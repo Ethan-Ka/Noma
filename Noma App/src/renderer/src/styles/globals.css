@@ -79,3 +79,46 @@ body {
     outline-offset: 2px;
   }
 }
+
+/* Noma Notice lives in a transparent, frameless window, so its document
+   must not paint the app's page canvas — otherwise the "glass" card would
+   sit on an opaque black rectangle the size of the whole window. Set as a
+   class on <html> by renderer/src/main.tsx when it renders the notice
+   surface, rather than globally, because the same bundle also renders the
+   ordinary app window, which does want its canvas. */
+html.noma-notice-surface,
+html.noma-notice-surface body,
+html.noma-notice-surface #root {
+  background: transparent;
+  overflow: hidden;
+}
+
+/* Enters from below, like a surface sliding into place rather than a
+   notification popping. Deliberately undramatic: no scale, no bounce, no
+   overshoot — the point is that you notice it in peripheral vision and are
+   not pulled away from what you were doing. Reduced motion drops the
+   movement entirely and keeps only the fade (see usePrefersReducedMotion). */
+@keyframes noma-notice-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Leaves the way it came, a little shorter and a little less far — an exit
+   should be quieter than an entrance. */
+@keyframes noma-notice-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+

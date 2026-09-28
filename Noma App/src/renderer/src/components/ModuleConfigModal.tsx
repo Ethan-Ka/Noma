@@ -23,7 +23,9 @@ interface ModuleConfigModalProps {
 // silently does nothing when triggered. 'focusApplication' does execute,
 // but (like here) has no "pick an application" picker of its own yet — see
 // ControlEditorModal.tsx, which applies the same rule to control actions.
-type SelectableActionType = Exclude<ControlAction['type'], 'launchApplication' | 'focusApplication'>
+// 'click' is the same story: real execution (main/actions/click.ts), but a
+// click target only ever comes from a captured workflow step.
+type SelectableActionType = Exclude<ControlAction['type'], 'launchApplication' | 'focusApplication' | 'click'>
 
 const ACTION_TYPE_LABELS: Record<SelectableActionType, string> = {
   shortcut: 'Keyboard shortcut',

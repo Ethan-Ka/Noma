@@ -74,8 +74,10 @@ export function sanitizeControlLabel(controlType: string | null, name: string | 
 export const ZONE_COLUMNS = 16
 export const ZONE_ROWS = 10
 /** A window smaller than this in either direction is too small for a grid
- *  cell to mean anything (tooltips, popups, tray flyouts). */
-const MIN_WINDOW_SIZE = 200
+ *  cell to mean anything (tooltips, popups, tray flyouts) — exported so
+ *  click.ts's replay path applies the exact same floor capture used, rather
+ *  than a second guessed-at constant. */
+export const MIN_WINDOW_SIZE = 200
 
 export interface ScreenRect {
   left: number

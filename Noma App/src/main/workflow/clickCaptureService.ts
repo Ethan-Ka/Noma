@@ -2,6 +2,7 @@ import { uIOhook, type UiohookMouseEvent } from 'uiohook-napi'
 import { acquireHook, releaseHook } from './sharedHook'
 import { clickTargetFor } from './clickTarget'
 import { isClickCaptureExcluded } from './appKnowledge'
+import { isSelfInjectedClick } from './selfInjectedClicks'
 import type { ClickInspector } from './uiaInspector'
 
 export interface CapturedClickEvent {
@@ -77,6 +78,10 @@ export class ClickCaptureService {
 
   private readonly handleMouseDown = (event: UiohookMouseEvent): void => {
     if (event.button !== LEFT_BUTTON) return
+    // A control/macro's own click step fires through this exact hook too —
+    // see selfInjectedClicks.ts. Checked first, before the (async) UIA
+    // inspection, so Flow's own replayed click is never even looked at.
+    if (isSelfInjectedClick()) return
     void this.handlePress(event.x, event.y, this.currentApplicationId, Date.now())
   }
 }

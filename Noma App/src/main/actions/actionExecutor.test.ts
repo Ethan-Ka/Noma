@@ -7,6 +7,7 @@ import { createMacro } from '../database/repositories/macrosRepository'
 import { __resetSelfInjectedGuardForTesting, isSelfInjected } from '../workflow/selfInjectedKeys'
 import { findMainWindowHandleForProcess } from './processWindow'
 import { focusWindowAndVerify } from './windowFocus'
+import { executeClick } from './click'
 import {
   executeControlAction,
   executeMacroSteps,
@@ -44,6 +45,14 @@ vi.mock('./windowFocus', async (importOriginal) => {
   return { ...actual, focusWindowAndVerify: vi.fn(actual.focusWindowAndVerify) }
 })
 
+// click.ts's own real behavior (zone math, GetWindowRect/SendInput) is
+// Win32 I/O with no meaningful headless-test story (there's no real window
+// to click) — mocked here so this suite only has to verify that a `click`
+// MacroStep actually dispatches to it and that its result is honored,
+// exactly the same shape as the findMainWindowHandleForProcess mock above.
+vi.mock('./click', () => ({ executeClick: vi.fn() }))
+vi.mock('./uiaControlFinder', () => ({ uiaControlFinder: { warmUp: vi.fn(), find: vi.fn() } }))
+
 function insertApplication(id: string, name: string, processName: string): void {
   getDatabase()
     .prepare('INSERT INTO applications (id, name, process_name) VALUES (?, ?, ?)')
@@ -58,6 +67,7 @@ beforeEach(() => {
   vi.mocked(uIOhook.keyTap).mockClear()
   vi.mocked(findMainWindowHandleForProcess).mockReset()
   vi.mocked(focusWindowAndVerify).mockClear() // keeps the real pass-through implementation
+  vi.mocked(executeClick).mockReset()
 })
 
 describe('isKeystrokeExecutionEnabled', () => {
@@ -224,6 +234,52 @@ describe('executeMacroSteps', () => {
     const result = await executeMacroSteps(steps, null)
     expect(result.ok).toBe(false)
     expect(result.reason).toContain('not implemented yet')
+  })
+
+  it('dispatches a click step to click.ts and succeeds when it does', async () => {
+    vi.mocked(executeClick).mockResolvedValue({ ok: true })
+    const steps: MacroStep[] = [{ type: 'click', target: 'zone:8x5' }]
+    const result = await executeMacroSteps(steps, null)
+    expect(result.ok).toBe(true)
+    expect(executeClick).toHaveBeenCalledWith('zone:8x5', undefined)
+  })
+
+  it('stops the macro and surfaces click.ts\'s own refusal reason when a click step fails', async () => {
+    vi.mocked(executeClick).mockResolvedValue({ ok: false, reason: 'Could not find the focused window on screen right now (it may be minimized)' })
+    const steps: MacroStep[] = [
+      { type: 'click', target: 'zone:8x5' },
+      { type: 'shortcut', keys: ['Control', 'T'] }
+    ]
+    const result = await executeMacroSteps(steps, null)
+    expect(result.ok).toBe(false)
+    expect(result.reason).toContain('minimized')
+    // Says where it stopped, so a half-run workflow is never a mystery.
+    expect(result.reason).toMatch(/^Stopped at step 1 of 2: /)
+    // The step after the failed click never ran.
+    expect(uIOhook.keyTap).not.toHaveBeenCalled()
+  })
+
+  it('passes the recorded app along so the click can check it is in front', async () => {
+    vi.mocked(executeClick).mockResolvedValue({ ok: true })
+    await executeMacroSteps([{ type: 'click', target: 'label:Blade', applicationId: 'resolve' }], null)
+    expect(executeClick).toHaveBeenCalledWith('label:Blade', 'resolve')
+  })
+
+  it('counts only real actions (not delays) when saying which step failed', async () => {
+    vi.mocked(executeClick).mockResolvedValue({ ok: false, reason: 'Couldn’t find it' })
+    const steps: MacroStep[] = [
+      { type: 'shortcut', keys: ['Control', 'C'] },
+      { type: 'delay', ms: 1 },
+      { type: 'click', target: 'label:Export' }
+    ]
+    const result = await executeMacroSteps(steps, null)
+    expect(result.reason).toMatch(/^Stopped at step 2 of 2: /)
+  })
+
+  it('reports a single-step failure without a step number', async () => {
+    vi.mocked(executeClick).mockResolvedValue({ ok: false, reason: 'nope' })
+    const result = await executeMacroSteps([{ type: 'click', target: 'zone:1x1' }], null)
+    expect(result.reason).toBe('nope')
   })
 
   it('refuses a blocked shortcut step the same way a direct shortcut control is refused', async () => {

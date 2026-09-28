@@ -1,6 +1,32 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+
+/**
+ * Isolated test profile — set NOMA_TEST_USER_DATA_DIR to point Electron's
+ * userData (and therefore db.ts's noma.db) at a throwaway directory instead
+ * of the real, actively-used profile.
+ *
+ * This exists because of a real incident: automated testing launched the
+ * raw built binary directly, which defaulted to the same userData path the
+ * developer's actual daily-use Noma installation uses, and ended up
+ * overwriting two real control slots with demo data before anyone noticed.
+ * That should be structurally impossible, not something a future session
+ * has to remember not to do — hence a hard switch, checked before anything
+ * else in this file touches `app`, rather than a convention documented
+ * somewhere and hoped for.
+ *
+ * Must run before `initDatabase()` (db.ts reads `app.getPath('userData')`
+ * the moment it's called) and before anything else that could touch real
+ * user state — so this sits at the very top of the file, ahead of every
+ * other import's side effects that might run first.
+ */
+const TEST_USER_DATA_DIR = process.env.NOMA_TEST_USER_DATA_DIR
+if (TEST_USER_DATA_DIR) {
+  app.setPath('userData', TEST_USER_DATA_DIR)
+  // eslint-disable-next-line no-console
+  console.log(`[TEST MODE] userData redirected to: ${TEST_USER_DATA_DIR}`)
+}
 import icon from '../../resources/icon.png?asset'
 import { IPC_CHANNELS } from '@shared/constants'
 import { initDatabase } from './database/db'
@@ -17,12 +43,25 @@ import { getLaptopInfo } from './holo/laptopInfo'
 import { insertWorkflowEvent } from './database/repositories/workflowEventsRepository'
 import { getClickCaptureEnabled, getWorkflowMonitoringEnabled } from './database/repositories/settingsRepository'
 import { getSuggestionHistoryForKind, getPendingSuggestions } from './database/repositories/suggestionsRepository'
+import { simulateDemoMultiStepWorkflow } from './demo/demoService'
 import { getApplicationById } from './database/repositories/applicationsRepository'
 import { LocalRuleBasedProvider } from './ai/localProvider'
 import { SuggestionEngine } from './ai/suggestionEngine'
 import { executeControlAction } from './actions/actionExecutor'
+import { WorkflowNotifier } from './notifications/workflowNotifier'
+import {
+  closeWorkflowNoticeWindow,
+  getPendingWorkflowNotice,
+  setWorkflowNoticeInteractive
+} from './notifications/notificationWindow'
 
 let mainWindow: BrowserWindow | null = null
+let tray: Tray | null = null
+/** False until a real quit is underway (tray "Quit Noma", OS shutdown, or
+ *  Cmd+Q) — while false, the window's own close button hides it instead of
+ *  exiting the app. See `createTray` and `createMainWindow`'s `close`
+ *  handler. */
+let isQuitting = false
 /** The last application a genuine appSwitch WorkflowEvent was recorded for
  *  (see contextService.onContextChanged below) — distinct from
  *  contextService's own `current`, which also updates for reasons that
@@ -51,12 +90,26 @@ const aiProvider = new LocalRuleBasedProvider(
 )
 const suggestionEngine = new SuggestionEngine(aiProvider)
 
+/**
+ * Noma Notice. Nothing about detection changed to add this — the notifier
+ * only reads the suggestions the engine already produced and decides whether
+ * one of them has been seen often enough to be worth saying out loud while
+ * the user is working somewhere else.
+ */
+const workflowNotifier = new WorkflowNotifier(() => {
+  mainWindow?.webContents.send(IPC_CHANNELS.SUGGESTIONS_CHANGED, getPendingSuggestions())
+})
+
 /** Re-runs pattern detection -> suggestion generation, then pushes the
  *  (possibly updated) pending list to the renderer. Called after every
  *  captured workflow event — see docs/architecture.md's learning loop. */
 async function refreshSuggestions(): Promise<void> {
-  await suggestionEngine.refresh()
+  const patterns = await suggestionEngine.refresh()
   mainWindow?.webContents.send(IPC_CHANNELS.SUGGESTIONS_CHANGED, getPendingSuggestions())
+  // Reuses the patterns that pass already detected rather than running
+  // detection again — and runs after the push, so the app is never showing
+  // a stale list behind a notice that's already on screen.
+  workflowNotifier.review(patterns)
 }
 
 const captureService = new CaptureService((event) => {
@@ -88,6 +141,25 @@ const clickCaptureService = new ClickCaptureService((event) => {
   void refreshSuggestions()
 }, new UiaClickInspector())
 
+/**
+ * A control usually fires while the user is in some other app (that's the
+ * point of a physical key or a Holo tap), where the in-app "✗ failed" line
+ * on the Virtual Keyboard page is invisible. A workflow that stops partway
+ * without saying so leaves the user not knowing what did and didn't
+ * happen, so a failure there gets a Windows notification instead. Only when
+ * Noma's own window isn't the one being looked at, and only for failures:
+ * a success is already visible in whatever the action did.
+ */
+function notifyActionFailed(controlLabel: string, reason: string | undefined): void {
+  if (mainWindow?.isVisible() && mainWindow.isFocused()) return
+  if (!Notification.isSupported()) return
+  new Notification({
+    title: `Noma couldn't finish “${controlLabel}”`,
+    body: reason ?? 'The action failed.',
+    silent: true
+  }).show()
+}
+
 function createMainWindow(): void {
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -97,6 +169,7 @@ function createMainWindow(): void {
     show: false,
     autoHideMenuBar: true,
     backgroundColor: '#08080a',
+    title: TEST_USER_DATA_DIR ? 'Noma — TEST PROFILE' : 'Noma',
     // Windows/Linux taskbar + window icon. macOS instead uses the app
     // bundle's icon (set at packaging time), which doesn't exist yet — see
     // "Prepare for STM32"/packaging notes; this only affects the
@@ -121,8 +194,46 @@ function createMainWindow(): void {
     mainWindow?.show()
   })
 
+  // The renderer's own <title>Noma</title> would otherwise overwrite the
+  // constructor's `title` option the instant the page loads — this is the
+  // one place that's allowed to win, so "TEST PROFILE" actually stays
+  // visible for the whole session rather than flashing briefly on launch.
+  if (TEST_USER_DATA_DIR) {
+    mainWindow.on('page-title-updated', (event) => {
+      event.preventDefault()
+    })
+  }
+
+  // Noma is meant to run in the background (see PRODUCT.md's "infrastructure
+  // that is always present," and Flow/Holo both keep working with no window
+  // open at all). The minimize button and the close button both hide the
+  // window instead of minimizing/quitting — reopening happens from the tray
+  // icon's "Open Noma" (or a click on the icon itself), same as any other
+  // background-utility app. A real quit only happens via the tray's "Quit
+  // Noma" or the OS shutting the app down, both of which set `isQuitting`
+  // first.
+  // 'minimize' itself isn't cancelable (no `event` to preventDefault — see
+  // Electron's typings), so this rides along right after: the taskbar entry
+  // blinks for an instant, then `hide()` removes it entirely and the window
+  // is reachable only from the tray from here on.
+  mainWindow.on('minimize', () => {
+    mainWindow?.hide()
+  })
+
+  mainWindow.on('close', (event) => {
+    if (isQuitting) return
+    event.preventDefault()
+    mainWindow?.hide()
+  })
+
   mainWindow.on('closed', () => {
     mainWindow = null
+    // The notice window is hidden rather than closed between notices, so it
+    // would otherwise still be in getAllWindows() here — 'window-all-closed'
+    // would never fire and Noma would linger invisibly after a real quit.
+    // Only reached now once `isQuitting` is true (see the `close` handler
+    // above) — an ordinary close hides the window instead of destroying it.
+    closeWorkflowNoticeWindow()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
@@ -135,6 +246,41 @@ function createMainWindow(): void {
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
+}
+
+/** Un-hides the main window, creating it first if it was never opened this
+ *  run — the one path both the tray icon and Noma Notice's "Review" use. */
+function showMainWindow(): void {
+  if (!mainWindow) createMainWindow()
+  mainWindow?.show()
+  mainWindow?.focus()
+}
+
+/**
+ * The reopen path for a minimized/closed Noma — see the `minimize`/`close`
+ * handlers above. A left-click toggles (matches most Windows tray icons:
+ * Discord, Slack); the context menu (right-click, or Electron's own
+ * left-click fallback on Linux) spells the same action out in words, plus
+ * the only real way left to quit the app.
+ */
+function createTray(): void {
+  const trayIcon = nativeImage.createFromPath(icon).resize({ width: 16, height: 16 })
+  tray = new Tray(trayIcon)
+  tray.setToolTip(TEST_USER_DATA_DIR ? 'Noma — TEST PROFILE, running in the background' : 'Noma — running in the background')
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: 'Open Noma', click: () => showMainWindow() },
+      { type: 'separator' },
+      // Flips `isQuitting` via the app-wide `before-quit` listener, not
+      // here directly — the same flag has to be true for an OS shutdown or
+      // Cmd+Q to actually exit too, not just this menu item.
+      { label: 'Quit Noma', click: () => app.quit() }
+    ])
+  )
+  tray.on('click', () => {
+    if (mainWindow?.isVisible()) mainWindow.hide()
+    else showMainWindow()
+  })
 }
 
 app.whenReady().then(() => {
@@ -150,6 +296,43 @@ app.whenReady().then(() => {
     if (enabled) return inputActivityService.start()
     inputActivityService.stop()
     return null
+  })
+
+  // Noma Notice. Registered here rather than in registerIpcHandlers because,
+  // like the two above, these belong to a window this file owns.
+  ipcMain.handle(
+    IPC_CHANNELS.WORKFLOW_NOTICE_DISMISS,
+    (_event, suggestionId: string, reason: 'timeout' | 'closed' | 'dismissed' | 'reviewed') => {
+      workflowNotifier.dismiss(suggestionId, reason)
+    }
+  )
+  ipcMain.handle(IPC_CHANNELS.WORKFLOW_NOTICE_PENDING, () => getPendingWorkflowNotice())
+  ipcMain.handle(IPC_CHANNELS.WORKFLOW_NOTICE_SET_INTERACTIVE, (_event, interactive: boolean) => {
+    setWorkflowNoticeInteractive(interactive)
+  })
+  ipcMain.handle(IPC_CHANNELS.WORKFLOW_NOTICE_REVIEW, (_event, suggestionId: string) => {
+    // Accepting ends in choosing which control slot the workflow lives on,
+    // and a 400px card floating over someone's work is the wrong place to
+    // ask that. This is the one interaction that deliberately brings the
+    // main window forward — because the user just asked for it.
+    workflowNotifier.dismiss(suggestionId, 'reviewed')
+    showMainWindow()
+    mainWindow?.webContents.send(IPC_CHANNELS.OPEN_SUGGESTION_IN_APP, suggestionId)
+  })
+  ipcMain.handle(IPC_CHANNELS.SIMULATE_WORKFLOW_NOTICE, async () => {
+    // Demo Mode: replay the real demo workflow through the real pipeline,
+    // then put its real suggestion on screen — the threshold and cooldown
+    // are the only things bypassed, so what appears is the production
+    // surface with production data, not a mock.
+    simulateDemoMultiStepWorkflow()
+    await refreshSuggestions()
+    // The most-repeated multi-application workflow, which after that replay
+    // is the demo one — picked by the same "which workflow matters most"
+    // rule the real policy uses, rather than by hardcoding the demo's id.
+    const workflow = getPendingSuggestions()
+      .filter((suggestion) => suggestion.chainApplicationNames)
+      .sort((a, b) => (b.occurrenceCount ?? 0) - (a.occurrenceCount ?? 0) || b.confidence - a.confidence)[0]
+    if (workflow) workflowNotifier.simulate(workflow, workflow.occurrenceCount ?? 0)
   })
   registerIpcHandlers(
     contextService,
@@ -233,6 +416,7 @@ app.whenReady().then(() => {
       if (control) {
         void executeControlAction(control.action, osAdapter.getLastKnownWindowHandle()).then(
           (result) => {
+            if (!result.ok) notifyActionFailed(control.label, result.reason)
             mainWindow?.webContents.send(IPC_CHANNELS.ACTION_EXECUTED, {
               controlId: event.controlId,
               ok: result.ok,
@@ -279,10 +463,21 @@ app.whenReady().then(() => {
   }
 
   createMainWindow()
+  createTray()
 
   app.on('activate', function () {
+    // Minimizing/closing now hides the window rather than destroying it
+    // (see createMainWindow's `minimize`/`close` handlers), so on macOS a
+    // dock click most often finds one already open, just hidden — show it
+    // instead of leaving `getAllWindows().length === 0` as the only check,
+    // which would never fire again once the first window exists.
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
+    else showMainWindow()
   })
+})
+
+app.on('before-quit', () => {
+  isQuitting = true
 })
 
 app.on('window-all-closed', () => {

@@ -113,14 +113,14 @@ pipeline, it doesn't sit beside it.
 
 **The gap this closes.** `detectRepeatedSequences` only ever sees two
 shortcuts inside one application. `detectCrossAppWorkflows` (added earlier)
-generalized that to a fixed 2-step pair that can include an app switch, but
-deliberately produces an *informational-only* suggestion — there was no safe
-executable step for "switch to this app," so there was nothing real to turn
-it into. Neither can represent "screenshot → switch to Claude Code → paste →
-switch back": that's 3-4 steps, crosses an app boundary, and (because
-`captureFilter.ts` never records raw typed content — see
-`docs/privacy-and-legal.md`) doesn't look *identical* every time a real user
-does it.
+generalized that to a fixed 2-step pair that can include an app switch —
+originally informational-only (no safe executable step existed for "switch
+to this app" yet — see "Click and cross-app execution" below for why that's
+no longer true). Neither detector alone can represent "screenshot → switch
+to Claude Code → paste → switch back": that's 3-4 steps, crosses an app
+boundary, and (because `captureFilter.ts` never records raw typed content —
+see `docs/privacy-and-legal.md`) doesn't look *identical* every time a real
+user does it.
 
 **`detectMultiStepWorkflows`** (`patternDetection.ts`) closes this: a
 sliding-window search (3-6 steps) over the same already-captured
@@ -163,6 +163,57 @@ the exact same `assignSuggestionToControl` path every other suggestion kind
 uses, executable from the software interface today and, unchanged, from the
 virtual device and eventual physical hardware — pressing a control has never
 cared *why* a macro exists, only that it does.
+
+**Click and cross-app execution (added later).** Two restrictions from the
+paragraphs above were later lifted, once the missing capability existed:
+
+- **`main/actions/click.ts`** adds real click execution — a `click`
+  `ControlAction`/`MacroStep` (`shared/types`). Every click is checked
+  before it happens and refuses (stopping the macro, with the reason) rather
+  than click somewhere it can't vouch for:
+  - **The recorded app must be in front.** A click step built from a learned
+    workflow carries the `applicationId` it was recorded in; the foreground
+    window's process (`windowProcess.ts`, `GetWindowThreadProcessId` +
+    `QueryFullProcessImageNameW` via `koffi`) must match that app's
+    `processName`, or nothing is clicked.
+  - **`label:<name>`** is found again by name at replay time
+    (`uiaControlFinder.ts`: a long-lived PowerShell UI Automation helper,
+    same approach as capture's `uiaInspector.ts`). It searches every
+    top-level window of that process (menus and dialogs are their own
+    windows) for enabled, on-screen command controls whose cleaned name
+    matches, waits up to 2 s for one that's still appearing, and requires
+    exactly one match. The helper only *finds*: the click is a real
+    `SetCursorPos` + `SendInput` click at the control's clickable point, and
+    only after `WindowFromPoint` confirms that point belongs to the same
+    app (nothing covering it). Not UI Automation's `InvokePattern`: some
+    apps block Invoke until a dialog it opened is closed, and a real click
+    is what was recorded.
+  - **`zone:<col>x<row>`** (custom-drawn apps with no named controls) is
+    mapped onto the focused window's *current* bounds via `GetWindowRect`.
+  `selfInjectedClicks.ts` suppresses `clickCaptureService.ts`'s own hook
+  from recording the synthetic click as if the user had made it — the click
+  counterpart to `selfInjectedKeys.ts`.
+- **A stopped workflow says where it stopped.** `executeMacroSteps` prefixes
+  a failure with "Stopped at step N of M" (delays not counted), and
+  `main/index.ts` shows it as a Windows notification when Noma's own window
+  isn't focused — a control usually fires while the user is in another app,
+  where the in-app result line is invisible.
+- With click execution in place, **`crossAppWorkflow` suggestions are no
+  longer informational-only** — `suggestionRules.ts` gives them the same
+  `createWorkflowMacroAndAssignToControl` action `multiStepWorkflow` gets,
+  offered in the application the chain starts in. Same for a
+  `multiStepWorkflow` chain that happens to include a click (previously
+  informational for the same missing-capability reason).
+- **Real-paced replay.** Pattern detection now carries `stepDelaysMs` —
+  the actual gap (ms) observed before each step, from one real occurrence
+  (median-of-occurrences for `crossAppWorkflow`'s fixed pair, the chosen
+  representative window for `multiStepWorkflow`) — through to the
+  suggestion's action. `buildWorkflowMacroSteps` (`suggestionResolution.ts`)
+  turns that into real `delay` steps between the macro's actions (clamped
+  to 300ms–2s: long enough to matter, short enough that "one press instead
+  of the full sequence" still holds), so pressing the resulting control
+  reproduces roughly the pace the user actually worked at instead of firing
+  every step back-to-back.
 
 **Demo Mode** (`main/demo/demoService.ts`'s `simulateDemoMultiStepWorkflow`,
 `renderer/src/pages/Demo.tsx`'s `multiStep*` phases) plays the flagship story
@@ -353,6 +404,24 @@ it's hidden. Live outcomes (pressed / ignored / unrecognized / no control)
 are shown on the Holo page. The classifier's thresholds
 (`MAX_TRUSTED_DISTANCE`, `SENSITIVITY_MULTIPLIER`) are first-pass values
 validated against synthetic audio only — tune with real recordings.
+
+**2-zone layout is trackpad-relative, not mic-relative (changed later).**
+`getHoloZones`/`getHoloZoneLabel` (shared/constants) originally put both
+2-zone positions on whichever side the built-in mic was on (front+rear),
+measured via a "tap far left / far right" calibration step
+(`detectMicSide`, classifier.ts) or a small hardcoded model lookup
+(`lookupHoloMicSide`). Both were removed by explicit request: the 2-zone
+pair is now always `frontLeft`/`frontRight` — reinterpreted, for 2-zone
+mode only, as the empty palm-rest space to the left/right of the trackpad
+rather than desk corners — regardless of mic side. This simplified
+calibration (one fewer wizard phase) and removed ~40 lines of mic-side
+plumbing (`HoloMicSide`, `SideOverride`, the measured/override/lookup
+chain in `holoStore.ts`) without touching the classifier itself:
+calibration already learns whatever acoustic signature a zone actually
+produces from real taps, so a laptop's off-center mic just becomes part of
+what makes left vs. right distinguishable, the same way it already made
+frontLeft vs. rearLeft distinguishable. 4-zone mode (MacBooks) is
+unchanged — still real desk corners.
 
 **No paywall exists — all 4 zones are free, by explicit request.** A
 `SubscriptionTier`/`getMaxHoloZones` zone-count gate (free: 2 zones, pro:

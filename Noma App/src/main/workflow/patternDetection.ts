@@ -463,6 +463,14 @@ function detectCrossAppWorkflows(events: WorkflowEvent[]): DetectedPattern[] {
       ? `${chain} repeated ${count} times, usually followed by ${describeStep(closingStep)}`
       : `${chain} repeated ${count} times`
 
+    // The real gap this pair took, each time it happened — median rather
+    // than the latest or first, so one unusually slow or fast repeat (user
+    // got distracted mid-workflow once) doesn't set the replay pace.
+    const gaps = group.occurrences
+      .map((occurrence) => occurrence.timestamp - steps[occurrence.index].timestamp)
+      .sort((a, b) => a - b)
+    const medianGapMs = Math.min(WORKFLOW_STEP_WINDOW_MS, Math.max(0, gaps[Math.floor(gaps.length / 2)]))
+
     patterns.push({
       id: `workflow:${signature}`,
       kind: 'crossAppWorkflow',
@@ -472,6 +480,7 @@ function detectCrossAppWorkflows(events: WorkflowEvent[]): DetectedPattern[] {
       description,
       count,
       sessionCount: countSessions(group.occurrences.map((occurrence) => occurrence.timestamp)),
+      stepDelaysMs: [0, medianGapMs],
       ...(closingStep ? { closingStep } : {})
     })
   }
@@ -528,14 +537,18 @@ export const IN_APP_CLICK_THRESHOLD = 3
  * Same time window (SEQUENCE_WINDOW_MS) and spam guard as every other
  * sequence-shaped detector.
  *
- * Reported as a two-step `multiStepWorkflow`: suggestionRules.ts makes any
- * chain containing a click informational-only, because there's no "click
- * this control" step in the macro vocabulary to replay it with.
+ * Reported as a two-step `multiStepWorkflow`, offered like any other as a
+ * one-press macro: a named-control click is found again by name at replay
+ * time and a zone click is mapped onto the window's current bounds (see
+ * main/actions/click.ts).
  */
 function detectInAppClickPairs(events: WorkflowEvent[]): DetectedPattern[] {
   const steps = buildWorkflowSteps(events)
 
-  const groups = new Map<string, { steps: [WorkflowStep, WorkflowStep]; timestamps: number[] }>()
+  const groups = new Map<
+    string,
+    { steps: [WorkflowStep, WorkflowStep]; timestamps: number[]; delaysMs: number[] }
+  >()
   for (let i = 0; i < steps.length - 1; i++) {
     const first = steps[i]
     const second = steps[i + 1]
@@ -556,9 +569,14 @@ function detectInAppClickPairs(events: WorkflowEvent[]): DetectedPattern[] {
     if (firstSignature === secondSignature) continue
 
     const key = `${firstSignature}->${secondSignature}`
+    const delayMs = second.timestamp - first.timestamp
     const existing = groups.get(key)
-    if (existing) existing.timestamps.push(second.timestamp)
-    else groups.set(key, { steps: [first.step, second.step], timestamps: [second.timestamp] })
+    if (existing) {
+      existing.timestamps.push(second.timestamp)
+      existing.delaysMs.push(delayMs)
+    } else {
+      groups.set(key, { steps: [first.step, second.step], timestamps: [second.timestamp], delaysMs: [delayMs] })
+    }
   }
 
   const patterns: DetectedPattern[] = []
@@ -567,6 +585,8 @@ function detectInAppClickPairs(events: WorkflowEvent[]): DetectedPattern[] {
     if (count < IN_APP_CLICK_THRESHOLD) continue
 
     const applicationId = group.steps[0].applicationId
+    const sortedDelays = [...group.delaysMs].sort((a, b) => a - b)
+    const medianDelayMs = sortedDelays[Math.floor(sortedDelays.length / 2)]
     patterns.push({
       id: `multistep:${key}`,
       kind: 'multiStepWorkflow',
@@ -577,7 +597,8 @@ function detectInAppClickPairs(events: WorkflowEvent[]): DetectedPattern[] {
       description: `${group.steps.map(describeStep).join(' → ')} repeated ${count} times`,
       count,
       sessionCount: countSessions(group.timestamps),
-      consistency: 1
+      consistency: 1,
+      stepDelaysMs: [0, medianDelayMs]
     })
   }
   return patterns
@@ -609,10 +630,26 @@ const WORKFLOW_SIMILARITY_THRESHOLD = 0.75
 
 interface WorkflowWindow {
   steps: WorkflowStep[]
+  /** Real timestamp of each entry in `steps`, same order — kept so the
+   *  chosen representative window's actual pacing survives into the final
+   *  pattern (see `stepDelaysMs` below), not just its shape. */
+  stepTimestamps: number[]
   signatures: string[]
   /** Timestamp of the window's last step — this occurrence's marker for
    *  countSpacedOccurrences, same convention every other detector uses. */
   completedAt: number
+}
+
+/** `stepDelaysMs[i]` = real ms between `timestamps[i-1]` and `timestamps[i]`,
+ *  `stepDelaysMs[0] = 0` (nothing precedes the first step) — shared by every
+ *  detector that reports a `stepDelaysMs`-carrying pattern. Capped at
+ *  WORKFLOW_STEP_WINDOW_MS, which every caller's gap already is by
+ *  construction (that's the continuity requirement that put the steps in
+ *  the same window/pair to begin with) — the cap is defensive, not load-bearing. */
+function stepDelaysFromTimestamps(timestamps: number[]): number[] {
+  return timestamps.map((timestamp, index) =>
+    index === 0 ? 0 : Math.min(WORKFLOW_STEP_WINDOW_MS, Math.max(0, timestamp - timestamps[index - 1]))
+  )
 }
 
 /** Every contiguous, time-continuous, sufficiently-informative window of
@@ -666,6 +703,7 @@ function buildWorkflowWindows(steps: WorkflowStepEvent[]): WorkflowWindow[] {
 
       windows.push({
         steps: slice.map((s) => s.step),
+        stepTimestamps: slice.map((s) => s.timestamp),
         signatures,
         completedAt: slice[slice.length - 1].timestamp
       })
@@ -834,7 +872,8 @@ export function detectMultiStepWorkflows(events: WorkflowEvent[]): DetectedPatte
       description: `${chain} repeated ${count} times`,
       count,
       sessionCount: countSessions(candidate.timestamps),
-      consistency
+      consistency,
+      stepDelaysMs: stepDelaysFromTimestamps(representative.stepTimestamps)
     })
   }
 

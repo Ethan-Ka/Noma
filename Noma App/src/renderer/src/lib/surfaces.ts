@@ -71,3 +71,30 @@ export const KEYCAP_SHADOW =
  */
 export const HERO_CARD =
   'relative overflow-hidden rounded-2xl border border-base-700 bg-white/[0.025] backdrop-blur-md shadow-[0_20px_48px_-20px_rgba(0,0,0,0.6)]'
+
+/**
+ * Noma Notice's floating surface — the fourth, and last, place real glass
+ * belongs.
+ *
+ * It earns it for a reason none of the in-app cards could: this one
+ * genuinely does sit on the user's desktop, over their actual work, in its
+ * own transparent window. Translucency here is representational rather than
+ * decorative — it is what tells you the thing is *on top of* your screen
+ * rather than part of an application. That was exactly the argument this
+ * file's own history rejected for ordinary cards, and it holds here.
+ *
+ * Restrained to the same rules as everything else: a graphite tint rather
+ * than translucent white, one real border, one plain ambient shadow. No
+ * glow, no gradient, no accent-coloured background. The workflow's real
+ * application icons inside are the only thing with any visual weight.
+ *
+ * `backdrop-blur` is included and is honest about what it does: over a
+ * transparent window it has no desktop content to sample, so it frosts
+ * nothing today and costs nothing. It is there so the card looks right
+ * anywhere it is rendered over real content — a preview inside the app, a
+ * future acrylic-backed window (see notificationWindow.ts). The tint,
+ * border and shadow are what carry the material in the meantime.
+ */
+export const NOTICE_GLASS =
+  'rounded-2xl border border-white/[0.09] bg-[rgba(17,18,20,0.82)] backdrop-blur-xl shadow-[0_24px_64px_-24px_rgba(0,0,0,0.8)]'
+

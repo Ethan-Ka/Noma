@@ -156,9 +156,15 @@ describe('SuggestionEngine.refresh (end-to-end: events -> patterns -> suggestion
     expect(suggestions).toHaveLength(1)
     expect(suggestions[0].explanation).toContain('Click “Cut”')
     expect(suggestions[0].explanation).toContain('Click “Delete”')
-    // Can't be replayed, so it's informational: no action, no control slot.
-    expect(suggestions[0].action).toBeUndefined()
-    expect(suggestions[0].applicationId).toBeNull()
+    // Real control slot now (click execution exists — main/actions/click.ts).
+    // A `label:` click target still refuses at press time with a clear
+    // reason (re-finding a named control isn't supported yet), but the
+    // suggestion itself is no longer informational-only just because it
+    // contains a click.
+    expect(suggestions[0].applicationId).toBe('resolve')
+    expect(suggestions[0].action).toMatchObject({ kind: 'createWorkflowMacroAndAssignToControl' })
+    // The real ~1500ms gap between the Cut and Delete clicks, not invented.
+    expect(suggestions[0].action).toMatchObject({ stepDelaysMs: [0, 1500] })
   })
 
   it('does not call a burst of button-mashing a workflow', async () => {

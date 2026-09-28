@@ -15,8 +15,10 @@ type StepType = MacroStep['type']
 // (suggestionResolution.ts) — there's no application picker here yet to
 // hand-author one from scratch. A macro containing one still renders
 // correctly (defaultStepForType covers it below); it just can't be *added*
-// via this dropdown.
-type SelectableStepType = Exclude<StepType, 'launchApplication' | 'focusApplication'>
+// via this dropdown. 'click' is the same story again — real execution
+// (main/actions/click.ts), but a click target only ever comes from a
+// captured workflow step.
+type SelectableStepType = Exclude<StepType, 'launchApplication' | 'focusApplication' | 'click'>
 
 const STEP_TYPE_LABELS: Record<SelectableStepType, string> = {
   shortcut: 'Keyboard shortcut',
@@ -40,6 +42,8 @@ export function defaultStepForType(type: StepType): MacroStep {
       return { type: 'launchApplication', applicationId: '' }
     case 'focusApplication':
       return { type: 'focusApplication', applicationId: '' }
+    case 'click':
+      return { type: 'click', target: '' }
     case 'macro':
       return { type: 'macro', macroId: '' }
   }

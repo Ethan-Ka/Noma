@@ -136,6 +136,11 @@ export function runMigrations(database: Database.Database): void {
   ensureColumn(database, 'suggestions', 'pattern_fingerprint', 'pattern_fingerprint TEXT')
   ensureColumn(database, 'suggestions', 'pattern_features', 'pattern_features TEXT')
   ensureColumn(database, 'applications', 'executable_path', 'executable_path TEXT')
+  // Noma Notice: how many times Flow has now seen this workflow, and when (if
+  // ever) it was announced on screen. Both additive, so an existing flow.db
+  // picks them up with no reset — same pattern as every column above.
+  ensureColumn(database, 'suggestions', 'occurrence_count', 'occurrence_count INTEGER')
+  ensureColumn(database, 'suggestions', 'notified_at', 'notified_at INTEGER')
 }
 
 /**

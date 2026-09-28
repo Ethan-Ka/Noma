@@ -86,7 +86,13 @@ function groupIntoNodes(steps: WorkflowChainStep[]): WorkflowNode[] {
 // so. 50 keeps the rendered icon (`0.92 * icon`) at 46px, just under the
 // real ceiling, so it's shown at its native resolution or smaller, never
 // stretched past it. `md` was already safe (44px rendered) and is untouched.
+// `sm` exists for Noma Notice, which sits in a corner of the user's desktop
+// rather than in the app — at that size the chain has to be readable at a
+// glance and take almost no room. Its rendered icon (0.92 * 34 = 31px) is
+// well under the 48px real-icon ceiling described above, so it is shown
+// below native resolution rather than stretched past it.
 const SIZES = {
+  sm: { box: 34, icon: 32, name: 'text-[11px]', action: 'text-[10px]', gap: 'gap-x-2' },
   md: { box: 52, icon: 48, name: 'text-sm', action: 'text-[11px]', gap: 'gap-x-3' },
   lg: { box: 58, icon: 50, name: 'text-base', action: 'text-xs', gap: 'gap-x-5' }
 } as const
@@ -98,7 +104,7 @@ const SIZES = {
  *  what's supposed to earn the eye's attention, not the chip around it. */
 const ICON_BOX = 'flex shrink-0 items-center justify-center'
 
-export function WorkflowChain({ steps, size = 'md' }: { steps: WorkflowChainStep[]; size?: 'md' | 'lg' }) {
+export function WorkflowChain({ steps, size = 'md' }: { steps: WorkflowChainStep[]; size?: 'sm' | 'md' | 'lg' }) {
   const reduceMotion = usePrefersReducedMotion()
   const nodes = groupIntoNodes(steps)
   const dim = SIZES[size]
@@ -130,8 +136,8 @@ export function WorkflowChain({ steps, size = 'md' }: { steps: WorkflowChainStep
               </div>
             ) : (
               <span
-                className={`flex items-center rounded-md border border-base-700 px-2.5 py-1 font-mono text-neutral-300 ${
-                  size === 'lg' ? 'text-xs' : 'text-[11px]'
+                className={`flex items-center rounded-md border border-base-700 font-mono text-neutral-300 ${
+                  size === 'lg' ? 'px-2.5 py-1 text-xs' : size === 'sm' ? 'px-1.5 py-0.5 text-[10px]' : 'px-2.5 py-1 text-[11px]'
                 }`}
                 style={{ height: dim.box }}
               >
@@ -151,11 +157,17 @@ export function WorkflowChain({ steps, size = 'md' }: { steps: WorkflowChainStep
                     visual indication anything was cut from the start.
                     Left-aligned text only ever overflows (and correctly
                     ellipsizes) on the one edge `truncate` actually handles. */}
-                <p className={`mt-2 truncate text-left font-medium text-neutral-100 ${dim.name}`} style={{ maxWidth: dim.box + 28 }}>
+                <p
+                  className={`truncate text-left font-medium text-neutral-100 ${size === 'sm' ? 'mt-1' : 'mt-2'} ${dim.name}`}
+                  style={{ maxWidth: dim.box + (size === 'sm' ? 16 : 28) }}
+                >
                   {node.label}
                 </p>
                 {node.action && (
-                  <p className={`mt-0.5 truncate text-left font-mono text-neutral-500 ${dim.action}`} style={{ maxWidth: dim.box + 28 }}>
+                  <p
+                    className={`mt-0.5 truncate text-left font-mono text-neutral-500 ${dim.action}`}
+                    style={{ maxWidth: dim.box + (size === 'sm' ? 16 : 28) }}
+                  >
                     {node.action}
                   </p>
                 )}
@@ -171,7 +183,9 @@ export function WorkflowChain({ steps, size = 'md' }: { steps: WorkflowChainStep
             // instead of a child fighting the column for width.
             <span
               aria-hidden
-              className={`flex shrink-0 items-center text-white/25 ${size === 'lg' ? 'text-lg' : 'text-sm'}`}
+              className={`flex shrink-0 items-center text-white/25 ${
+                size === 'lg' ? 'text-lg' : size === 'sm' ? 'text-[11px]' : 'text-sm'
+              }`}
               style={{ height: dim.box }}
             >
               →

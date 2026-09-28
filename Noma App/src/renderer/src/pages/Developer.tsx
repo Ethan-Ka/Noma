@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react'
-import { MODULE_CATALOG } from '@shared/constants'
+import {
+  MODULE_CATALOG,
+  WORKFLOW_NOTIFICATION_COOLDOWN_MS,
+  WORKFLOW_NOTIFICATION_THRESHOLD
+} from '@shared/constants'
 import type { ControlAction } from '@shared/types'
 import { useHardwareStore } from '../stores/hardwareStore'
 import { useFlowStore } from '../stores/flowStore'
@@ -22,6 +26,8 @@ function describeAction(action: ControlAction): string {
       return `flowAction: ${action.action}`
     case 'focusApplication':
       return `focusApplication: ${action.applicationId}`
+    case 'click':
+      return `click: ${action.target}`
   }
 }
 
@@ -152,6 +158,21 @@ export function Developer() {
             </p>
           )}
         </div>
+      </div>
+
+      <div className="mb-8 rounded-xl border border-white/10 bg-base-900 px-4 py-4">
+        <div className="mb-3 text-xs uppercase tracking-widest text-neutral-500">Noma Notice</div>
+        <p className="mb-3 text-[11px] text-neutral-600">
+          Puts a real workflow notice on screen now, instead of waiting for Flow to see the same
+          workflow {WORKFLOW_NOTIFICATION_THRESHOLD} times. It replays the demo workflow through the
+          real detection pipeline and surfaces the real suggestion that comes out — only the
+          repetition threshold and the {Math.round(WORKFLOW_NOTIFICATION_COOLDOWN_MS / 60000)}-minute
+          cooldown are bypassed. Minimize Noma first: the point is that it appears over whatever
+          you're actually working in.
+        </p>
+        <DevToolButton onClick={() => void window.flow.simulateWorkflowNotice()}>
+          Show Workflow Notice
+        </DevToolButton>
       </div>
 
       <div className="mb-8 rounded-xl border border-white/10 bg-base-900 px-4 py-4">

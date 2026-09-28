@@ -9,6 +9,8 @@ import { focusWindowAndVerify } from './windowFocus'
 import { closeWindowGracefully } from './windowClose'
 import { executeSystemCommand, isKnownSystemCommand } from './systemCommands'
 import { findMainWindowHandleForProcess } from './processWindow'
+import { executeClick } from './click'
+import { uiaControlFinder } from './uiaControlFinder'
 
 /**
  * The only implemented flowAction so far. Deliberately the *safe*
@@ -244,81 +246,94 @@ export async function executeMacroSteps(
   targetHwnd: number | null,
   visitedMacroIds: Set<string> = new Set()
 ): Promise<ExecutionResult> {
+  const actions = steps.filter((step) => step.type !== 'delay').length
+  let actionIndex = 0
+  if (steps.some((step) => step.type === 'click' && step.target.startsWith('label:'))) uiaControlFinder.warmUp()
   for (const step of steps) {
-    switch (step.type) {
-      case 'delay':
-        await sleep(Math.max(0, step.ms))
-        continue // the delay *is* the pacing for this step — no extra sleep after it
-
-      case 'shortcut': {
-        const result = sendShortcut(step.keys)
-        if (!result.ok) return result
-        break
-      }
-
-      case 'systemCommand':
-        if (!isKnownSystemCommand(step.command)) {
-          return { ok: false, reason: `Unknown system command: ${step.command}` }
-        }
-        if (!executeSystemCommand(step.command)) {
-          return { ok: false, reason: `System command failed: ${step.command}` }
-        }
-        break
-
-      case 'flowAction':
-        if (!isKnownFlowAction(step.action)) {
-          return { ok: false, reason: `flowAction "${step.action}" is not implemented yet` }
-        }
-        if (targetHwnd === null) {
-          return { ok: false, reason: 'No known target window to close' }
-        }
-        if (!closeWindowGracefully(targetHwnd)) {
-          return { ok: false, reason: 'Could not deliver the close message to the target window' }
-        }
-        break
-
-      case 'launchApplication':
-        return { ok: false, reason: 'launchApplication execution is not implemented yet' }
-
-      case 'focusApplication': {
-        const result = await focusApplicationById(step.applicationId)
-        if (!result.ok) return result
-        break
-      }
-
-      case 'macro': {
-        if (visitedMacroIds.has(step.macroId)) {
-          return { ok: false, reason: 'Refused: macro references itself, directly or indirectly' }
-        }
-        if (visitedMacroIds.size >= MAX_MACRO_NESTING_DEPTH) {
-          return { ok: false, reason: `Refused: macros can nest at most ${MAX_MACRO_NESTING_DEPTH} levels deep` }
-        }
-        const nested = getMacroById(step.macroId)
-        if (!nested) return { ok: false, reason: 'Macro not found' }
-        if (!nested.enabled) return { ok: false, reason: 'Macro is disabled' }
-
-        const result = await executeMacroSteps(
-          nested.actions,
-          targetHwnd,
-          new Set([...visitedMacroIds, step.macroId])
-        )
-        if (!result.ok) return result
-        break
-      }
+    if (step.type !== 'delay') actionIndex++
+    const result = await executeMacroStep(step, targetHwnd, visitedMacroIds)
+    if (!result.ok) {
+      // Say where it stopped, so a half-run workflow is never a mystery:
+      // "Stopped at step 3 of 5: ..." tells the user exactly what did and
+      // didn't happen before they carry on by hand.
+      return actions > 1 && !result.reason?.startsWith('Stopped at step')
+        ? { ok: false, reason: `Stopped at step ${actionIndex} of ${actions}: ${result.reason ?? 'failed'}` }
+        : result
     }
 
     // Real input pacing between steps — skipped for 'delay' (already
-    // waited above) and 'flowAction' (WM_CLOSE isn't synthetic input, so
-    // there's nothing to give the OS time to process). A freshly-focused
-    // window gets longer: raising a window can involve an animation, and
-    // the next step is very often a paste that needs to land inside it.
+    // waited) and 'flowAction' (WM_CLOSE isn't synthetic input, so there's
+    // nothing to give the OS time to process). A freshly-focused window gets
+    // longer: raising a window can involve an animation, and the next step
+    // is very often a paste that needs to land inside it. A named-control
+    // click needs no fixed pause for the *next* step: if that step is also
+    // a named click, its own search waits for its control to appear.
     if (step.type === 'focusApplication') {
       await sleep(200)
-    } else if (step.type !== 'flowAction') {
+    } else if (step.type !== 'flowAction' && step.type !== 'delay') {
       await sleep(80)
     }
   }
   return { ok: true }
+}
+
+async function executeMacroStep(
+  step: MacroStep,
+  targetHwnd: number | null,
+  visitedMacroIds: Set<string>
+): Promise<ExecutionResult> {
+  switch (step.type) {
+    case 'delay':
+      await sleep(Math.max(0, step.ms))
+      return { ok: true }
+
+    case 'shortcut':
+      return sendShortcut(step.keys)
+
+    case 'systemCommand':
+      if (!isKnownSystemCommand(step.command)) {
+        return { ok: false, reason: `Unknown system command: ${step.command}` }
+      }
+      if (!executeSystemCommand(step.command)) {
+        return { ok: false, reason: `System command failed: ${step.command}` }
+      }
+      return { ok: true }
+
+    case 'flowAction':
+      if (!isKnownFlowAction(step.action)) {
+        return { ok: false, reason: `flowAction "${step.action}" is not implemented yet` }
+      }
+      if (targetHwnd === null) {
+        return { ok: false, reason: 'No known target window to close' }
+      }
+      if (!closeWindowGracefully(targetHwnd)) {
+        return { ok: false, reason: 'Could not deliver the close message to the target window' }
+      }
+      return { ok: true }
+
+    case 'launchApplication':
+      return { ok: false, reason: 'launchApplication execution is not implemented yet' }
+
+    case 'focusApplication':
+      return focusApplicationById(step.applicationId)
+
+    case 'click':
+      return executeClick(step.target, step.applicationId)
+
+    case 'macro': {
+      if (visitedMacroIds.has(step.macroId)) {
+        return { ok: false, reason: 'Refused: macro references itself, directly or indirectly' }
+      }
+      if (visitedMacroIds.size >= MAX_MACRO_NESTING_DEPTH) {
+        return { ok: false, reason: `Refused: macros can nest at most ${MAX_MACRO_NESTING_DEPTH} levels deep` }
+      }
+      const nested = getMacroById(step.macroId)
+      if (!nested) return { ok: false, reason: 'Macro not found' }
+      if (!nested.enabled) return { ok: false, reason: 'Macro is disabled' }
+
+      return executeMacroSteps(nested.actions, targetHwnd, new Set([...visitedMacroIds, step.macroId]))
+    }
+  }
 }
 
 /**
@@ -389,5 +404,13 @@ export async function executeControlAction(
 
     case 'focusApplication':
       return focusApplicationById(action.applicationId)
+
+    // Only ever reached via a nested `macro` action's own steps in
+    // practice — see the `click` ControlAction's doc comment in
+    // shared/types for why the Control Mapping Editor never offers it
+    // directly. Handled here too so `executeControlAction` stays
+    // exhaustive rather than silently unreachable for a valid variant.
+    case 'click':
+      return executeClick(action.target, action.applicationId)
   }
 }

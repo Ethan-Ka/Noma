@@ -10,7 +10,8 @@ import type {
   FlowApi,
   MacroStep,
   ModuleFunctionConfig,
-  Suggestion
+  Suggestion,
+  WorkflowNotice
 } from '@shared/types'
 
 const flowApi: FlowApi = {
@@ -162,6 +163,29 @@ const flowApi: FlowApi = {
     ipcRenderer.on(IPC_CHANNELS.HOLO_INPUT_ACTIVITY, listener)
     return () => {
       ipcRenderer.removeListener(IPC_CHANNELS.HOLO_INPUT_ACTIVITY, listener)
+    }
+  },
+
+  onWorkflowNoticeShown: (callback) => {
+    const listener = (_event: IpcRendererEvent, notice: WorkflowNotice): void => callback(notice)
+    ipcRenderer.on(IPC_CHANNELS.WORKFLOW_NOTICE_SHOWN, listener)
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.WORKFLOW_NOTICE_SHOWN, listener)
+    }
+  },
+  getPendingWorkflowNotice: () => ipcRenderer.invoke(IPC_CHANNELS.WORKFLOW_NOTICE_PENDING),
+  dismissWorkflowNotice: (suggestionId, reason) =>
+    ipcRenderer.invoke(IPC_CHANNELS.WORKFLOW_NOTICE_DISMISS, suggestionId, reason),
+  setWorkflowNoticeInteractive: (interactive) =>
+    ipcRenderer.invoke(IPC_CHANNELS.WORKFLOW_NOTICE_SET_INTERACTIVE, interactive),
+  reviewWorkflowNoticeInApp: (suggestionId) =>
+    ipcRenderer.invoke(IPC_CHANNELS.WORKFLOW_NOTICE_REVIEW, suggestionId),
+  simulateWorkflowNotice: () => ipcRenderer.invoke(IPC_CHANNELS.SIMULATE_WORKFLOW_NOTICE),
+  onOpenSuggestionInApp: (callback) => {
+    const listener = (_event: IpcRendererEvent, suggestionId: string): void => callback(suggestionId)
+    ipcRenderer.on(IPC_CHANNELS.OPEN_SUGGESTION_IN_APP, listener)
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.OPEN_SUGGESTION_IN_APP, listener)
     }
   }
 }

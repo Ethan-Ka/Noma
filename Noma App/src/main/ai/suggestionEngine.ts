@@ -18,6 +18,7 @@ import {
   type KnownSuggestion
 } from './workflowQuality'
 import type { AIProvider } from './types'
+import type { DetectedPattern } from '@shared/types'
 
 /**
  * Orchestrates the OBSERVE -> IDENTIFY PATTERN -> GENERATE SUGGESTION half
@@ -39,7 +40,10 @@ import type { AIProvider } from './types'
 export class SuggestionEngine {
   constructor(private readonly provider: AIProvider) {}
 
-  async refresh(): Promise<void> {
+  /** Returns the patterns this pass detected, so a caller that needs them
+   *  (Noma Notice's occurrence counts and threshold) doesn't have to run
+   *  detection a second time over the same events. */
+  async refresh(): Promise<DetectedPattern[]> {
     const events = getWorkflowEventsSince(startOfTodayMs())
     const patterns = detectPatterns(events)
     const patternsById = new Map(patterns.map((pattern) => [`suggestion:${pattern.id}`, pattern]))
@@ -101,6 +105,8 @@ export class SuggestionEngine {
       insertSuggestionIfNew(suggestion, { fingerprint, features })
       known.push({ id: suggestion.id, status: 'pending', fingerprint })
     }
+
+    return patterns
   }
 
   /**

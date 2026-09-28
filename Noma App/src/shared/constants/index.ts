@@ -1,4 +1,4 @@
-import type { HoloZone } from '../types'
+import type { HoloZone, PatternKind } from '../types'
 
 export const IPC_CHANNELS = {
   GET_FLOW_STATUS: 'flow:get-flow-status',
@@ -66,7 +66,25 @@ export const IPC_CHANNELS = {
   CLEAR_HOLO_CALIBRATION: 'flow:clear-holo-calibration',
   GET_LAPTOP_INFO: 'flow:get-laptop-info',
   HOLO_SET_INPUT_GATE: 'flow:holo-set-input-gate',
-  HOLO_INPUT_ACTIVITY: 'flow:holo-input-activity'
+  HOLO_INPUT_ACTIVITY: 'flow:holo-input-activity',
+
+  /**
+   * Noma Notice — the small glass surface that appears bottom-centre of the
+   * screen when Flow recognizes a workflow, while Noma itself is in the
+   * background. Its own window (main/notifications/notificationWindow.ts)
+   * loads the same renderer bundle, so these are the only channels that
+   * window needs beyond the shared ones above.
+   */
+  WORKFLOW_NOTICE_SHOWN: 'flow:workflow-notice-shown',
+  /** The notice window asking, on mount, what it should be showing —
+   *  closes the race where the push arrives before React has mounted. */
+  WORKFLOW_NOTICE_PENDING: 'flow:workflow-notice-pending',
+  WORKFLOW_NOTICE_DISMISS: 'flow:workflow-notice-dismiss',
+  WORKFLOW_NOTICE_SET_INTERACTIVE: 'flow:workflow-notice-set-interactive',
+  WORKFLOW_NOTICE_REVIEW: 'flow:workflow-notice-review',
+  /** main -> the *main* window: bring this suggestion into view. */
+  OPEN_SUGGESTION_IN_APP: 'flow:open-suggestion-in-app',
+  SIMULATE_WORKFLOW_NOTICE: 'flow:simulate-workflow-notice'
 } as const
 
 /** Version of the (future) host<->device protocol. See docs/architecture.md. */
@@ -126,44 +144,32 @@ export const HOLO_ZONE_ORDER: HoloZone[] = ['frontLeft', 'frontRight', 'rearLeft
 /** Zone counts Holo supports. Fewer zones on hardware that can't tell more apart. */
 export type HoloZoneCount = 2 | 4
 
-/** Which side of the laptop the (single) microphone is on. */
-export type HoloMicSide = 'left' | 'right'
-
 /**
- * The zones used at a given count. With 4 it's all of them. With 2 (a
- * one-mic laptop) both zones sit on the *microphone's* side — the one
- * place taps are heard clearly — split front/back: mic on the left gives
- * bottom-left + top-left. The list order is slot order (index 0 = slot 1).
+ * The zones used at a given count. With 4 it's all of them — the desk
+ * around the laptop. With 2 (a one-mic laptop), zones move onto the
+ * laptop itself: the empty palm-rest space to the left and right of the
+ * trackpad (`frontLeft`/`frontRight` reused — no new zone identifiers
+ * needed). Deliberately no longer depends on which side the built-in mic
+ * is on: the old layout put both zones on the mic's side (front+rear)
+ * because that was the one place a single, possibly off-center mic heard
+ * taps clearly, but it wasted the other side of the desk and asked the
+ * user to tell apart two spots awkwardly close together. Left/right of
+ * the trackpad are further apart and a more natural resting spot for a
+ * hand; calibration learns whatever acoustic signature each side actually
+ * produces (including any loudness asymmetry from an off-center mic) the
+ * same way it already learns frontLeft vs. rearLeft — nothing about the
+ * classifier needed to change for this. The list order is slot order
+ * (index 0 = slot 1).
  */
-export function getHoloZones(count: HoloZoneCount, micSide: HoloMicSide = 'left'): HoloZone[] {
+export function getHoloZones(count: HoloZoneCount): HoloZone[] {
   if (count === 4) return HOLO_ZONE_ORDER
-  return micSide === 'left' ? ['frontLeft', 'rearLeft'] : ['frontRight', 'rearRight']
+  return ['frontLeft', 'frontRight']
 }
 
-/** Tile/wizard label. In 2-zone mode both are on one side, so Top/Bottom says it plainly. */
+/** Tile/wizard label. In 2-zone mode it's just which side of the trackpad. */
 export function getHoloZoneLabel(zone: HoloZone, count: HoloZoneCount): string {
   if (count === 4) return HOLO_ZONE_LABELS[zone]
-  const side = zone === 'frontLeft' || zone === 'rearLeft' ? 'left' : 'right'
-  return `${zone === 'rearLeft' || zone === 'rearRight' ? 'Top' : 'Bottom'} ${side}`
-}
-
-/**
- * Known laptops whose microphone side has been confirmed. Deliberately tiny
- * and only holds verified entries: public sources are vague or inconsistent
- * about mic placement (some list the G14's mics along the top edge of the
- * screen), so anything not here is *measured* during calibration instead
- * (tap far left / far right, see which is louder) rather than guessed.
- */
-const KNOWN_MIC_SIDES: Array<{ pattern: RegExp; side: HoloMicSide }> = [
-  // ASUS ROG Zephyrus G14 — confirmed by the developer's own unit.
-  { pattern: /zephyrus g14|GA40[1-3]/i, side: 'left' }
-]
-
-/** Mic side from the laptop model alone; null when the model isn't known. */
-export function lookupHoloMicSide(laptop: { manufacturer: string; model: string } | null): HoloMicSide | null {
-  if (!laptop) return null
-  const name = `${laptop.manufacturer} ${laptop.model}`
-  return KNOWN_MIC_SIDES.find((entry) => entry.pattern.test(name))?.side ?? null
+  return zone === 'frontLeft' ? 'Left' : 'Right'
 }
 
 export interface HoloZoneRecommendation {
@@ -202,3 +208,39 @@ export const HOLO_ZONE_LABELS: Record<HoloZone, string> = {
 // is ever wanted, that's the shape to reintroduce, hooked into
 // holoRepository.saveHoloCalibration's zone list (the actual enforcement
 // point, not the renderer's UI) — see docs/architecture.md's Holo section.
+
+/**
+ * Noma Notice's tuning, in one place because both processes need it: main
+ * makes the decision, the renderer explains the decision to the user. Every
+ * one of these is a judgement about how much of someone's attention Noma has
+ * earned, so they belong together and in the open rather than scattered
+ * through the code that happens to enforce them.
+ */
+
+/**
+ * How many times a workflow must have been observed before Noma says
+ * anything. Not 1: the point is that Flow noticed a *habit*, and a single
+ * occurrence is an event. Detection has its own, lower bar for generating a
+ * suggestion at all — this sits on top of it.
+ */
+export const WORKFLOW_NOTIFICATION_THRESHOLD = 3
+
+/**
+ * How long Noma stays quiet afterwards. Long on purpose: two notices half an
+ * hour apart read as a tool paying attention; two a minute apart read as
+ * something to switch off. Nothing is lost by waiting — the suggestions are
+ * in the app either way.
+ */
+export const WORKFLOW_NOTIFICATION_COOLDOWN_MS = 30 * 60 * 1000
+
+/** Below this, Flow isn't sure enough about the chain to interrupt over it. */
+export const WORKFLOW_NOTIFICATION_MIN_CONFIDENCE = 0.5
+
+/**
+ * The kinds worth interrupting for: a recognized multi-step or cross-app
+ * workflow. A single repeated shortcut is a perfectly good suggestion, but
+ * it is also by far the most common kind — notifying on those would make
+ * Notice constant, and constant is worthless.
+ */
+export const NOTIFIABLE_PATTERN_KINDS: PatternKind[] = ['multiStepWorkflow', 'crossAppWorkflow']
+

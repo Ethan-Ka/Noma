@@ -21,6 +21,8 @@ interface SuggestionRow {
   action_payload: string | null
   confidence_breakdown: string | null
   chain_application_names: string | null
+  occurrence_count: number | null
+  notified_at: number | null
 }
 
 const SUGGESTION_SELECT = `
@@ -52,7 +54,9 @@ function rowToSuggestion(row: SuggestionRow): Suggestion {
       : undefined,
     chainApplicationNames: row.chain_application_names
       ? (JSON.parse(row.chain_application_names) as Record<string, string | null>)
-      : undefined
+      : undefined,
+    occurrenceCount: row.occurrence_count ?? undefined,
+    notifiedAt: row.notified_at ?? undefined
   }
 }
 
@@ -255,4 +259,25 @@ export function getSuggestionHistoryForKind(kind: PatternKind): SuggestionHistor
 
 function escapeLike(value: string): string {
   return value.replace(/[\\%_]/g, (match) => `\\${match}`)
+}
+
+/**
+ * Keeps a pending suggestion's observed-occurrence count current.
+ *
+ * `insertSuggestionIfNew` is deliberately a no-op once an id exists, which
+ * is what stops Flow re-suggesting something the user already answered — but
+ * it also means the count written at first detection would freeze there. Noma
+ * Notice's whole threshold rests on that number still being true, so it is
+ * refreshed on every detection pass. Scoped to pending rows: a resolved
+ * suggestion's count is part of the record of what the user decided and why.
+ */
+export function recordSuggestionOccurrences(id: string, occurrenceCount: number): void {
+  getDatabase()
+    .prepare(`UPDATE suggestions SET occurrence_count = @count WHERE id = @id AND status = 'pending'`)
+    .run({ id, count: occurrenceCount })
+}
+
+/** Marks a workflow as announced on screen, so it is never announced twice. */
+export function markSuggestionNotified(id: string, notifiedAt: number): void {
+  getDatabase().prepare('UPDATE suggestions SET notified_at = @at WHERE id = @id').run({ id, at: notifiedAt })
 }

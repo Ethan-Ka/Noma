@@ -2,16 +2,17 @@ import { describe, expect, it } from 'vitest'
 import {
   DEFAULT_GATES,
   FEATURES_PER_CHANNEL,
+  IGNORE_MATCH_MARGIN,
   blockEnergy,
   buildModel,
   classifyZone,
   createOnsetDetectorState,
   deriveGates,
   detectImpact,
-  detectMicSide,
   detectOnset,
   estimateDelay,
   evaluateCalibration,
+  countContacts,
   extractTapFeatures,
   isImpactLike,
   localizeOnset,
@@ -19,9 +20,17 @@ import {
   powerSpectrum,
   relaxGates,
   scaledDistance,
+  buildDiscriminant,
+  discriminantPosteriors,
+  forgetLearnedTap,
+  learnFromTap,
+  onsetWindow,
+  shouldLearnFrom,
+  trainingTaps,
+  MAX_LEARNED_TAPS,
   type ImpactCheck
 } from './classifier'
-import type { HoloGates, HoloZone } from '@shared/types'
+import type { HoloGates, HoloZone, HoloZoneProfile } from '@shared/types'
 
 const SAMPLE_RATE = 48000
 const WINDOW = 12288
@@ -208,18 +217,6 @@ describe('onset detector', () => {
   })
 })
 
-describe('detectMicSide', () => {
-  it('picks the louder side', () => {
-    expect(detectMicSide([-10, -11, -9], [-20, -19, -21])).toBe('left')
-    expect(detectMicSide([-22, -20], [-9, -10])).toBe('right')
-  })
-
-  it('refuses to guess when the sides are too close', () => {
-    expect(detectMicSide([-15, -14], [-15, -15])).toBeNull()
-    expect(detectMicSide([], [-10])).toBeNull()
-  })
-})
-
 describe('separability weighting', () => {
   const zones = Object.keys(ZONE_SOUNDS) as HoloZone[]
   const training = zones.map((zone, index) => ({ zone, taps: zoneTaps(zone, 8, 100 + index * 50) }))
@@ -275,7 +272,7 @@ describe('separability weighting', () => {
 
 describe('gates derived from the calibration taps', () => {
   const impacts = (sustain: number, driven: number, count = 8): ImpactCheck[] =>
-    Array.from({ length: count }, () => ({ sustainDb: sustain, drivenDb: driven, periodicity: 0.1 }))
+    Array.from({ length: count }, () => ({ sustainDb: sustain, drivenDb: driven, periodicity: 0.1, contacts: 1 }))
 
   it('sets every bound from the taps the user actually made', () => {
     const gates = deriveGates([1.0, 1.1, 1.2, 1.3], [-24, -20, -16], impacts(-38, -26))
@@ -472,5 +469,237 @@ describe('rejecting non-taps (objects set down, and the level bounds)', () => {
     expect(classifyZone(tap, profiles, scale, { weights, gates, peakDb: -15 }).zone).toBe('frontLeft')
     expect(classifyZone(tap, profiles, scale, { weights, gates, peakDb: 2 }).reason).toBe('wrong-level')
     expect(classifyZone(tap, profiles, scale, { weights, gates, peakDb: -45 }).reason).toBe('wrong-level')
+  })
+})
+
+describe('objects being set down (counting contacts)', () => {
+  const zones = Object.keys(ZONE_SOUNDS) as HoloZone[]
+  const training = zones.map((zone, index) => ({ zone, taps: zoneTaps(zone, 8, 100 + index * 50) }))
+  const { zones: profiles, scale, weights } = buildModel(training)
+  const ONSET = 1000
+
+  /** A mouse put down: it lands on one edge, then settles onto the other a
+   *  few milliseconds later. Both contacts are real impacts on the desk. */
+  function setDownObject(gapMs: number, seed: number): Float32Array {
+    const rng = makeRng(seed)
+    const out = new Float32Array(WINDOW)
+    const second = ONSET + Math.round((SAMPLE_RATE * gapMs) / 1000)
+    for (let i = 0; i < WINDOW; i++) {
+      const strike = (at: number, amp: number): number => {
+        const t = i - at
+        return t >= 0 ? amp * Math.sin((2 * Math.PI * 520 * t) / SAMPLE_RATE) * Math.exp(-t / 260) : 0
+      }
+      out[i] = 0.4 * (strike(ONSET, 1) + strike(second, 0.85)) + rng() * 0.002
+    }
+    return out
+  }
+
+  it('counts one contact for a knuckle and more for something landing', () => {
+    for (const sound of Object.values(ZONE_SOUNDS)) {
+      expect(countContacts(synthTap({ ...sound, seed: 91 }), ONSET, SAMPLE_RATE)).toBe(1)
+    }
+    expect(countContacts(setDownObject(18, 92), ONSET, SAMPLE_RATE)).toBeGreaterThan(1)
+  })
+
+  /** What a real calibration of single-contact taps derives. */
+  const measured: HoloGates = { ...DEFAULT_GATES, maxContacts: 1 }
+
+  it('rejects a two-contact landing even though it decays like a real impact', () => {
+    const impact = detectImpact([setDownObject(18, 93)], SAMPLE_RATE)!
+    // It passes the decay gate — that is the whole difficulty: a mouse on a
+    // desk really is an impact on that desk, and behaves like one.
+    expect(isImpactLike(impact, DEFAULT_GATES)).toBe(true)
+    const features = extractTapFeatures([setDownObject(18, 93)], [0], SAMPLE_RATE)!
+    expect(classifyZone(features, profiles, scale, { weights, gates: measured, impact }).reason).toBe('set-down')
+  })
+
+  it('is permissive by default, so an old calibration is never made worse', () => {
+    // Nothing measured this user's own taps, so the bar can't be assumed —
+    // it takes a recalibration to tighten to 1, and DEFAULT_GATES says so.
+    expect(DEFAULT_GATES.maxContacts).toBe(2)
+    const impact = detectImpact([setDownObject(18, 93)], SAMPLE_RATE)!
+    const features = extractTapFeatures([setDownObject(18, 93)], [0], SAMPLE_RATE)!
+    expect(classifyZone(features, profiles, scale, { weights, impact }).reason).not.toBe('set-down')
+  })
+
+  it('still accepts a real tap at the strictest measured bar', () => {
+    const tap = synthTap({ ...ZONE_SOUNDS.frontLeft, seed: 94 })
+    const impact = detectImpact([tap], SAMPLE_RATE)!
+    const features = extractTapFeatures([tap], [0], SAMPLE_RATE)!
+    expect(classifyZone(features, profiles, scale, { weights, gates: measured, impact }).zone).toBe('frontLeft')
+  })
+
+  it('lets a user whose own taps bounce set their own bar', () => {
+    const bouncy = Array.from({ length: 8 }, () => ({
+      sustainDb: -40,
+      drivenDb: -30,
+      periodicity: 0.1,
+      contacts: 2
+    }))
+    expect(deriveGates([1.2], [-20], bouncy).maxContacts).toBe(2)
+    expect(deriveGates([1.2], [-20], impactsWithContacts(1)).maxContacts).toBe(1)
+  })
+
+  const impactsWithContacts = (contacts: number): ImpactCheck[] =>
+    Array.from({ length: 8 }, () => ({ sustainDb: -40, drivenDb: -30, periodicity: 0.1, contacts }))
+})
+
+describe('sounds the user has taught Noma to ignore', () => {
+  const zones = Object.keys(ZONE_SOUNDS) as HoloZone[]
+  const training = zones.map((zone, index) => ({ zone, taps: zoneTaps(zone, 8, 100 + index * 50) }))
+  const { zones: profiles, scale, weights } = buildModel(training)
+
+  /** Close enough to a calibrated zone to have been squeaking through as
+   *  one — which is the only kind of sound this list has any work to do on. */
+  const unwanted = extractTapFeatures([synthTap({ freq: 415, decay: 490, seed: 95 })], [0], SAMPLE_RATE)!
+
+  it('rejects a sound matching one it was told to ignore', () => {
+    const before = classifyZone(unwanted, profiles, scale, { weights })
+    const after = classifyZone(unwanted, profiles, scale, { weights, negatives: [unwanted] })
+    expect(after.reason).toBe('learned-ignore')
+    expect(after.zone).toBeNull()
+    // Worth stating plainly: without the example it was being accepted.
+    expect(before.zone).not.toBeNull()
+  })
+
+  it('never lets a list of unwanted sounds swallow real taps', () => {
+    // The exact failure that killed this mechanism's ancestor: unwanted
+    // sounds were averaged into one vector, which landed in the middle of
+    // feature space and beat real zones. These stay separate examples.
+    const negatives = [
+      [{ freq: 520, decay: 430 }, { freq: 900, decay: 180 }, { freq: 250, decay: 700 }, { freq: 1600, decay: 90 }]
+    ][0].map((sound, index) => extractTapFeatures([synthTap({ ...sound, seed: 700 + index })], [0], SAMPLE_RATE)!)
+
+    for (const zone of zones) {
+      const [tap] = zoneTaps(zone, 1, 800 + zones.indexOf(zone))
+      expect(classifyZone(tap, profiles, scale, { weights, negatives }).zone, zone).toBe(zone)
+    }
+  })
+
+  it('requires the ignored sound to be a clearly better match, not a tie', () => {
+    const [tap] = zoneTaps('frontLeft', 1, 96)
+    // An example sitting at exactly the same distance as the winning zone
+    // must not veto it — only one inside the margin may.
+    const best = classifyZone(tap, profiles, scale, { weights })
+    expect(best.zone).toBe('frontLeft')
+    expect(IGNORE_MATCH_MARGIN).toBeLessThan(1)
+  })
+
+  it('does nothing at all when nothing has been taught', () => {
+    const [tap] = zoneTaps('rearLeft', 1, 97)
+    expect(classifyZone(tap, profiles, scale, { weights, negatives: [] }).zone).toBe('rearLeft')
+    expect(classifyZone(tap, profiles, scale, { weights }).zone).toBe('rearLeft')
+  })
+})
+
+describe('onsetWindow (keeping the attack)', () => {
+  it('is near full weight a few samples into the segment, where Hann is near zero', () => {
+    const n = 1024
+    const hann = 0.5 - 0.5 * Math.cos((2 * Math.PI * 40) / (n - 1))
+    expect(onsetWindow(40, n, 32)).toBe(1)
+    expect(hann).toBeLessThan(0.02)
+  })
+
+  it('fades in over `rise` and out over the last quarter', () => {
+    expect(onsetWindow(0, 1024, 32)).toBeLessThan(0.01)
+    expect(onsetWindow(1023, 1024, 32)).toBeLessThan(0.01)
+    expect(onsetWindow(512, 1024, 32)).toBe(1)
+  })
+})
+
+describe('the discriminant', () => {
+  /** Two zones that differ only in dimension 0, buried under a large
+   *  wobble shared by every dimension (like tap force brightening every
+   *  band at once). */
+  function correlatedZones(seed: number): Array<{ zone: HoloZone; taps: number[][] }> {
+    const rng = (() => {
+      let state = seed
+      return () => {
+        state = (state * 1664525 + 1013904223) % 4294967296
+        return state / 4294967296 - 0.5
+      }
+    })()
+    const tap = (offset: number): number[] => {
+      const shared = rng() * 6
+      return Array.from({ length: 8 }, (_, d) => shared + (d === 0 ? offset : 0) + rng() * 0.2)
+    }
+    return [
+      { zone: 'frontLeft', taps: Array.from({ length: 12 }, () => tap(0)) },
+      { zone: 'frontRight', taps: Array.from({ length: 12 }, () => tap(1)) }
+    ]
+  }
+
+  it("cancels a shared wobble that swamps the per-feature distance", () => {
+    const training = correlatedZones(11)
+    const test = correlatedZones(99)
+    const scale = new Array(8).fill(1)
+    const discriminant = buildDiscriminant(training, scale)!
+    let right = 0
+    let total = 0
+    for (const { zone, taps } of test) {
+      for (const tap of taps) {
+        const posteriors = discriminantPosteriors(tap, discriminant, scale)
+        if (discriminant.zones[posteriors.indexOf(Math.max(...posteriors))] === zone) right++
+        total++
+      }
+    }
+    expect(right / total).toBeGreaterThan(0.9)
+  })
+
+  it('returns posteriors that sum to 1', () => {
+    const training = correlatedZones(5)
+    const discriminant = buildDiscriminant(training, new Array(8).fill(1))!
+    const posteriors = discriminantPosteriors(training[0].taps[0], discriminant, new Array(8).fill(1))
+    expect(posteriors.reduce((a, b) => a + b, 0)).toBeCloseTo(1, 10)
+  })
+
+  it('needs at least two zones with taps', () => {
+    expect(buildDiscriminant([{ zone: 'frontLeft', taps: [[1, 2]] }], [1, 1])).toBeNull()
+  })
+})
+
+describe('learning from taps in use', () => {
+  const profile = (zone: HoloZone): HoloZoneProfile => ({ zone, features: [0, 0], taps: [[0, 0]], sampleCount: 1 })
+  const gates = { ...DEFAULT_GATES, maxDistance: 2 }
+
+  it('only learns from near-certain taps well inside the bound', () => {
+    expect(shouldLearnFrom({ zone: 'frontLeft', confidence: 0.995, reason: 'ok', distance: 1 }, gates)).toBe(true)
+    expect(shouldLearnFrom({ zone: 'frontLeft', confidence: 0.96, reason: 'ok', distance: 1 }, gates)).toBe(false)
+    expect(shouldLearnFrom({ zone: 'frontLeft', confidence: 0.995, reason: 'ok', distance: 1.9 }, gates)).toBe(false)
+    expect(shouldLearnFrom({ zone: null, confidence: 0.995, reason: 'ambiguous', distance: 1 }, gates)).toBe(false)
+  })
+
+  it('keeps calibration taps untouched and caps the learned ones, oldest first', () => {
+    let profiles = [profile('frontLeft'), profile('frontRight')]
+    for (let i = 0; i < MAX_LEARNED_TAPS + 5; i++) profiles = learnFromTap(profiles, 'frontLeft', [i, i])
+    expect(profiles[0].taps).toEqual([[0, 0]])
+    expect(profiles[0].learnedTaps).toHaveLength(MAX_LEARNED_TAPS)
+    expect(profiles[0].learnedTaps?.[0]).toEqual([5, 5])
+    expect(profiles[1].learnedTaps).toBeUndefined()
+    expect(trainingTaps(profiles)[0].taps).toHaveLength(1 + MAX_LEARNED_TAPS)
+  })
+
+  it('forgets a learned tap by value, and leaves the profiles alone when it was never learned', () => {
+    const profiles = learnFromTap([profile('frontLeft')], 'frontLeft', [3, 4])
+    expect(forgetLearnedTap(profiles, [3, 4])[0].learnedTaps).toEqual([])
+    expect(forgetLearnedTap(profiles, [9, 9])).toBe(profiles)
+  })
+})
+
+describe('onset detector noise floor', () => {
+  it("doesn't let a tap's own ringing raise the threshold for the next tap", () => {
+    const state = createOnsetDetectorState(1e-5)
+    for (let i = 0; i < 20; i++) detectOnset(1e-5, state)
+    const before = state.noiseFloor
+    expect(detectOnset(1e-2, state)).toBe(true)
+    // ~100 ms of ringing, well above the threshold.
+    for (let i = 0; i < 10; i++) detectOnset(5e-3, state)
+    expect(state.noiseFloor).toBeLessThan(before * 1.5)
+  })
+
+  it('still follows a room that gets lastingly louder', () => {
+    const state = createOnsetDetectorState(1e-5)
+    for (let i = 0; i < 200; i++) detectOnset(1e-2, state)
+    expect(state.noiseFloor).toBeGreaterThan(1e-3)
   })
 })

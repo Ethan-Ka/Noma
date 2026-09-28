@@ -25,8 +25,10 @@ interface ControlEditorModalProps {
 // only way to build one today is by accepting a learned-workflow suggestion
 // (suggestionResolution.ts) — there's no "pick an application" control here
 // yet to hand-author one from scratch, same reasoning MacroStepRow.tsx
-// applies to its own step-type picker.
-type SelectableActionType = Exclude<ControlAction['type'], 'launchApplication' | 'focusApplication'>
+// applies to its own step-type picker. 'click' is the same story again: it
+// executes for real (main/actions/click.ts), but a click target only ever
+// comes from a captured workflow step — there's nothing to pick here.
+type SelectableActionType = Exclude<ControlAction['type'], 'launchApplication' | 'focusApplication' | 'click'>
 
 const ACTION_TYPE_LABELS: Record<SelectableActionType, string> = {
   shortcut: 'Keyboard shortcut',

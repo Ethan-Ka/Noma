@@ -161,7 +161,7 @@ describe('suggestionForPattern', () => {
     expect(suggestion?.explanation).toContain('in code')
   })
 
-  it('generates an informational suggestion for a crossAppWorkflow pattern, with no applicationId or action', () => {
+  it('generates an executable suggestion for a crossAppWorkflow pattern, offered in the chain\'s starting app', () => {
     const pattern: DetectedPattern = {
       id: 'workflow:app:screenshot->app:code',
       kind: 'crossAppWorkflow',
@@ -172,12 +172,19 @@ describe('suggestionForPattern', () => {
       steps: [
         { type: 'appSwitch', applicationId: 'screenshot' },
         { type: 'appSwitch', applicationId: 'code' }
-      ]
+      ],
+      stepDelaysMs: [0, 1200]
     }
     const suggestion = suggestionForPattern(pattern)
     expect(suggestion).not.toBeNull()
-    expect(suggestion?.applicationId).toBeNull()
-    expect(suggestion?.action).toBeUndefined()
+    // Offered in the app the chain *starts* in, same convention
+    // multiStepWorkflow's contextApplicationId uses.
+    expect(suggestion?.applicationId).toBe('screenshot')
+    expect(suggestion?.action).toEqual({
+      kind: 'createWorkflowMacroAndAssignToControl',
+      steps: pattern.steps,
+      stepDelaysMs: pattern.stepDelaysMs
+    })
     expect(suggestion?.explanation).toContain('4 times')
   })
 

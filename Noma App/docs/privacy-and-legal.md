@@ -148,8 +148,10 @@ Principle") is the constraint this document exists to satisfy.
 ## Holo — microphone input (the free, no-hardware option)
 
 Holo (`src/renderer/src/lib/holo`, `pages/Holo.tsx`) lets someone use Noma
-without buying the physical keyboard, by tapping the desk around their
-laptop instead — a simplified, from-scratch reimplementation of the
+without buying the physical keyboard, by tapping instead — the desk around
+their laptop in 4-zone mode, or (2-zone, most single-mic Windows laptops)
+the empty palm-rest space to the left/right of the trackpad, on the laptop
+itself. Either way it's a simplified, from-scratch reimplementation of the
 *concept* behind the open-source `github.com/JustinGamer191/Holo` project
 (MIT-licensed; its actual Swift/macOS code never runs here). This is a
 **materially different privacy shape than the keystroke policy above**,
@@ -255,9 +257,17 @@ are stated explicitly and enforced in one pure, unit-tested place
   the device.
 
 Limits worth knowing: UI Automation only sees what an app chooses to expose,
-so accuracy varies by app; and a captured click chain is *informational* —
-Flow cannot replay a click (there is no "click this control" macro step), so
-these suggestions name the workflow rather than offering to automate it.
+so accuracy varies by app. A captured `zone:` click chain (no named control
+at the click point) *can* be turned into a real macro and replayed — see
+`docs/architecture.md`'s "Click and cross-app execution" — which replays the
+click at the same coarse, window-relative position it was recorded at, never
+anything more precise than what was already captured. A `label:` click is
+replayed by looking the named control up again with UI Automation in the
+app the step was recorded in, at the moment the macro runs
+(`main/actions/uiaControlFinder.ts`). That search reads the names of the
+app's buttons and menu items to find the one that matches, in memory, and
+keeps nothing: no name it sees is stored, logged or sent anywhere, and it
+only runs when the user presses a control whose macro contains such a step.
 
 ## Disclaimer
 

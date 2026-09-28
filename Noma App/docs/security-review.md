@@ -233,6 +233,53 @@ than left as an unstated gap in the claim above:
   window-enumeration answer `koffi`'s existing `user32.dll` bindings can't
   provide.
 
+## 4c. `click` (WORKFLOW LEARNING) — real synthetic mouse input, deliberately bounded
+
+Section 1's "never single keys, never password-like typing" and section 4's
+own posture are both about *keyboard* input; a `click` `MacroStep`
+(`main/actions/click.ts`) introduces a materially different capability —
+real synthetic *mouse* input, via the same `koffi`/`user32.dll` mechanism
+section 4 already uses for keystrokes, but a click can trigger something a
+keystroke usually can't (deleting, sending, confirming a dialog) if it lands
+somewhere unintended. Reviewed on its own terms:
+
+- **Only a `zone:<col>x<row>` target executes.** This is the same coarse,
+  window-relative grid cell clickTarget.ts already falls back to at capture
+  time for apps with no named control at the click point — see
+  `docs/privacy-and-legal.md`'s click-capture section. Replay maps that same
+  cell onto the target window's *current* bounds (`GetWindowRect`) and
+  clicks its center; it never reads what's actually there, the same "no
+  screen content" property capture already has.
+- **A `label:<name>` target refuses outright**, with a clear reason, rather
+  than attempting anything. Re-finding a *named* control correctly at replay
+  time would need a fresh UI Automation search of the current window —
+  genuinely more capability, not yet built — and guessing a screen position
+  for a named control instead would be exactly the kind of misdirected
+  action `windowFocus.ts`'s own doc comment already warns against for
+  keystrokes, with a worse failure mode here: a keystroke sent to the wrong
+  window is usually just noise, a click can be a decision.
+- **Bounded blast radius even for a `zone:` click.** `windowRect()` refuses
+  a window under 200x200px (same floor capture used) or one reporting
+  off-screen/minimized coordinates (~-32000, Windows' own convention) — a
+  click never fires at a guessed position when there's no real, visible
+  window to click within.
+- **Self-injection is suppressed the same way keystrokes are.**
+  `selfInjectedClicks.ts` marks the synthetic click immediately before
+  `SendInput`, and `clickCaptureService.ts`'s own mouse hook (which can't
+  otherwise tell a synthetic `SendInput` click from a real one — the same
+  reason `selfInjectedKeys.ts` exists for keystrokes) drops it rather than
+  recording Flow's own replayed click as new user behavior.
+- **Where a `zone:` target actually comes from.** Only ever a value
+  clickTarget.ts itself produced during real capture, carried through
+  `DetectedPattern` → `Suggestion.action` → the saved `Macro`'s own steps —
+  there's no path today where a remote or untrusted source writes a
+  `click` step's `target`, the same caveat 4b's closing bullets make for
+  `processName`.
+- **This does not weaken any of section 4's other guarantees.** Every other
+  step type's execution is unchanged; this exception is scoped to the one
+  new capability (a real click) that genuinely needs one, and only the
+  bounded `zone:` case actually fires.
+
 ## 5. Database
 
 - All queries go through `better-sqlite3`'s parameterized `.prepare(...).run(params)` /

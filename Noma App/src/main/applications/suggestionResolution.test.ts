@@ -199,6 +199,71 @@ describe('assignSuggestionToControl — multiStepWorkflow (WORKFLOW LEARNING)', 
       expect.fail('expected a macro action')
     }
   })
+
+  it('turns a click step into a real click MacroStep — never silently folded into focusApplication', () => {
+    insertSuggestionIfNew(
+      workflowSuggestion({
+        id: 'suggestion:multistep:click',
+        action: {
+          kind: 'createWorkflowMacroAndAssignToControl',
+          steps: [
+            { type: 'shortcut', applicationId: 'code', comboKeys: ['Meta', 'Shift', 'S'] },
+            { type: 'click', applicationId: 'code', target: 'zone:8x5' }
+          ]
+        }
+      })
+    )
+
+    const result = assignSuggestionToControl('suggestion:multistep:click', 4)
+    const updatedControl = result?.profile.controls.find((c) => c.slot === 4)
+    if (updatedControl?.action.type === 'macro') {
+      const macroRow = getDatabase()
+        .prepare('SELECT * FROM macros WHERE id = ?')
+        .get(updatedControl.action.macroId) as { actions: string }
+      expect(JSON.parse(macroRow.actions)).toEqual([
+        { type: 'shortcut', keys: ['Meta', 'Shift', 'S'] },
+        { type: 'click', target: 'zone:8x5', applicationId: 'code' }
+      ])
+    } else {
+      expect.fail('expected a macro action')
+    }
+  })
+
+  it('inserts a real delay step from stepDelaysMs, clamped to the replay ceiling, skipping tiny gaps', () => {
+    insertSuggestionIfNew(
+      workflowSuggestion({
+        id: 'suggestion:multistep:timed',
+        action: {
+          kind: 'createWorkflowMacroAndAssignToControl',
+          steps: [
+            { type: 'shortcut', applicationId: 'code', comboKeys: ['Meta', 'Shift', 'S'] },
+            { type: 'appSwitch', applicationId: 'claude' },
+            { type: 'shortcut', applicationId: 'claude', comboKeys: ['Control', 'Shift', 'L'] }
+          ],
+          // [0] is a placeholder; [1] is a real 5s gap (clamped down to the
+          // 2s replay ceiling); [2] is a real but tiny 120ms gap, under the
+          // floor natural pacing already covers — no explicit delay for it.
+          stepDelaysMs: [0, 5000, 120]
+        }
+      })
+    )
+
+    const result = assignSuggestionToControl('suggestion:multistep:timed', 1)
+    const updatedControl = result?.profile.controls.find((c) => c.slot === 1)
+    if (updatedControl?.action.type === 'macro') {
+      const macroRow = getDatabase()
+        .prepare('SELECT * FROM macros WHERE id = ?')
+        .get(updatedControl.action.macroId) as { actions: string }
+      expect(JSON.parse(macroRow.actions)).toEqual([
+        { type: 'shortcut', keys: ['Meta', 'Shift', 'S'] },
+        { type: 'delay', ms: 2000 },
+        { type: 'focusApplication', applicationId: 'claude' },
+        { type: 'shortcut', keys: ['Control', 'Shift', 'L'] }
+      ])
+    } else {
+      expect.fail('expected a macro action')
+    }
+  })
 })
 
 describe('assignSuggestionToControl — failure cases (fail closed, never guess)', () => {

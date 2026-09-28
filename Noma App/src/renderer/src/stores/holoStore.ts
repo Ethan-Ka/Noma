@@ -7,20 +7,14 @@ import {
   type InputSource,
   type LaptopInfo
 } from '@shared/types'
-import {
-  getHoloZones,
-  lookupHoloMicSide,
-  recommendHoloZoneCount,
-  type HoloMicSide,
-  type HoloZoneCount
-} from '@shared/constants'
+import { getHoloZones, recommendHoloZoneCount, type HoloZoneCount } from '@shared/constants'
 import { HoloCaptureEngine, type MicInfo } from '../lib/holo/holoCapture'
 import type { MicCandidate } from '../lib/holo/micKind'
 import {
   buildModel,
   deriveGates,
-  detectMicSide,
-  evaluateCalibration,
+  evaluateDiscriminant,
+  MAX_IGNORED_SOUNDS,
   type HoloSensitivity,
   type ImpactCheck
 } from '../lib/holo/classifier'
@@ -46,27 +40,18 @@ const COOLDOWN_KEY = 'noma.holo.cooldown'
 const ALLOW_EXTERNAL_KEY = 'noma.holo.allowExternalMic'
 const ZONE_OVERRIDE_KEY = 'noma.holo.zoneOverride'
 export type ZoneOverride = 'auto' | HoloZoneCount
-export type SideOverride = 'auto' | HoloMicSide
-
-const SIDE_OVERRIDE_KEY = 'noma.holo.micSideOverride'
-/** The side found by the last calibration's edge-tap test on this computer. */
-const MEASURED_SIDE_KEY = 'noma.holo.measuredMicSide'
 
 interface SetupInputs {
   laptop: LaptopInfo | null
   zoneOverride: ZoneOverride
-  sideOverride: SideOverride
-  measuredSide: HoloMicSide | null
 }
 
-/** Everything derived from "what computer is this": zone count, which side
- *  the mic is on (manual > measured by tapping > model lookup > assumed
- *  left), and the resulting ordered zone list. */
+/** Everything derived from "what computer is this": zone count and the
+ *  resulting ordered zone list. Zone *position* no longer depends on
+ *  anything measured or looked up — see getHoloZones' own doc comment. */
 function resolveSetup(inputs: SetupInputs): {
   zoneCount: HoloZoneCount
   zoneReason: string
-  micSide: HoloMicSide
-  micSideReason: string
   activeZones: HoloZone[]
 } {
   let zoneCount: HoloZoneCount
@@ -80,23 +65,7 @@ function resolveSetup(inputs: SetupInputs): {
     zoneReason = recommended.reason
   }
 
-  const looked = lookupHoloMicSide(inputs.laptop)
-  let micSide: HoloMicSide
-  let micSideReason: string
-  if (inputs.sideOverride !== 'auto') {
-    micSide = inputs.sideOverride
-    micSideReason = 'set manually'
-  } else if (inputs.measuredSide) {
-    micSide = inputs.measuredSide
-    micSideReason = 'measured by your calibration taps'
-  } else if (looked) {
-    micSide = looked
-    micSideReason = 'known for this laptop model'
-  } else {
-    micSide = 'left'
-    micSideReason = 'assumed until measured; calibrating will find it'
-  }
-  return { zoneCount, zoneReason, micSide, micSideReason, activeZones: getHoloZones(zoneCount, micSide) }
+  return { zoneCount, zoneReason, activeZones: getHoloZones(zoneCount) }
 }
 
 function currentSetup(state: SetupInputs): ReturnType<typeof resolveSetup> {
@@ -131,6 +100,8 @@ export type TapOutcome =
   | 'wrong-level'
   | 'voice'
   | 'not-a-tap'
+  | 'set-down'
+  | 'learned-ignore'
   | 'layout-changed'
 
 interface LastTap {
@@ -141,6 +112,9 @@ interface LastTap {
   /** The raw measurements behind the outcome (Holo page > Details). */
   peakDb: number
   impact: ImpactCheck | null
+  /** Kept so "that wasn't a tap" can teach Noma this exact sound without
+   *  asking the user to reproduce it — it has already been heard once. */
+  features: number[]
 }
 
 /**
@@ -156,12 +130,27 @@ interface LastTap {
 export type HoloPace = 'rapid' | 'normal' | 'deliberate'
 export const HOLO_COOLDOWN_MS: Record<HoloPace, number> = { rapid: 300, normal: 900, deliberate: 2000 }
 
-/** Taps per edge in the mic-side test — few, since it only needs a level comparison. */
-const SIDE_TEST_TAPS = 4
+/**
+ * Adds examples to the learned-ignore list and persists them.
+ *
+ * Oldest-first eviction at MAX_IGNORED_SOUNDS: a desk, a room and a mouse all
+ * change over time, and a list that only ever grew would slowly veto more and
+ * more of what the user actually does.
+ */
+async function appendIgnoredSounds(
+  get: () => HoloStoreState,
+  set: (partial: Partial<HoloStoreState>) => void,
+  examples: number[][]
+): Promise<void> {
+  const calibration = get().calibration
+  if (!calibration) return
+  const ignoredSounds = [...(calibration.ignoredSounds ?? []), ...examples].slice(-MAX_IGNORED_SOUNDS)
+  const saved = await window.flow.saveHoloCalibration({ ...calibration, ignoredSounds })
+  engine.setCalibration(saved)
+  set({ calibration: saved })
+}
 
-export type CalibrationProgress =
-  | { phase: 'side'; edge: HoloMicSide; tapIndex: number; totalTaps: number }
-  | { phase: 'zone'; zone: HoloZone; zoneIndex: number; totalZones: number; tapIndex: number }
+export type CalibrationProgress = { phase: 'zone'; zone: HoloZone; zoneIndex: number; totalZones: number; tapIndex: number }
 
 interface HoloStoreState {
   inputSource: InputSource
@@ -199,12 +188,6 @@ interface HoloStoreState {
   zoneCount: HoloZoneCount
   zoneReason: string
   setZoneOverride: (override: ZoneOverride) => void
-  /** Which side the mic is on (2-zone mode puts both zones on this side). */
-  micSide: HoloMicSide
-  micSideReason: string
-  sideOverride: SideOverride
-  measuredSide: HoloMicSide | null
-  setSideOverride: (override: SideOverride) => void
   /** Zones in slot order for the current setup. */
   activeZones: HoloZone[]
 
@@ -214,6 +197,13 @@ interface HoloStoreState {
   stopListening: () => void
   setSensitivity: (sensitivity: HoloSensitivity) => void
   setPace: (pace: HoloPace) => void
+  /** Teaches Noma that a sound is not a tap. Either the one it just
+   *  reacted to, or `count` fresh ones the user makes on purpose. */
+  ignoreLastSound: () => Promise<void>
+  learnIgnoredSounds: (count: number, onProgress: (index: number, total: number) => void) => Promise<void>
+  clearIgnoredSounds: () => Promise<void>
+  /** True while `learnIgnoredSounds` is listening. */
+  isLearningIgnored: boolean
   setAllowExternalMic: (allow: boolean) => Promise<void>
   refreshAvailableMics: () => Promise<void>
   /**
@@ -243,30 +233,21 @@ export const useHoloStore = create<HoloStoreState>((set, get) => ({
   sensitivity: readStored<HoloSensitivity>(SENSITIVITY_KEY, 'medium'),
   pace: readStored<HoloPace>(COOLDOWN_KEY, 'normal'),
   coolingDown: false,
+  isLearningIgnored: false,
   level: 0,
   pausedForTyping: false,
   touchCoverage: null,
   layoutMismatch: false,
   laptop: null,
   zoneOverride: readStored<ZoneOverride>(ZONE_OVERRIDE_KEY, 'auto'),
-  sideOverride: readStored<SideOverride>(SIDE_OVERRIDE_KEY, 'auto'),
-  measuredSide: readStored<HoloMicSide | null>(MEASURED_SIDE_KEY, null),
   ...resolveSetup({
     laptop: null,
-    zoneOverride: readStored<ZoneOverride>(ZONE_OVERRIDE_KEY, 'auto'),
-    sideOverride: readStored<SideOverride>(SIDE_OVERRIDE_KEY, 'auto'),
-    measuredSide: readStored<HoloMicSide | null>(MEASURED_SIDE_KEY, null)
+    zoneOverride: readStored<ZoneOverride>(ZONE_OVERRIDE_KEY, 'auto')
   }),
 
   setZoneOverride: (override) => {
     writeStored(ZONE_OVERRIDE_KEY, override)
     set({ zoneOverride: override })
-    set(currentSetup(get()))
-  },
-
-  setSideOverride: (override) => {
-    writeStored(SIDE_OVERRIDE_KEY, override)
-    set({ sideOverride: override })
     set(currentSetup(get()))
   },
 
@@ -362,25 +343,6 @@ export const useHoloStore = create<HoloStoreState>((set, get) => ({
       }
       set({ isListening: true, mics: engine.mics })
 
-      // One-mic laptops: find which side the mic is on by tapping the far
-      // left and far right of the desk (the near side is louder), so the 2
-      // zones can sit where taps are actually heard. Skipped when the side
-      // was set by hand or the setup uses 4 zones.
-      if (get().zoneCount === 2 && get().sideOverride === 'auto') {
-        const levels: Record<HoloMicSide, number[]> = { left: [], right: [] }
-        for (const edge of ['left', 'right'] as const) {
-          for (let tapIndex = 0; tapIndex < SIDE_TEST_TAPS; tapIndex++) {
-            onProgress({ phase: 'side', edge, tapIndex, totalTaps: SIDE_TEST_TAPS })
-            await engine.captureNextTap()
-            levels[edge].push(engine.lastTapPeakDb)
-          }
-        }
-        const measured = detectMicSide(levels.left, levels.right)
-        if (measured) writeStored(MEASURED_SIDE_KEY, measured)
-        set({ measuredSide: measured ?? get().measuredSide })
-        set(currentSetup(get()))
-      }
-
       // Zones are fixed for the rest of this run.
       const zones = get().activeZones
 
@@ -406,7 +368,9 @@ export const useHoloStore = create<HoloStoreState>((set, get) => ({
       }
 
       const { zones: profiles, scale, weights } = buildModel(tapsByZone)
-      const { accuracy, distances } = evaluateCalibration(tapsByZone, scale, weights)
+      // Refits the model for every held-out tap, so the accuracy shown is
+      // what fresh taps will get, not a flattering in-sample score.
+      const { accuracy, distances } = evaluateDiscriminant(tapsByZone, scale)
       const saved = await window.flow.saveHoloCalibration({
         version: HOLO_CALIBRATION_VERSION,
         zones: profiles,
@@ -425,6 +389,47 @@ export const useHoloStore = create<HoloStoreState>((set, get) => ({
     } finally {
       set({ isCalibrating: false })
     }
+  },
+
+  ignoreLastSound: async () => {
+    const features = get().lastTap?.features
+    if (!features?.length) return
+    // If Holo had learned from it, un-learn it first, so the zone stops
+    // treating it as a typical tap.
+    const unlearned = engine.forgetTap(features)
+    if (unlearned) set({ calibration: unlearned })
+    await appendIgnoredSounds(get, set, [features])
+  },
+
+  learnIgnoredSounds: async (count, onProgress) => {
+    set({ isLearningIgnored: true, micError: null })
+    try {
+      if (!engine.isRunning) {
+        await engine.start()
+        await enableInputGate()
+        set({ isListening: true, mics: engine.mics })
+      }
+      const learned: number[][] = []
+      for (let index = 0; index < count; index++) {
+        onProgress(index, count)
+        // requireImpact: false — the whole point is to record sounds that
+        // are *not* taps, so the tap gate must not filter them out.
+        learned.push(await engine.captureNextTap(20000, { requireImpact: false }))
+      }
+      await appendIgnoredSounds(get, set, learned)
+    } catch (error) {
+      set({ micError: error instanceof Error ? error.message : 'Could not learn that sound' })
+    } finally {
+      set({ isLearningIgnored: false })
+    }
+  },
+
+  clearIgnoredSounds: async () => {
+    const calibration = get().calibration
+    if (!calibration) return
+    const saved = await window.flow.saveHoloCalibration({ ...calibration, ignoredSounds: [] })
+    engine.setCalibration(saved)
+    set({ calibration: saved })
   },
 
   clearCalibration: async () => {
@@ -448,10 +453,28 @@ engine.onStatus(({ level, muted, coolingDown }) => {
   if (Math.abs(current.level - level) > 0.05) useHoloStore.setState({ level })
 })
 
+/** Learned taps are saved at most this often: they arrive one per tap, and
+ *  nothing is lost by writing a burst of them together. */
+const LEARN_SAVE_DELAY_MS = 4000
+let learnSaveTimer: ReturnType<typeof setTimeout> | null = null
+
+engine.onCalibrationLearned((calibration) => {
+  // The store's copy is updated straight away, not on save: anything else
+  // that edits the calibration (the ignore list, say) starts from the store's
+  // copy, and must not quietly drop what was just learned.
+  useHoloStore.setState({ calibration })
+  if (learnSaveTimer) clearTimeout(learnSaveTimer)
+  learnSaveTimer = setTimeout(() => {
+    learnSaveTimer = null
+    const latest = useHoloStore.getState().calibration
+    if (latest) void window.flow.saveHoloCalibration(latest)
+  }, LEARN_SAVE_DELAY_MS)
+})
+
 engine.onTap((event) => {
-  const { zone, confidence, reason, ignoredByInput, peakDb, impact } = event
+  const { zone, confidence, reason, ignoredByInput, peakDb, impact, features } = event
   const publish = (outcome: TapOutcome): void =>
-    useHoloStore.setState({ lastTap: { zone, confidence, outcome, at: Date.now(), peakDb, impact } })
+    useHoloStore.setState({ lastTap: { zone, confidence, outcome, at: Date.now(), peakDb, impact, features } })
 
   if (ignoredByInput) return publish('ignored-input')
   if (reason === 'no-calibration') {
@@ -461,7 +484,7 @@ engine.onTap((event) => {
   if (!zone) {
     // Reasons the user gets told apart by name, because each one has its own
     // fix; anything else just reads as "that didn't match a zone".
-    const named: TapOutcome[] = ['ambiguous', 'wrong-level', 'voice', 'not-a-tap']
+    const named: TapOutcome[] = ['ambiguous', 'wrong-level', 'voice', 'not-a-tap', 'set-down', 'learned-ignore']
     return publish(named.find((outcome) => outcome === reason) ?? 'unrecognized')
   }
 

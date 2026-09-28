@@ -106,23 +106,24 @@ export function suggestionForPattern(
       const base = baseConfidence(pattern.count, threshold)
       const chain = describeChain(pattern.steps, pattern.closingStep, chainApplicationNames)
       const knownChain = matchRealisticWorkflow(pattern.steps.map((step) => step.applicationId))
+      // The application the chain *starts* in — same "offer the control
+      // where the workflow begins" reasoning multiStepWorkflow's
+      // contextApplicationId uses. Once `focusApplication`/click execution
+      // existed, "no executable action" stopped being true for this kind —
+      // see detectCrossAppWorkflows' doc comment, and shared/types'
+      // `createWorkflowMacroAndAssignToControl`.
+      const startApplicationId = pattern.steps[0].applicationId
       return {
         id: `suggestion:${pattern.id}`,
-        // No `applicationId` (and so no `action`) on purpose: this pattern
-        // spans multiple apps, and there's no single profile to assign it
-        // to or executable macro step for "switch application" (see
-        // detectCrossAppWorkflows' doc comment). NomaMoment already has
-        // an informational-only accept path for exactly this case (no
-        // profile to pick a slot from) — reused here rather than building a
-        // second one.
         title: knownChain
           ? `Flow noticed a workflow across apps: ${knownChain.name}`
           : 'Flow noticed a workflow across apps',
-        explanation: `You've repeated ${chain} ${pattern.count} times today. Flow watches for patterns like this across every app, not just within one.`,
+        explanation: `You've repeated ${chain} ${pattern.count} times today. Turn it into one action?`,
         confidence: clampConfidence(base + confidenceBias),
         status: 'pending',
         createdAt: now,
-        applicationId: null,
+        applicationId: startApplicationId,
+        action: { kind: 'createWorkflowMacroAndAssignToControl', steps: pattern.steps, stepDelaysMs: pattern.stepDelaysMs },
         chainApplicationNames,
         confidenceBreakdown: {
           occurrenceCount: pattern.count,
@@ -148,34 +149,6 @@ export function suggestionForPattern(
       // title, so the card says what Noma understood, not just what it saw.
       const known = matchRealisticWorkflow(pattern.steps.map((step) => step.applicationId))
 
-      // A chain that includes clicking an on-screen control can't be replayed
-      // (the macro vocabulary has no "click this control" step), so — like
-      // crossAppWorkflow — it's informational: Noma names what it noticed,
-      // and accepting just remembers it. No `applicationId`/`action` reuses
-      // NomaMoment's existing no-profile accept path.
-      if (pattern.steps.some((step) => step.type === 'click')) {
-        const appName = pattern.contextApplicationId ? chainApplicationNames[pattern.contextApplicationId] : null
-        const where = appName ?? pattern.contextApplicationId
-        return {
-          id: `suggestion:${pattern.id}`,
-          title: where ? `Noma noticed a workflow in ${where}` : 'Noma noticed a workflow',
-          explanation: `You keep doing this: ${chain}. Detected ${pattern.count} times recently. Noma will remember it as one of your workflows.`,
-          confidence: clampConfidence(base + confidenceBias),
-          status: 'pending',
-          createdAt: now,
-          applicationId: null,
-          chainApplicationNames,
-          confidenceBreakdown: {
-            occurrenceCount: pattern.count,
-            threshold,
-            baseConfidence: base,
-            historyBias: confidenceBias,
-            priorAccepted: priorHistory.accepted,
-            priorRejected: priorHistory.rejected
-          }
-        }
-      }
-
       return {
         id: `suggestion:${pattern.id}`,
         title: known ? `Noma noticed a workflow: ${known.name}` : 'Noma noticed a workflow',
@@ -186,7 +159,11 @@ export function suggestionForPattern(
         // Offered alongside the other controls for the app the chain starts
         // in — see the field's own doc comment in shared/types.
         applicationId: pattern.contextApplicationId,
-        action: { kind: 'createWorkflowMacroAndAssignToControl', steps: pattern.steps },
+        action: {
+          kind: 'createWorkflowMacroAndAssignToControl',
+          steps: pattern.steps,
+          stepDelaysMs: pattern.stepDelaysMs
+        },
         chainApplicationNames,
         confidenceBreakdown: {
           occurrenceCount: pattern.count,

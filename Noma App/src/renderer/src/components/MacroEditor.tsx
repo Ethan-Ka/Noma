@@ -22,8 +22,10 @@ interface MacroEditorProps {
 // 'focusApplication' DOES run for real, but — same as MacroStepRow.tsx's
 // own picker — the only way one gets built today is by accepting a
 // learned-workflow suggestion; there's no application picker here yet to
-// add one by hand.
-type NewStepType = Exclude<MacroStep['type'], 'launchApplication' | 'focusApplication'>
+// add one by hand. 'click' is the same story: real execution
+// (main/actions/click.ts), but a click target only ever comes from a
+// captured workflow step, never hand-authored.
+type NewStepType = Exclude<MacroStep['type'], 'launchApplication' | 'focusApplication' | 'click'>
 
 const STEP_TYPES_FOR_NEW_STEP: NewStepType[] = ['shortcut', 'delay', 'systemCommand', 'flowAction', 'macro']
 

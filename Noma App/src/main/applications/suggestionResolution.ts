@@ -71,14 +71,14 @@ function buildControlUpdate(
       }
     }
 
-    // WORKFLOW LEARNING: the executable counterpart to crossAppWorkflow's
-    // informational-only suggestion — see buildWorkflowMacroSteps.
+    // WORKFLOW LEARNING: turns a detected chain (crossAppWorkflow or
+    // multiStepWorkflow) into a real macro — see buildWorkflowMacroSteps.
     case 'createWorkflowMacroAndAssignToControl': {
       const macro = createMacro({
         name: action.steps.map(describeStep).join(' → '),
         applicationId: suggestion.applicationId ?? undefined,
         trigger: 'flow-control',
-        actions: buildWorkflowMacroSteps(action.steps),
+        actions: buildWorkflowMacroSteps(action.steps, action.stepDelaysMs),
         delayMs: 0,
         enabled: true
       })
@@ -115,8 +115,23 @@ function trimTrailingAppSwitches(steps: WorkflowStep[]): WorkflowStep[] {
 }
 
 /**
+ * A replayed delay is capped well under the detection window
+ * (WORKFLOW_STEP_WINDOW_MS, 20s) on purpose: a macro's whole promise is
+ * "one press instead of the full sequence," and baking in a pause as long
+ * as the original, occasionally-distracted gap between two steps would
+ * undermine that. Below this, a real observed gap is honored as-is.
+ */
+const MAX_REPLAY_DELAY_MS = 2000
+/** Below this, `executeMacroSteps`' own natural pacing (80ms between
+ *  ordinary steps, 200ms after a focus change) already covers it — not
+ *  worth a separate explicit `delay` step for a gap this small. */
+const MIN_REPLAY_DELAY_MS = 300
+
+/**
  * Converts a detected workflow's steps into a real, executable macro:
- * `shortcut` steps pass straight through, an `appSwitch` becomes a
+ * `shortcut` steps pass straight through, a `click` step passes through
+ * unchanged too (see actionExecutor.ts's click.ts for how it actually
+ * executes — only a `zone:` target does, today), an `appSwitch` becomes a
  * `focusApplication` step (see that ControlAction variant's doc comment in
  * shared/types for why "focus an existing window" is the safe capability
  * here, not `launchApplication`), a trailing "switched back" tail is
@@ -124,14 +139,45 @@ function trimTrailingAppSwitches(steps: WorkflowStep[]): WorkflowStep[] {
  * a submit keystroke appended — reproducing the flagship "screenshot ->
  * paste -> submit" shape generically, without hardcoding any one
  * application (STEP 7: this has to generalize beyond Claude Code).
+ *
+ * `stepDelaysMs`, when given, is the real gap observed before each step in
+ * the ORIGINAL (untrimmed) `steps` — a `delay` MacroStep is inserted ahead
+ * of the corresponding action so pressing the resulting control reproduces
+ * roughly the pace the user actually worked at, clamped to
+ * MIN_REPLAY_DELAY_MS..MAX_REPLAY_DELAY_MS. Absent entirely for a
+ * suggestion built before this existed — no delay steps then, same as
+ * before.
  */
-function buildWorkflowMacroSteps(steps: WorkflowStep[]): MacroStep[] {
+function buildWorkflowMacroSteps(steps: WorkflowStep[], stepDelaysMs?: number[]): MacroStep[] {
   const core = trimTrailingAppSwitches(steps)
-  const macroSteps: MacroStep[] = core.map((step) =>
-    step.type === 'shortcut'
-      ? { type: 'shortcut', keys: step.comboKeys }
-      : { type: 'focusApplication', applicationId: step.applicationId ?? '' }
-  )
+  const macroSteps: MacroStep[] = []
+
+  core.forEach((step, index) => {
+    // stepDelaysMs[0] is always a placeholder (nothing precedes the first
+    // step) — never insert a delay ahead of the macro's own first action.
+    if (index > 0) {
+      const delayMs = stepDelaysMs?.[index]
+      if (delayMs !== undefined && delayMs >= MIN_REPLAY_DELAY_MS) {
+        macroSteps.push({ type: 'delay', ms: Math.min(delayMs, MAX_REPLAY_DELAY_MS) })
+      }
+    }
+
+    switch (step.type) {
+      case 'shortcut':
+        macroSteps.push({ type: 'shortcut', keys: step.comboKeys })
+        break
+      case 'click':
+        macroSteps.push({
+          type: 'click',
+          target: step.target,
+          ...(step.applicationId ? { applicationId: step.applicationId } : {})
+        })
+        break
+      case 'appSwitch':
+        macroSteps.push({ type: 'focusApplication', applicationId: step.applicationId ?? '' })
+        break
+    }
+  })
 
   const lastStep = core[core.length - 1]
   if (lastStep && isPasteShortcut(lastStep)) {

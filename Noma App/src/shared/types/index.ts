@@ -41,6 +41,25 @@ export type ControlAction =
    * step in that vocabulary `launchApplication` couldn't safely cover.
    */
   | { type: 'focusApplication'; applicationId: string }
+  /**
+   * Clicks inside the currently-focused window — the executable counterpart
+   * to `WorkflowStep`'s own `click` (same `target` format: `label:<name>` or
+   * `zone:<col>x<row>`, see clickTarget.ts). Added alongside real click
+   * execution (main/actions/click.ts) so a learned workflow that includes a
+   * click can actually be replayed, not just described. Only ever appears
+   * inside a learned workflow macro's steps — the Control Mapping Editor's
+   * action-type picker deliberately excludes it, the same way it already
+   * excludes `focusApplication`: there's no on-screen picker for "click
+   * here" that isn't itself a captured workflow step.
+   *
+   * A `label:` target is found again by name at replay time (UI Automation,
+   * see main/actions/click.ts), so it survives a moved or resized window; a
+   * `zone:` target is a position in the current window. `applicationId`,
+   * when present, is the app the click was recorded in: replay refuses to
+   * click unless that app is the one in front. Optional so macros saved
+   * before it existed still run.
+   */
+  | { type: 'click'; target: string; applicationId?: string }
 
 export interface Control {
   id: string
@@ -107,17 +126,25 @@ export type SuggestionAction =
   | { kind: 'assignShortcutToControl'; comboKeys: string[] }
   | { kind: 'createMacroAndAssignToControl'; sequence: string[] }
   /**
-   * WORKFLOW LEARNING (see `multiStepWorkflow` below): turns a recognized
-   * multi-step, possibly cross-app chain into a real macro and assigns it
-   * to a control — the executable counterpart to `crossAppWorkflow`'s
-   * informational-only suggestion. `steps` is the detected chain itself
-   * (screenshot, switch app, paste, ...); suggestionResolution.ts converts
-   * each step into a MacroStep (shortcut -> shortcut, appSwitch ->
-   * focusApplication), drops a trailing appSwitch (the "and switches
-   * back" tail is what the workflow leads to, not part of *doing* it), and
-   * appends a submit keystroke when the chain ends in a paste.
+   * WORKFLOW LEARNING (see `multiStepWorkflow` and `crossAppWorkflow`
+   * below): turns a recognized chain into a real macro and assigns it to a
+   * control. `steps` is the detected chain itself (screenshot, switch app,
+   * paste, ...); suggestionResolution.ts converts each step into a
+   * MacroStep (shortcut -> shortcut, appSwitch -> focusApplication, click ->
+   * click), drops a trailing appSwitch (the "and switches back" tail is
+   * what the workflow leads to, not part of *doing* it), and appends a
+   * submit keystroke when the chain ends in a paste.
+   *
+   * `stepDelaysMs`, when present, is index-aligned with `steps` — the real
+   * gap (in ms) observed before that step, taken from one actual occurrence
+   * (the representative one for `multiStepWorkflow`, the median for
+   * `crossAppWorkflow`) rather than invented. `stepDelaysMs[0]` is always
+   * meaningless (nothing precedes the first step) and ignored.
+   * suggestionResolution.ts turns the gaps into real `delay` MacroSteps, so
+   * pressing the resulting control reproduces the pace the user actually
+   * worked at, not everything fired back-to-back.
    */
-  | { kind: 'createWorkflowMacroAndAssignToControl'; steps: WorkflowStep[] }
+  | { kind: 'createWorkflowMacroAndAssignToControl'; steps: WorkflowStep[]; stepDelaysMs?: number[] }
 
 /**
  * The actual arithmetic behind one suggestion's confidence percentage —
@@ -176,6 +203,29 @@ export interface Suggestion {
    *  raw id `claude`. Absent for single-application suggestion kinds, and
    *  for suggestions created before this field existed. */
   chainApplicationNames?: Record<string, string | null>
+  /** How many times Flow has observed the pattern behind this suggestion,
+   *  refreshed on every detection pass while the suggestion is pending.
+   *  Noma Notice's repetition threshold reads this. Absent for suggestions
+   *  created before the column existed. */
+  occurrenceCount?: number
+  /** When this workflow was announced by Noma Notice, if it ever was —
+   *  what stops the same one being announced twice. */
+  notifiedAt?: number
+}
+
+/**
+ * What Noma Notice shows: a workflow Flow has recognized often enough to be
+ * worth mentioning while the user is working in some other application.
+ *
+ * Carries the whole `Suggestion` rather than a flattened copy of it, so the
+ * notice renders through exactly the same `workflowChainSteps` ->
+ * `WorkflowChain` path the in-app Noma Moment does — one description of what
+ * a workflow looks like, not two that can drift apart.
+ */
+export interface WorkflowNotice {
+  suggestion: Suggestion
+  /** How many repeats Flow had seen when it decided to surface this. */
+  occurrenceCount: number
 }
 
 /**
@@ -350,12 +400,16 @@ export interface DeviceStatus {
 export type InputSource = 'keyboard' | 'holo'
 
 /**
- * One of the four fixed desk zones Holo listens for taps in — see
- * HOLO_ZONE_ORDER (shared/constants) for the canonical order, which maps
- * 1:1 to control slots 1-4 (frontLeft -> slot 1, ... rearRight -> slot 4).
- * Named after Holo's own zone layout (github.com/JustinGamer191/Holo), the
- * open-source macOS project this feature's *concept* — not its Swift code,
- * which never runs here — is adapted from. See docs/architecture.md.
+ * One of Holo's four fixed tap zones — see HOLO_ZONE_ORDER (shared/
+ * constants) for the canonical order, which maps 1:1 to control slots 1-4
+ * (frontLeft -> slot 1, ... rearRight -> slot 4). In 4-zone mode these are
+ * desk corners around the laptop; in 2-zone mode (see getHoloZones)
+ * `frontLeft`/`frontRight` are reused for a different physical spot — the
+ * empty palm-rest space to the left/right of the trackpad, on the laptop
+ * itself, not the desk. Named after Holo's own zone layout
+ * (github.com/JustinGamer191/Holo), the open-source macOS project this
+ * feature's *concept* — not its Swift code, which never runs here — is
+ * adapted from. See docs/architecture.md.
  */
 export type HoloZone = 'frontLeft' | 'frontRight' | 'rearLeft' | 'rearRight'
 
@@ -374,6 +428,15 @@ export interface HoloZoneProfile {
    *  the one that otherwise lands on a neighbour. Still derived numbers,
    *  never audio (see classifier.ts). */
   taps: number[][]
+  /**
+   * Taps Holo was near-certain about in everyday use, added on top of the
+   * calibration taps so the zone keeps learning after the wizard (see
+   * classifier.ts's `learnFromTap`). Capped, oldest dropped first, and
+   * always kept apart from `taps`: the calibration itself is never
+   * overwritten, and recalibrating starts this over. Optional so a
+   * calibration that has never learned anything stays as it was.
+   */
+  learnedTaps?: number[][]
   /** How many taps were averaged into `features` — shown in the UI so a
    *  thin (e.g. interrupted) calibration is visibly distinguishable from a
    *  full one, even though both produce a usable profile. */
@@ -433,12 +496,33 @@ export interface HoloGates {
    *  stops looking like something that was struck. See `isImpactLike`. */
   maxSustainDb: number
   maxDrivenDb: number
+  /** How many separate impacts a single tap of this user's contains —
+   *  almost always 1, which is what makes an object being set down (which
+   *  lands, then settles) distinguishable from a knuckle. Optional so a
+   *  calibration saved before it was measured still loads. */
+  maxContacts?: number
+  /** Least posterior probability the winning zone needs (see
+   *  classifier.ts's `Discriminant`). Optional so older gates load. */
+  minPosterior?: number
 }
 
-/** Bumped whenever the feature vector's meaning changes, so a calibration
- *  saved by an older pipeline is recognized as unusable (its numbers
- *  describe a different thing) instead of silently misclassifying. */
-export const HOLO_CALIBRATION_VERSION = 4
+/**
+ * Bumped whenever the feature vector's meaning changes, so a calibration
+ * saved by an older pipeline is recognized as unusable (its numbers
+ * describe a different thing) instead of silently misclassifying. Also
+ * bumped for a 2-zone layout change (v4 -> v5): the 2-zone pair moved from
+ * "front+rear on the mic's side" to "left/right of the trackpad" — an old
+ * 2-zone calibration's `rearLeft`/`rearRight` entry would otherwise linger
+ * unused (not in the new `activeZones`) while `frontRight`/`frontLeft`
+ * stayed uncalibrated, which `Holo.tsx`'s `isFullyCalibrated` check would
+ * still (correctly) flag as incomplete — but a genuinely stray tap could
+ * still match the stale entry and silently classify into a now-unreachable
+ * zone instead of cleanly prompting recalibration. The version bump forces
+ * the clean prompt instead. v6: the feature vector gained attack, early-echo
+ * and loudness features (and the body spectrum's window changed), and zones
+ * are now decided by a discriminant built from the stored taps.
+ */
+export const HOLO_CALIBRATION_VERSION = 6
 
 /** A completed calibration — one profile per zone (all 4; there's no
  *  paywall/tier gate on Holo). */
@@ -462,6 +546,12 @@ export interface HoloCalibration {
    *  Optional so a calibration written before they were measured still
    *  loads; the classifier falls back to DEFAULT_GATES. */
   gates?: HoloGates
+  /** Sounds the user has explicitly told Noma to ignore, as feature vectors
+   *  — never audio. Kept as individual examples rather than averaged into
+   *  one (see classifier.ts's IGNORE_MATCH_MARGIN for why that distinction
+   *  is the whole safety of the mechanism). Optional and additive: it starts
+   *  empty, and an existing calibration keeps working without it. */
+  ignoredSounds?: number[][]
   /** Leave-one-out accuracy (0..1) over the calibration taps — how
    *  separable the zones were on this setup. */
   accuracy: number
@@ -530,6 +620,10 @@ export type DetectedPattern =
        *  after several rounds of pasting into an editor. Absent when no
        *  consistent follow-up was found. */
       closingStep?: WorkflowStep
+      /** The real (median-of-occurrences) gap before `steps[1]`, in ms — see
+       *  `SuggestionAction.createWorkflowMacroAndAssignToControl`'s doc
+       *  comment. `[0]` is a placeholder (nothing precedes `steps[0]`). */
+      stepDelaysMs?: [number, number]
     })
   | (DetectedPatternBase & {
       /**
@@ -539,10 +633,10 @@ export type DetectedPattern =
        * matching (patternDetection.ts's detectMultiStepWorkflows) so minor,
        * naturally-occurring variation between repeats — an extra uncaptured
        * keystroke, one repeat missing a step another had — doesn't stop it
-       * from being recognized as "the same workflow." Unlike
-       * `crossAppWorkflow` (fixed at 2 steps, informational only), this
-       * kind's suggestion carries a real executable action — see
-       * `SuggestionAction`'s `createWorkflowMacroAndAssignToControl`.
+       * from being recognized as "the same workflow." Like `crossAppWorkflow`
+       * (its fixed-length, 2-step sibling), this kind's suggestion carries a
+       * real executable action — see `SuggestionAction`'s
+       * `createWorkflowMacroAndAssignToControl`.
        */
       kind: 'multiStepWorkflow'
       /** The recognized chain itself, in order — the cluster's representative
@@ -562,6 +656,11 @@ export type DetectedPattern =
        *  suggestion's confidence (STEP 4: "the detector must prioritize
        *  semantically meaningful sequences," not just any recurring blob). */
       consistency: number
+      /** The real gaps (ms) before each step in `steps`, taken from one
+       *  actual representative occurrence — see `crossAppWorkflow`'s
+       *  `stepDelaysMs` doc comment; same meaning, just index-aligned with
+       *  this kind's variable-length `steps` instead of a fixed pair. */
+      stepDelaysMs?: number[]
     })
 
 /** Whether pressing a control actually did what it was configured to do —
@@ -894,4 +993,30 @@ export interface FlowApi {
    */
   setHoloInputGate(enabled: boolean): Promise<HoloInputGateStatus | null>
   onHoloInputActivity(callback: (timestamp: number) => void): () => void
+
+  /**
+   * Noma Notice. The first three are used only by the notice's own window;
+   * the last is a Demo Mode trigger and is never reachable from normal UI.
+   */
+  onWorkflowNoticeShown(callback: (notice: WorkflowNotice) => void): () => void
+  /** What the notice window should be showing right now, asked on mount. */
+  getPendingWorkflowNotice(): Promise<WorkflowNotice | null>
+  /** Closes the notice. `reason` records what the user did, so "Not now"
+   *  marks the workflow dismissed while a timeout — or an X, which is a
+   *  verdict on the interruption, not on the workflow — leaves it untouched. */
+  dismissWorkflowNotice(
+    suggestionId: string,
+    reason: 'timeout' | 'closed' | 'dismissed' | 'reviewed'
+  ): Promise<void>
+  /** Lets the notice's window take clicks while the pointer is over the
+   *  card, and pass them straight through to the desktop otherwise. */
+  setWorkflowNoticeInteractive(interactive: boolean): Promise<void>
+  /** Opens the main Noma window on this suggestion (used when accepting it
+   *  needs a control slot picked, which the small notice deliberately
+   *  doesn't try to do). */
+  reviewWorkflowNoticeInApp(suggestionId: string): Promise<void>
+  simulateWorkflowNotice(): Promise<void>
+  /** Main window only: fires when a notice's "Add to Noma" needs the
+   *  full review UI (picking a control slot). */
+  onOpenSuggestionInApp(callback: (suggestionId: string) => void): () => void
 }

@@ -309,6 +309,19 @@ describe('detectPatterns — cross-app workflows', () => {
     expect(workflow).toMatchObject({ count: 4 })
     expect(workflow?.description).not.toContain('usually followed by')
   })
+
+  it('reports the real (median) gap between the two steps as stepDelaysMs, for real-paced replay', () => {
+    const events: WorkflowEvent[] = []
+    for (let i = 0; i < 3; i++) {
+      const base = i * 100_000
+      events.push(appSwitchEvent('screenshot', base))
+      events.push(appSwitchEvent('code', base + 2_000))
+    }
+    const workflow = detectPatterns(events).find((p) => p.kind === 'crossAppWorkflow')
+    // [0] is a placeholder (nothing precedes the first step); [1] is the
+    // real, consistently-observed 2s gap in this fixture.
+    expect(workflow).toMatchObject({ stepDelaysMs: [0, 2_000] })
+  })
 })
 
 describe('detectPatterns — multi-step workflow learning', () => {
@@ -340,6 +353,11 @@ describe('detectPatterns — multi-step workflow learning', () => {
     if (workflow.kind === 'multiStepWorkflow') {
       expect(workflow.consistency).toBe(1)
       expect(workflow.applicationIds).toEqual(['code', 'claude'])
+      // The real, consistently-observed 2s gap before each step in
+      // flagshipWorkflowEvents — [0] is a placeholder (nothing precedes the
+      // first step) — so pressing the resulting control can replay at
+      // roughly the pace the user actually worked at.
+      expect(workflow.stepDelaysMs).toEqual([0, 2_000, 2_000, 2_000])
     }
   })
 

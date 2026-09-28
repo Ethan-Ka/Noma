@@ -13,8 +13,14 @@ import { getHoloZoneLabel } from '@shared/constants'
 import type { HoloInputGateStatus, HoloZone } from '@shared/types'
 import type { HoloSensitivity } from '../lib/holo/classifier'
 
-/** Taps per zone: more is more accurate but a longer wizard. */
-const TAPS_PER_ZONE = 8
+/** Taps per zone: more is more accurate but a longer wizard. 12 is where the
+ *  discriminant reliably clears 95% right-zone on the simulated benchmark
+ *  (classifier.accuracy.test.ts); at 8 it falls just short. */
+const TAPS_PER_ZONE = 12
+/** Examples taken per "teach Noma a sound to ignore" run. A few, varied,
+ *  beats one: the same mouse never lands twice the same way. */
+const IGNORE_SAMPLES = 4
+
 /** How long a zone tile stays visibly flashed after a recognized tap. */
 const FLASH_MS = 500
 
@@ -31,6 +37,8 @@ const OUTCOME_MESSAGES: Record<TapOutcome, string> = {
   'wrong-level': 'Ignored: much louder or softer than your calibration taps, so probably not a tap.',
   voice: 'Ignored: that sounded like a voice, not a tap.',
   'not-a-tap': "Ignored: that kept going instead of dying away like a tap — a cough, a scrape, or something moving.",
+  'set-down': 'Ignored: that landed and settled, like something being put down rather than tapped.',
+  'learned-ignore': 'Ignored: that matches a sound you told Noma to ignore.',
   ambiguous: 'Heard a tap between two zones. Tap closer to the middle of a zone, or recalibrate.',
   'layout-changed': 'Your microphone setup changed since calibration. Recalibrate to continue.'
 }
@@ -70,13 +78,13 @@ export function Holo() {
     zoneCount,
     zoneReason,
     setZoneOverride,
-    micSide,
-    micSideReason,
-    sideOverride,
-    setSideOverride,
     activeZones,
     setSensitivity,
     setPace,
+    ignoreLastSound,
+    learnIgnoredSounds,
+    clearIgnoredSounds,
+    isLearningIgnored,
     setAllowExternalMic,
     refreshAvailableMics,
     refresh,
@@ -89,6 +97,8 @@ export function Holo() {
   const [wizard, setWizard] = useState<WizardState>({ status: 'idle' })
   const [flashingZone, setFlashingZone] = useState<HoloZone | null>(null)
   const [showTapDetail, setShowTapDetail] = useState(false)
+  const [ignoreProgress, setIgnoreProgress] = useState<{ index: number; total: number } | null>(null)
+  const ignoredCount = calibration?.ignoredSounds?.length ?? 0
 
   useEffect(() => {
     refresh()
@@ -119,6 +129,7 @@ export function Holo() {
   }, [lastTap])
 
   const calibratedZones = new Set(calibration?.zones.map((zone) => zone.zone) ?? [])
+  const learnedTapCount = calibration?.zones.reduce((sum, zone) => sum + (zone.learnedTaps?.length ?? 0), 0) ?? 0
   const isFullyCalibrated =
     activeZones.every((zone) => calibratedZones.has(zone)) && calibratedZones.size === activeZones.length
 
@@ -141,9 +152,10 @@ export function Holo() {
       <div className="mb-8">
         <h1 className="font-display text-xl font-semibold text-neutral-100">Holo</h1>
         <p className="mt-1 max-w-xl text-sm text-neutral-600">
-          No physical keyboard needed. Tap the desk around your laptop in one of four zones and
-          Noma presses the matching control, exactly as if a real button were pressed. Free, and
-          keeps listening in the background while Holo is your chosen input (Settings).
+          No physical keyboard needed. Tap one of Holo's zones — the desk around your laptop, or
+          (on most laptops) the empty space beside your trackpad — and Noma presses the matching
+          control, exactly as if a real button were pressed. Free, and keeps listening in the
+          background while Holo is your chosen input (Settings).
         </p>
       </div>
 
@@ -217,12 +229,6 @@ export function Holo() {
           ))}
         </div>
 
-        {wizard.status === 'running' && wizard.phase === 'side' && (
-          <div className="mb-4 rounded-lg border border-accent/30 bg-accent/[0.08] px-4 py-3 text-sm text-holo-text">
-            Finding your microphone. Tap the desk at the far {wizard.edge.toUpperCase()} edge of your laptop, level
-            with the keyboard (tap {wizard.tapIndex + 1} of {wizard.totalTaps})
-          </div>
-        )}
         {wizard.status === 'running' && wizard.phase === 'zone' && (
           <div className="mb-4 rounded-lg border border-accent/30 bg-accent/[0.08] px-4 py-3 text-sm text-holo-text">
             Zone {wizard.zoneIndex + 1} of {wizard.totalZones}: {getHoloZoneLabel(wizard.zone, zoneCount)}, tap it now
@@ -276,6 +282,18 @@ export function Holo() {
                 >
                   {showTapDetail ? 'Hide details' : 'Details'}
                 </button>
+                {lastTap.features.length > 0 && lastTap.outcome !== 'ignored-input' && (
+                  <>
+                    {' · '}
+                    <button
+                      type="button"
+                      onClick={() => void ignoreLastSound()}
+                      className="text-holo-muted underline decoration-dotted underline-offset-2 hover:text-holo-text"
+                    >
+                      That wasn't a tap
+                    </button>
+                  </>
+                )}
                 {showTapDetail && (
                   <div className="mt-1 font-mono text-[11px] text-holo-muted">
                     {/* The numbers the gates are compared against, so a
@@ -304,9 +322,13 @@ export function Holo() {
               calibration.accuracy < 0.75 ? 'border-amber-400/30 text-amber-200' : 'border-holo-border text-holo-muted'
             }`}
           >
-            Calibration accuracy: {Math.round(calibration.accuracy * 100)}%.
+            Calibration accuracy: {Math.round(calibration.accuracy * 100)}% (each tap scored as if Holo had never heard
+            it).{' '}
+            {learnedTapCount > 0
+              ? `Since then Holo has learned from ${learnedTapCount} taps it was sure about, so it keeps getting better with use.`
+              : 'Holo keeps learning from taps it is sure about, so it gets better with use.'}
             {calibration.accuracy < 0.75 &&
-              ' Some zones sound too alike on this setup. Recalibrate with firmer, more distinct taps, spaced further apart on the desk, or add a second microphone.'}
+              ' Some zones sound too alike on this setup. Recalibrate with more distinct taps, spaced further apart, and vary how hard you tap.'}
           </div>
         )}
         {layoutMismatch && (
@@ -317,7 +339,7 @@ export function Holo() {
 
         {calibration && !isCalibrating && !isFullyCalibrated && (
           <div className="mb-4 rounded-lg border border-amber-400/30 px-4 py-3 text-xs text-amber-200">
-            Your zones changed since you calibrated (zone count or microphone side). Recalibrate to continue.
+            Your zone count changed since you calibrated. Recalibrate to continue.
           </div>
         )}
 
@@ -332,33 +354,9 @@ export function Holo() {
             )}
             Using <span className="text-holo-text">{zoneCount} zones</span>: {zoneReason}.
             {zoneCount === 2 && (
-              <>
-                {' '}
-                Microphone is on the <span className="text-holo-text">{micSide}</span> ({micSideReason}), so both
-                zones sit on that side, top and bottom.
-              </>
+              <> Zones sit in the empty space beside your trackpad — one on the left, one on the right.</>
             )}
           </div>
-          {zoneCount === 2 && (
-            <div className="flex items-center gap-2">
-              <span>Mic side</span>
-              {(['auto', 'left', 'right'] as const).map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  disabled={isCalibrating}
-                  onClick={() => setSideOverride(option)}
-                  className={`rounded-full border px-2.5 py-0.5 text-[11px] capitalize disabled:opacity-40 ${
-                    sideOverride === option
-                      ? 'border-accent/50 bg-accent/10 text-accent'
-                      : 'border-holo-border hover:border-holo-text/30 hover:text-holo-text'
-                  }`}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          )}
           <div className="flex items-center gap-2">
             <span>Zones</span>
             {(['auto', 2, 4] as const).map((option) => (
@@ -398,6 +396,42 @@ export function Holo() {
             ))}
           </div>
         </div>
+
+        {calibration && (
+          <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-holo-muted">
+            <span>Ignore sounds</span>
+            <button
+              type="button"
+              disabled={isLearningIgnored}
+              onClick={() =>
+                void learnIgnoredSounds(IGNORE_SAMPLES, (index, total) => setIgnoreProgress({ index, total }))
+              }
+              className="rounded-full border border-holo-border px-2.5 py-0.5 text-[11px] hover:border-holo-text/30 hover:text-holo-text disabled:opacity-40"
+            >
+              {isLearningIgnored ? 'Listening…' : 'Teach Noma a sound to ignore'}
+            </button>
+            {ignoredCount > 0 && (
+              <>
+                <span className="text-[11px]">
+                  {ignoredCount} sound{ignoredCount === 1 ? '' : 's'} learned
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void clearIgnoredSounds()}
+                  className="text-[11px] underline decoration-dotted underline-offset-2 hover:text-holo-text"
+                >
+                  Clear
+                </button>
+              </>
+            )}
+            {isLearningIgnored && ignoreProgress && (
+              <span className="text-[11px] text-holo-text">
+                Make the sound now — putting your mouse down, for instance ({ignoreProgress.index + 1} of{' '}
+                {ignoreProgress.total})
+              </span>
+            )}
+          </div>
+        )}
 
         <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-holo-muted">
           <span>Pace</span>

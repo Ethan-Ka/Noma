@@ -126,6 +126,8 @@ export function macroChainSteps(
             applicationId: step.applicationId
           }
         ]
+      case 'click':
+        return [{ label: clickStepLabel(step.target), kind: 'shortcut' }]
       default:
         // delay/macro/systemCommand/flowAction/launchApplication steps
         // don't currently appear in a Noma-learned macro (see

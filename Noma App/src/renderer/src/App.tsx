@@ -28,11 +28,14 @@ function App() {
     loadOnboardingState()
   }, [loadOnboardingState])
 
-  // Noma Notice's "Add to Noma" finishes here: accepting a workflow ends in
+  // Noma Notice's "Review" finishes here: accepting a workflow ends in
   // picking a control slot, which the floating card is deliberately too
-  // small to ask for. Home is where the Noma Moment (and its slot picker)
-  // lives, so that's where the user lands.
-  useEffect(() => window.flow.onOpenSuggestionInApp(() => setActivePage('home')), [setActivePage])
+  // small to ask for. Workflows — not Home — is where the user lands: Home
+  // only ever shows a single "most important" suggestion (`suggestions[0]`),
+  // so the one just reviewed could easily not be it and effectively
+  // disappear. Workflows' "Noma noticed" section lists every pending
+  // suggestion, so the reviewed one is guaranteed to actually be there.
+  useEffect(() => window.flow.onOpenSuggestionInApp(() => setActivePage('workflows')), [setActivePage])
 
   // Blank instead of a spinner while the very first IPC round-trip is in
   // flight — same background as every other state below, so there's no
