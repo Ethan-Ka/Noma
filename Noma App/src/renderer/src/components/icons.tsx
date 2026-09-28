@@ -81,6 +81,20 @@ export function MacroIcon({ className }: IconProps) {
   )
 }
 
+/** Workflows — three connected nodes, echoing the app-icon chain
+ *  (`WorkflowChain`) the Workflows page is built around, distinct from
+ *  ActivityIcon's timeline (dots on one line) and MacroIcon's bolt. */
+export function WorkflowsIcon({ className }: IconProps) {
+  return (
+    <svg {...BASE_PROPS} className={className}>
+      <circle cx="5" cy="17" r="2.25" />
+      <circle cx="12" cy="7" r="2.25" />
+      <circle cx="19" cy="17" r="2.25" />
+      <path d="M6.8 15.3 10.2 8.7M13.8 8.7l3.4 6.6" />
+    </svg>
+  )
+}
+
 export function LearningIcon({ className }: IconProps) {
   return (
     <svg {...BASE_PROPS} className={className}>

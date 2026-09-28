@@ -9,6 +9,7 @@ import {
   KeyboardIcon,
   HoloIcon,
   MacroIcon,
+  WorkflowsIcon,
   LearningIcon,
   ActivityIcon,
   StatsIcon,
@@ -21,10 +22,14 @@ import {
 
 type NavItem = { label: string; page: Page; Icon: IconComponent }
 
-// The primary loop, quiet and text-led — three items, not a wall of icons.
+// The primary loop, quiet and text-led — four items, not a wall of icons.
+// Workflows sits between Controls (what Noma is doing right now) and
+// Learning (how Noma decides) — the collection of things it has actually
+// learned to do sits naturally between "now" and "the model behind it."
 const PRIMARY_NAV_ITEMS: NavItem[] = [
   { label: 'Home', page: 'home', Icon: HomeIcon },
   { label: 'Controls', page: 'controls', Icon: ControlsIcon },
+  { label: 'Workflows', page: 'workflows', Icon: WorkflowsIcon },
   { label: 'Learning', page: 'learning', Icon: LearningIcon }
 ]
 

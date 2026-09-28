@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { AppShell } from './components/AppShell'
 import { Home } from './pages/Home'
 import { Controls } from './pages/Controls'
+import { Workflows } from './pages/Workflows'
 import { Demo } from './pages/Demo'
 import { VirtualKeyboard } from './pages/VirtualKeyboard'
 import { Holo } from './pages/Holo'
@@ -18,6 +19,7 @@ import { useOnboardingStore } from './stores/onboardingStore'
 
 function App() {
   const activePage = useUiStore((state) => state.activePage)
+  const setActivePage = useUiStore((state) => state.setActivePage)
   const onboardingState = useOnboardingStore((state) => state.state)
   const isOnboardingLoading = useOnboardingStore((state) => state.isLoading)
   const loadOnboardingState = useOnboardingStore((state) => state.load)
@@ -25,6 +27,12 @@ function App() {
   useEffect(() => {
     loadOnboardingState()
   }, [loadOnboardingState])
+
+  // Noma Notice's "Add to Noma" finishes here: accepting a workflow ends in
+  // picking a control slot, which the floating card is deliberately too
+  // small to ask for. Home is where the Noma Moment (and its slot picker)
+  // lives, so that's where the user lands.
+  useEffect(() => window.flow.onOpenSuggestionInApp(() => setActivePage('home')), [setActivePage])
 
   // Blank instead of a spinner while the very first IPC round-trip is in
   // flight — same background as every other state below, so there's no
@@ -44,6 +52,7 @@ function App() {
     <AppShell>
       {activePage === 'home' && <Home />}
       {activePage === 'controls' && <Controls />}
+      {activePage === 'workflows' && <Workflows />}
       {activePage === 'learning' && <Learning />}
       {activePage === 'activity' && <Activity />}
       {activePage === 'settings' && <Settings />}

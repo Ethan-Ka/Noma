@@ -2,12 +2,28 @@ import { useEffect, useState } from 'react'
 import type { Application, ControlUsageStat, Macro } from '@shared/types'
 import { macroChainSteps, type WorkflowChainStep } from './workflowChain'
 
+export interface LearnedActionAssignment {
+  controlId: string
+  applicationId: string
+  applicationName: string
+  slot: number
+  label: string
+}
+
 export interface LearnedAction {
   macro: Macro
   chain: WorkflowChainStep[]
   usageCount: number
   applicationId: string | null
   applicationName: string | null
+  /** Most recent press across every control this macro is assigned to, or
+   *  null if it has never been pressed yet — real data only, never a guess. */
+  lastUsedAt: number | null
+  /** Every control (across every app profile) this macro is currently
+   *  assigned to — the Workflows detail view's "Assigned to" list, and the
+   *  only real way to edit or remove a learned workflow (see
+   *  `ControlEditorModal`; there is no separate delete-macro affordance). */
+  assignments: LearnedActionAssignment[]
 }
 
 /**
@@ -39,12 +55,17 @@ export function useLearnedActions(): LearnedAction[] | null {
             (sum, ref) => sum + (usageByControlId.get(ref.controlId)?.count ?? 0),
             0
           )
+          const lastUsedTimes = referencing
+            .map((ref) => usageByControlId.get(ref.controlId)?.lastUsed)
+            .filter((value): value is number => value !== undefined)
           return {
             macro,
             chain: macroChainSteps(macro.actions, applicationNames),
             usageCount,
             applicationId: referencing[0]?.applicationId ?? null,
-            applicationName: referencing[0]?.applicationName ?? null
+            applicationName: referencing[0]?.applicationName ?? null,
+            lastUsedAt: lastUsedTimes.length ? Math.max(...lastUsedTimes) : null,
+            assignments: referencing
           }
         })
       )

@@ -6,6 +6,7 @@ import { create } from 'zustand'
 export type Page =
   | 'home'
   | 'controls'
+  | 'workflows'
   | 'learning'
   | 'activity'
   | 'settings'
