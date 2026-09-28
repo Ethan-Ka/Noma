@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import {
   HOLO_CALIBRATION_VERSION,
   type HoloCalibration,
+  type HoloInputGateStatus,
   type HoloZone,
   type InputSource,
   type LaptopInfo
@@ -32,6 +33,13 @@ import {
  * uses for captureService.
  */
 const engine = new HoloCaptureEngine()
+
+/** Turns on main's key/mouse/touch gate and records what this machine's
+ *  touch hardware lets it see (shown on the Holo page). */
+async function enableInputGate(): Promise<void> {
+  const touchCoverage = await window.flow.setHoloInputGate(true)
+  useHoloStore.setState({ touchCoverage })
+}
 
 const SENSITIVITY_KEY = 'noma.holo.sensitivity'
 const COOLDOWN_KEY = 'noma.holo.cooldown'
@@ -178,6 +186,9 @@ interface HoloStoreState {
   level: number
   /** True while the mic is switched off because the user is typing/clicking. */
   pausedForTyping: boolean
+  /** What this computer's trackpad/touchscreen lets Holo detect (null
+   *  until listening starts, or when touch reports aren't available). */
+  touchCoverage: HoloInputGateStatus | null
   /** True while taps are being ignored because a control just fired. */
   coolingDown: boolean
   /** True when the mic setup differs from what was calibrated. */
@@ -234,6 +245,7 @@ export const useHoloStore = create<HoloStoreState>((set, get) => ({
   coolingDown: false,
   level: 0,
   pausedForTyping: false,
+  touchCoverage: null,
   layoutMismatch: false,
   laptop: null,
   zoneOverride: readStored<ZoneOverride>(ZONE_OVERRIDE_KEY, 'auto'),
@@ -291,7 +303,7 @@ export const useHoloStore = create<HoloStoreState>((set, get) => ({
     set({ micError: null })
     try {
       await engine.start()
-      await window.flow.setHoloInputGate(true)
+      await enableInputGate()
       const { calibration } = get()
       set({
         isListening: true,
@@ -346,7 +358,7 @@ export const useHoloStore = create<HoloStoreState>((set, get) => ({
     try {
       if (!engine.isRunning) {
         await engine.start()
-        await window.flow.setHoloInputGate(true)
+        await enableInputGate()
       }
       set({ isListening: true, mics: engine.mics })
 

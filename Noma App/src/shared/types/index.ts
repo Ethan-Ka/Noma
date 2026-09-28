@@ -380,6 +380,27 @@ export interface HoloZoneProfile {
   sampleCount: number
 }
 
+/**
+ * How well this computer's touch surfaces can be kept out of Holo, found by
+ * main/holo/touchActivity.ts when the input gate turns on. Varies per
+ * machine, so the Holo page says which case applies instead of promising
+ * the same protection everywhere.
+ *
+ * - `direct`: a precision touchpad reports every touch, so even a touch
+ *   that never moves the pointer is ignored.
+ * - `movement-only`: a trackpad was found, but its driver only reports
+ *   pointer movement and clicks (older Synaptics/ELAN/Alps drivers). A
+ *   resting or motionless touch can't be seen.
+ * - `none`: no trackpad found (a desktop, or one Windows doesn't identify).
+ */
+export type HoloTrackpadCoverage = 'direct' | 'movement-only' | 'none'
+
+export interface HoloInputGateStatus {
+  trackpad: HoloTrackpadCoverage
+  /** A touchscreen or pen digitizer is present, and its touches are ignored too. */
+  touchscreen: boolean
+}
+
 /** What the OS reports about this computer (see main/holo/laptopInfo.ts). */
 export interface LaptopInfo {
   platform: string
@@ -861,14 +882,16 @@ export interface FlowApi {
   saveHoloCalibration(calibration: HoloCalibration): Promise<HoloCalibration>
   /** Erases calibration entirely — the "recalibrate from scratch" action. */
   clearHoloCalibration(): Promise<void>
-  /**
-   * Holo: while enabled, main forwards the *timestamp only* of every
-   * physical key/mouse-button/wheel event (never which key) so Holo can
-   * ignore the sound of the user typing or clicking. The OS hook exists
-   * only while enabled.
-   */
   /** Maker/model of this computer, read once; empty strings if unknown. */
   getLaptopInfo(): Promise<LaptopInfo>
-  setHoloInputGate(enabled: boolean): Promise<void>
+  /**
+   * Holo: while enabled, main forwards the *timestamp only* of every
+   * physical key/mouse event and trackpad/touchscreen touch (never which
+   * key or where) so Holo can ignore the sound of the user typing, clicking
+   * or touching the trackpad. The OS hooks exist only while enabled.
+   * Resolves with what this machine's touch hardware allows (null when
+   * disabling).
+   */
+  setHoloInputGate(enabled: boolean): Promise<HoloInputGateStatus | null>
   onHoloInputActivity(callback: (timestamp: number) => void): () => void
 }

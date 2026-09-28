@@ -32,10 +32,14 @@ let mainWindow: BrowserWindow | null = null
 let lastRecordedApplicationId: string | null = null
 
 /** Feeds Holo the timestamps (only) of real key/mouse activity so it can
- *  ignore the sound of typing and clicking. Engaged only while Holo asks. */
-const inputActivityService = new InputActivityService((timestamp) => {
-  mainWindow?.webContents.send(IPC_CHANNELS.HOLO_INPUT_ACTIVITY, timestamp)
-})
+ *  ignore the sound of typing, clicking and trackpad use. Engaged only while
+ *  Holo asks. */
+const inputActivityService = new InputActivityService(
+  (timestamp) => {
+    mainWindow?.webContents.send(IPC_CHANNELS.HOLO_INPUT_ACTIVITY, timestamp)
+  },
+  () => mainWindow
+)
 
 const osAdapter = new WindowsOSAdapter()
 const contextService = new ApplicationContextService(osAdapter)
@@ -143,8 +147,9 @@ app.whenReady().then(() => {
   initDatabase()
   ipcMain.handle(IPC_CHANNELS.GET_LAPTOP_INFO, () => getLaptopInfo())
   ipcMain.handle(IPC_CHANNELS.HOLO_SET_INPUT_GATE, (_event, enabled: boolean) => {
-    if (enabled) inputActivityService.start()
-    else inputActivityService.stop()
+    if (enabled) return inputActivityService.start()
+    inputActivityService.stop()
+    return null
   })
   registerIpcHandlers(
     contextService,

@@ -10,7 +10,7 @@ import { useFlowStore } from '../stores/flowStore'
 import { HoloZoneTile } from '../components/HoloZoneTile'
 import { AppIcon } from '../components/AppIcon'
 import { getHoloZoneLabel } from '@shared/constants'
-import type { HoloZone } from '@shared/types'
+import type { HoloInputGateStatus, HoloZone } from '@shared/types'
 import type { HoloSensitivity } from '../lib/holo/classifier'
 
 /** Taps per zone: more is more accurate but a longer wizard. */
@@ -26,7 +26,7 @@ type WizardState =
 const OUTCOME_MESSAGES: Record<TapOutcome, string> = {
   pressed: 'Recognized. Control pressed.',
   'no-control': 'Recognized, but this zone has no control assigned in the current app.',
-  'ignored-input': 'Ignored: that sound came with a key press or mouse click.',
+  'ignored-input': 'Ignored: that sound came with a key press, mouse click or trackpad touch.',
   unrecognized: "Heard a sound that didn't match any zone. Tap with a knuckle on the desk, or recalibrate.",
   'wrong-level': 'Ignored: much louder or softer than your calibration taps, so probably not a tap.',
   voice: 'Ignored: that sounded like a voice, not a tap.',
@@ -63,6 +63,7 @@ export function Holo() {
     coolingDown,
     level,
     pausedForTyping,
+    touchCoverage,
     layoutMismatch,
     laptop,
     zoneOverride,
@@ -252,11 +253,11 @@ export function Holo() {
             </div>
             <div>
               {pausedForTyping ? (
-                <span className="text-holo-text">Mic paused while you type or click. </span>
+                <span className="text-holo-text">Mic paused while you type, click or use the trackpad. </span>
               ) : coolingDown ? (
                 <>Just fired — waiting a moment before the next tap. </>
               ) : (
-                <>Mic on. It switches off while you type or click so those sounds are never heard. </>
+                <>Mic on. It switches off while you type, click or touch the trackpad so those sounds are never heard. </>
               )}
               Listening on the built-in microphone
               {mics[0] && <> ({mics[0].label})</>}
@@ -264,6 +265,7 @@ export function Holo() {
                 <span className="text-amber-200">. This is an external mic, so zone accuracy is not guaranteed.</span>
               )}
             </div>
+            {touchCoverage && <TouchCoverageNote coverage={touchCoverage} />}
             {lastTap && (
               <div className={lastTap.outcome === 'pressed' ? 'text-accent' : ''}>
                 {OUTCOME_MESSAGES[lastTap.outcome]}{' '}
@@ -445,10 +447,32 @@ export function Holo() {
         <p className="text-xs text-holo-muted">
           Holo processes audio in memory only to recognize a tap's zone,
           nothing is recorded or saved; calibration stores a small set of numbers, never audio. While
-          listening it also notices <em>when</em> you press a key or click (never which) so typing and
-          clicking are never mistaken for taps: the mic is switched off entirely while you type or click, and back on a moment after you stop. See docs/privacy-and-legal.md.
+          listening it also notices <em>when</em> you press a key, click, move the pointer or touch the trackpad (never which key or
+          where) so none of those are mistaken for taps: the mic is switched off entirely while you do, and back on a moment after you stop. See docs/privacy-and-legal.md.
         </p>
       </div>
     </div>
   )
+}
+
+/**
+ * Says how well this particular computer's trackpad/touchscreen is kept out
+ * of Holo. It differs by machine (see HoloTrackpadCoverage), so the page
+ * says which case applies instead of promising the same thing everywhere.
+ */
+function TouchCoverageNote({ coverage }: { coverage: HoloInputGateStatus }) {
+  const screen = coverage.touchscreen ? ' Touchscreen and pen touches are ignored too.' : ''
+  if (coverage.trackpad === 'direct') {
+    return <div>Trackpad: every touch is detected and ignored, even one that doesn't move the pointer.{screen}</div>
+  }
+  if (coverage.trackpad === 'movement-only') {
+    return (
+      <div className="text-amber-200">
+        Trackpad: this laptop's trackpad driver only reports movement and clicks, so a touch that doesn't move the
+        pointer may still be heard. Tap the desk away from the trackpad, or install the maker's Precision Touchpad
+        driver if one is offered.{screen}
+      </div>
+    )
+  }
+  return screen ? <div>{screen.trim()}</div> : null
 }

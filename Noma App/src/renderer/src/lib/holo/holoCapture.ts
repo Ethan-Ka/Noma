@@ -64,10 +64,21 @@ const FINALIZE_DELAY_MS = 190
  *  about to make again, and swallowing the retry is exactly what made it
  *  feel like it takes three tries. */
 const TAP_REFRACTORY_MS = 220
-/** A key/mouse event within this long *before* (or shortly after) an
- *  acoustic onset means the sound was the user's typing/clicking. */
+/** A key/mouse/trackpad event within this long *before* or *after* an
+ *  acoustic onset means the sound was the user's typing, clicking or
+ *  trackpad use, never a desk tap.
+ *
+ *  The "after" side is wide for the trackpad. A tap-to-click only produces
+ *  its click after the finger has lifted, and cursor movement starts a
+ *  beat after the finger lands, so the evidence that a sound was the
+ *  trackpad can arrive ~100-200 ms after the sound itself. Holo therefore
+ *  waits until this window has closed before acting on any tap (see
+ *  `decide`). That costs ~30 ms on top of FINALIZE_DELAY_MS, because
+ *  firing a macro because someone touched the trackpad is far worse. */
 const INPUT_GATE_BEFORE_MS = 220
-const INPUT_GATE_AFTER_MS = 90
+const INPUT_GATE_AFTER_MS = 220
+/** How long input timestamps are remembered for the gate above. */
+const INPUT_HISTORY_MS = 1000
 /** The mic is switched off the instant a key/mouse event arrives and back on
  *  this long after the last one, so typing sounds are never even captured
  *  (not merely filtered afterwards). */
@@ -130,8 +141,9 @@ export class HoloCaptureEngine {
   private unmuteTimer: ReturnType<typeof setTimeout> | null = null
   private settleUntil = 0
   private cooldownUntil = 0
-  private lastInputActivityAt = -Infinity
-  private nextInputActivityAt = Infinity
+  /** Recent key/mouse/trackpad timestamps (Date.now() ms), oldest first. */
+  private inputActivity: number[] = []
+  private decideTimer: ReturnType<typeof setTimeout> | null = null
   private readonly tapListeners = new Set<HoloTapListener>()
   private readonly statusListeners = new Set<(status: HoloStatus) => void>()
   private pendingCapture: { resolve: (features: number[]) => void; reject: (error: Error) => void } | null = null
@@ -269,6 +281,9 @@ export class HoloCaptureEngine {
   stop(): void {
     if (this.finalizeTimer) clearTimeout(this.finalizeTimer)
     this.finalizeTimer = null
+    if (this.decideTimer) clearTimeout(this.decideTimer)
+    this.decideTimer = null
+    this.inputActivity = []
     if (this.unmuteTimer) clearTimeout(this.unmuteTimer)
     this.unmuteTimer = null
     this.muted = false
@@ -330,13 +345,21 @@ export class HoloCaptureEngine {
     }
   }
 
-  /** Called for every physical key/mouse event (timestamp only — see
-   *  inputActivityService.ts). Sounds coinciding with one are typing/clicking. */
+  /** Called for every physical key/mouse/trackpad event (timestamp only —
+   *  see inputActivityService.ts). Sounds coinciding with one are the user's
+   *  typing, clicking or trackpad use. */
   noteInputActivity(timestamp: number): void {
-    this.lastInputActivityAt = timestamp
-    // A key event can also arrive just *after* its sound was detected.
-    if (this.finalizeTimer) this.nextInputActivityAt = Math.min(this.nextInputActivityAt, timestamp)
+    this.inputActivity.push(timestamp)
+    const cutoff = timestamp - INPUT_HISTORY_MS
+    while (this.inputActivity.length && this.inputActivity[0] < cutoff) this.inputActivity.shift()
     this.muteForInput()
+  }
+
+  /** True when any input event landed within the gate around `onsetAt`. */
+  private inputCoincided(onsetAt: number): boolean {
+    return this.inputActivity.some(
+      (t) => t >= onsetAt - INPUT_GATE_BEFORE_MS && t <= onsetAt + INPUT_GATE_AFTER_MS
+    )
   }
 
   /** Switches the mic track off (it delivers pure silence) while the user
@@ -415,7 +438,6 @@ export class HoloCaptureEngine {
       if (isOnset && !this.finalizeTimer && now >= this.cooldownUntil && now - this.lastOnsetAt >= TAP_REFRACTORY_MS) {
         this.onsetAt = Date.now()
         this.lastOnsetAt = now
-        this.nextInputActivityAt = Infinity
         this.finalizeTimer = setTimeout(() => this.finalizeTap(), FINALIZE_DELAY_MS)
       }
     }
@@ -449,13 +471,30 @@ export class HoloCaptureEngine {
 
     const features = extractTapFeatures(channels, deviceOf, context.sampleRate)
     if (!features) return
-    this.lastTapPeakDb = tapPeakDb(channels)
-    this.lastTapImpact = detectImpact(channels, context.sampleRate)
+    const peakDb = tapPeakDb(channels)
+    const impact = detectImpact(channels, context.sampleRate)
 
-    const sinceInput = this.onsetAt - this.lastInputActivityAt
-    const ignoredByInput =
-      (sinceInput >= 0 && sinceInput <= INPUT_GATE_BEFORE_MS) ||
-      this.nextInputActivityAt - this.onsetAt <= INPUT_GATE_AFTER_MS
+    // The audio is captured now, while the tap is still inside the ring
+    // buffer, but the verdict waits until every input event that could
+    // belong to this sound has had time to arrive (see INPUT_GATE_AFTER_MS).
+    const onsetAt = this.onsetAt
+    const wait = onsetAt + INPUT_GATE_AFTER_MS - Date.now()
+    if (wait <= 0) {
+      this.decide(features, peakDb, impact, onsetAt)
+      return
+    }
+    if (this.decideTimer) clearTimeout(this.decideTimer)
+    this.decideTimer = setTimeout(() => {
+      this.decideTimer = null
+      if (this.isRunning) this.decide(features, peakDb, impact, onsetAt)
+    }, wait)
+  }
+
+  private decide(features: number[], peakDb: number, impact: ImpactCheck | null, onsetAt: number): void {
+    this.lastTapPeakDb = peakDb
+    this.lastTapImpact = impact
+
+    const ignoredByInput = this.inputCoincided(onsetAt)
     if (ignoredByInput) {
       const result: HoloTapEvent = {
         zone: null,

@@ -184,10 +184,20 @@ reasoning:
 - **Keyboard/mouse timing gate.** While Holo is listening or calibrating,
   main installs the OS input hook (shared, reference-counted, with
   workflow capture — `sharedHook.ts`) purely to forward the *timestamp* of
-  each key/mouse-button/wheel event (`inputActivityService.ts`). Never
-  which key, never a position, never persisted; it lets Holo switch the
-  mic track off (silence, not filtering) the instant you type or click and
-  back on 300 ms after you stop, so typing sounds are never captured at all. The hook is removed when listening stops.
+  each key/mouse-button/wheel/pointer-move event (`inputActivityService.ts`).
+  On Windows it also registers for raw digitizer input from precision
+  touchpads, touchscreens and pens (`touchActivity.ts`) so a finger touching
+  them counts too, even when it doesn't click or move the cursor. Only the
+  report header is checked (to confirm it came from a digitizer). To tell
+  the user how much protection their machine gets, it also reads the list
+  of input devices' types and names once (`touchCoverage.ts`). That list is
+  used on the spot and never stored or sent. Contact positions and
+  finger counts are never read. Never which key, never a position, never
+  persisted. It lets Holo switch the mic track off (silence, not filtering)
+  the instant you type, click or touch the trackpad or screen, and back on 300 ms
+  after you stop, so those sounds are never captured at all. Any sound
+  within 220 ms either side of such an event is discarded. The hook and
+  the touchpad registration are removed when listening stops.
 - **Off by default, explicit action required every time.** `getUserMedia`
   is called only from two explicit user actions on the Holo page —
   clicking "Calibrate" or "Start Listening" — never automatically on app
