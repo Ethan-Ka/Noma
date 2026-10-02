@@ -157,6 +157,9 @@ const flowApi: FlowApi = {
     ipcRenderer.invoke(IPC_CHANNELS.SAVE_HOLO_CALIBRATION, calibration),
   clearHoloCalibration: () => ipcRenderer.invoke(IPC_CHANNELS.CLEAR_HOLO_CALIBRATION),
   getLaptopInfo: () => ipcRenderer.invoke(IPC_CHANNELS.GET_LAPTOP_INFO),
+  saveHoloRecording: (pcm, sampleRate, channels, meta) =>
+    ipcRenderer.invoke(IPC_CHANNELS.HOLO_SAVE_RECORDING, pcm, sampleRate, channels, meta),
+  openHoloRecordings: () => ipcRenderer.invoke(IPC_CHANNELS.HOLO_OPEN_RECORDINGS),
   setHoloInputGate: (enabled) => ipcRenderer.invoke(IPC_CHANNELS.HOLO_SET_INPUT_GATE, enabled),
   onHoloInputActivity: (callback) => {
     const listener = (_event: IpcRendererEvent, timestamp: number): void => callback(timestamp)

@@ -39,6 +39,7 @@ import { CaptureService } from './workflow/captureService'
 import { ClickCaptureService } from './workflow/clickCaptureService'
 import { UiaClickInspector } from './workflow/uiaInspector'
 import { InputActivityService } from './holo/inputActivityService'
+import { openRecordingsFolder, saveHoloRecording } from './holo/recordingStore'
 import { getLaptopInfo } from './holo/laptopInfo'
 import { insertWorkflowEvent } from './database/repositories/workflowEventsRepository'
 import { getClickCaptureEnabled, getWorkflowMonitoringEnabled } from './database/repositories/settingsRepository'
@@ -292,6 +293,12 @@ app.whenReady().then(() => {
 
   initDatabase()
   ipcMain.handle(IPC_CHANNELS.GET_LAPTOP_INFO, () => getLaptopInfo())
+  ipcMain.handle(
+    IPC_CHANNELS.HOLO_SAVE_RECORDING,
+    (_event, pcm: Int16Array, sampleRate: number, channels: number, meta: unknown) =>
+      saveHoloRecording(pcm, sampleRate, channels, meta)
+  )
+  ipcMain.handle(IPC_CHANNELS.HOLO_OPEN_RECORDINGS, () => openRecordingsFolder())
   ipcMain.handle(IPC_CHANNELS.HOLO_SET_INPUT_GATE, (_event, enabled: boolean) => {
     if (enabled) return inputActivityService.start()
     inputActivityService.stop()

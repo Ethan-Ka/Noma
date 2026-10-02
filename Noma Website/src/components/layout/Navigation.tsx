@@ -5,14 +5,14 @@ import nomaWordmark from '../../assets/noma-wordmark.png'
 import { GLASS, GLASS_ACCENT } from '../../lib/glass'
 import SiteLink from './SiteLink'
 
-// `#how-it-works` didn't match any real section id (`EditorialContrast`'s
-// is `how-it-knows`) — a broken link even before routing existed, fixed
-// here while every href in this file was already getting a pass for
-// `SiteLink`.
+// Four, matching the page's three pillars plus the one section that shows
+// the adaptation happening. Every href is a section id that exists on
+// `Home` — checked against it, not inherited from an older page.
 const links = [
-  { label: 'Product', href: '#product' },
-  { label: 'How It Works', href: '#how-it-knows' },
-  { label: 'Software', href: '#software' },
+  { label: 'How it works', href: '#context' },
+  { label: 'Flow', href: '#flow' },
+  { label: 'Holo', href: '#holo' },
+  { label: 'Device', href: '#device' },
 ]
 
 /**
@@ -47,10 +47,10 @@ export default function Navigation() {
           </ul>
 
           <SiteLink
-            href="#waitlist"
-            className={`hidden items-center gap-1.5 rounded-full px-4 py-1.5 text-[13px] font-medium lg:inline-flex ${GLASS_ACCENT}`}
+            href="#beta"
+            className={`hidden items-center rounded-full px-4 py-1.5 text-[13px] font-medium lg:inline-flex ${GLASS_ACCENT}`}
           >
-            Join Waitlist <span aria-hidden>&rarr;</span>
+            Get Noma Beta
           </SiteLink>
 
           <button
@@ -84,11 +84,11 @@ export default function Navigation() {
                 ))}
                 <li className="pt-2">
                   <SiteLink
-                    href="#waitlist"
+                    href="#beta"
                     onClick={() => setMenuOpen(false)}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-base font-medium ${GLASS_ACCENT}`}
+                    className={`inline-flex items-center rounded-full px-4 py-2 text-base font-medium ${GLASS_ACCENT}`}
                   >
-                    Join Waitlist <span aria-hidden>&rarr;</span>
+                    Get Noma Beta
                   </SiteLink>
                 </li>
               </ul>

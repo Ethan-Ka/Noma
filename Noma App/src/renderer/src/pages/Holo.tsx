@@ -8,15 +8,17 @@ import {
 } from '../stores/holoStore'
 import { useFlowStore } from '../stores/flowStore'
 import { HoloZoneTile } from '../components/HoloZoneTile'
+import { HoloDiagnosticCard } from '../components/HoloDiagnosticCard'
 import { AppIcon } from '../components/AppIcon'
 import { getHoloZoneLabel } from '@shared/constants'
 import type { HoloInputGateStatus, HoloZone } from '@shared/types'
 import type { HoloSensitivity } from '../lib/holo/classifier'
 
-/** Taps per zone: more is more accurate but a longer wizard. 12 is where the
- *  discriminant reliably clears 95% right-zone on the simulated benchmark
- *  (classifier.accuracy.test.ts); at 8 it falls just short. */
-const TAPS_PER_ZONE = 12
+/** Double taps per zone, i.e. 12 calibration taps: more is more accurate
+ *  but a longer wizard. 12 taps is where the discriminant cleared 95%
+ *  right-zone on the simulated benchmark (classifier.accuracy.test.ts). Taken
+ *  as double taps because that's how Holo is used (see doubleTap.ts). */
+const DOUBLE_TAPS_PER_ZONE = 6
 /** Examples taken per "teach Noma a sound to ignore" run. A few, varied,
  *  beats one: the same mouse never lands twice the same way. */
 const IGNORE_SAMPLES = 4
@@ -30,7 +32,9 @@ type WizardState =
   | { status: 'error'; message: string }
 
 const OUTCOME_MESSAGES: Record<TapOutcome, string> = {
-  pressed: 'Recognized. Control pressed.',
+  pressed: 'Double tap recognized. Control pressed.',
+  armed: 'Tap the same side again to fire (a relaxed knock-knock, under a second apart).',
+  'soft-touch': 'Ignored: that was a soft contact, like a finger or palm coming to rest, not a tap.',
   'no-control': 'Recognized, but this zone has no control assigned in the current app.',
   'ignored-input': 'Ignored: that sound came with a key press, mouse click or trackpad touch.',
   unrecognized: "Heard a sound that didn't match any zone. Tap with a knuckle on the desk, or recalibrate.",
@@ -136,7 +140,7 @@ export function Holo() {
   const runCalibration = async (): Promise<void> => {
     stopListening()
     try {
-      await calibrate(TAPS_PER_ZONE, (progress) => setWizard({ status: 'running', ...progress }))
+      await calibrate(DOUBLE_TAPS_PER_ZONE, (progress) => setWizard({ status: 'running', ...progress }))
       // calibrate() catches its own errors into micError rather than
       // throwing — check it here instead of a try/catch around a promise
       // that never rejects.
@@ -152,10 +156,11 @@ export function Holo() {
       <div className="mb-8">
         <h1 className="font-display text-xl font-semibold text-neutral-100">Holo</h1>
         <p className="mt-1 max-w-xl text-sm text-neutral-600">
-          No physical keyboard needed. Tap one of Holo's zones — the desk around your laptop, or
-          (on most laptops) the empty space beside your trackpad — and Noma presses the matching
-          control, exactly as if a real button were pressed. Free, and keeps listening in the
-          background while Holo is your chosen input (Settings).
+          No physical keyboard needed. Double-tap one of Holo's zones (the desk around your laptop,
+          or on most laptops the empty space beside your trackpad) with a relaxed knock-knock, and
+          Noma presses the matching control, exactly as if a real button were pressed. It takes two
+          taps so that a resting finger or a bumped desk never fires anything by accident. Free, and
+          keeps listening in the background while Holo is your chosen input (Settings).
         </p>
       </div>
 
@@ -231,9 +236,11 @@ export function Holo() {
 
         {wizard.status === 'running' && wizard.phase === 'zone' && (
           <div className="mb-4 rounded-lg border border-accent/30 bg-accent/[0.08] px-4 py-3 text-sm text-holo-text">
-            Zone {wizard.zoneIndex + 1} of {wizard.totalZones}: {getHoloZoneLabel(wizard.zone, zoneCount)}, tap it now
-            (tap {wizard.tapIndex + 1} of {TAPS_PER_ZONE}). Tap the way you actually will in use, varying your
-            force and spot a little within the zone — everything Holo accepts later is measured from these taps.
+            Zone {wizard.zoneIndex + 1} of {wizard.totalZones}: {getHoloZoneLabel(wizard.zone, zoneCount)}, double-tap
+            it now (double tap {wizard.doubleTapIndex + 1} of {DOUBLE_TAPS_PER_ZONE},{' '}
+            {wizard.half === 1 ? 'first tap' : 'second tap'}). Double-tap the way you actually will in use, a relaxed
+            knock-knock, varying your force and spot a little within the zone. Everything Holo accepts later,
+            including how far apart your two taps can be, is measured from these taps.
           </div>
         )}
         {(wizard.status === 'error' || micError) && (
@@ -432,6 +439,8 @@ export function Holo() {
             )}
           </div>
         )}
+
+        <HoloDiagnosticCard />
 
         <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-holo-muted">
           <span>Pace</span>

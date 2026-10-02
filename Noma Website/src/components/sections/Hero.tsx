@@ -1,123 +1,101 @@
-import { useEffect, useRef, useState } from 'react'
-import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion'
-import KeyboardVisual from '../visuals/KeyboardVisual'
+import { useEffect, useState } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
+import AdaptiveSurface from '../visuals/AdaptiveSurface'
+import SiteLink from '../layout/SiteLink'
 import { GLASS_ACCENT } from '../../lib/glass'
 
 /**
- * 2026 ground-up redesign — the opening cinematic moment, not a hero packed
- * with two CTAs and a headline competing with a device shot. One claim, one
- * action, and the product itself doing the rest of the talking:
+ * The claim, and the proof of it, in one screen.
  *
- *  1. Page opens dark and quiet — no immediate flash of content.
- *  2. The keyboard fades in first, alone, before any copy — it's the
- *     subject of the sentence that hasn't been said yet.
- *  3. The screen "powers on" a beat later (real component state, not a
- *     video loop): `controls` starts empty, then fills with VS Code's real
- *     controls via `KeyboardVisual`'s own scan-line transition — the exact
- *     mechanic every other section already uses to show Noma reacting,
- *     reused here as "it just turned on" instead of "it just adapted."
- *  4. The headline and supporting line settle in last, once there's
- *     something worth reading them next to.
- *
- * Parallax is a single, slow, small translateY tied to scroll — "very slow
- * camera movement," not a layered 3D scene. No pin-connector strips
- * (`showPinConnectors={false}`): modular hardware isn't part of this story.
+ * The headline is deliberately short enough to read in the time the surface
+ * below takes to change once — because the surface is the argument and the
+ * words are only the caption. Someone who never reads a line should still
+ * understand the product from watching four controls rewrite themselves when
+ * the application above them changes.
  */
-const HEADLINE_DELAY_MS = 900
-const POWER_ON_DELAY_MS = 1500
+
+/** The cycle leads with the two applications most people have open at once,
+ *  then the one that makes the point hardest: the same four keys, in a tool
+ *  that has nothing in common with the other two. */
+const CYCLE = ['vscode', 'chrome', 'claude', 'premiere']
+const DWELL_MS = 2600
 
 export default function Hero() {
   const reduceMotion = useReducedMotion()
-  const [poweredOn, setPoweredOn] = useState(reduceMotion ?? false)
-  const [showCopy, setShowCopy] = useState(reduceMotion ?? false)
-  const sectionRef = useRef<HTMLDivElement>(null)
-  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start start', 'end start'] })
-  const keyboardY = useTransform(scrollYProgress, [0, 1], [0, reduceMotion ? 0 : 90])
-  const keyboardOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0.2])
+  const [index, setIndex] = useState(0)
 
   useEffect(() => {
+    // Reduced motion gets a single, static state rather than a slower loop:
+    // the request is for less movement, not for the same movement delayed.
     if (reduceMotion) return
-    const powerTimer = setTimeout(() => setPoweredOn(true), POWER_ON_DELAY_MS)
-    const copyTimer = setTimeout(() => setShowCopy(true), HEADLINE_DELAY_MS)
-    return () => {
-      clearTimeout(powerTimer)
-      clearTimeout(copyTimer)
-    }
+    const timer = setInterval(() => setIndex((i) => (i + 1) % CYCLE.length), DWELL_MS)
+    return () => clearInterval(timer)
   }, [reduceMotion])
 
   return (
-    <div id="top" ref={sectionRef} className="relative flex min-h-[100svh] flex-col overflow-hidden bg-base-950 pt-32 sm:pt-36">
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[70vh] hero-glow" />
+    <section id="top" className="relative overflow-hidden">
+      <div aria-hidden className="hero-glow pointer-events-none absolute inset-x-0 top-0 h-[70vh]" />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-4xl flex-1 flex-col items-center px-6 text-center sm:px-8">
-        <motion.h1
-          initial={reduceMotion ? undefined : { opacity: 0, y: 14 }}
-          animate={showCopy ? { opacity: 1, y: 0 } : undefined}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-          className="text-balance font-display text-[clamp(2.25rem,6vw,4.25rem)] font-semibold leading-[1.05] tracking-tight text-base-50"
-        >
-          A keyboard that understands
-          <br className="hidden sm:block" /> what you&rsquo;re doing.
-        </motion.h1>
+      <div className="relative mx-auto max-w-6xl px-6 pb-24 pt-36 sm:px-8 sm:pt-44 md:pb-32">
+        <div className="mx-auto max-w-3xl text-center">
+          <motion.h1
+            initial={reduceMotion ? false : { opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="text-balance font-display text-[2.3rem] font-semibold leading-[1.04] tracking-[-0.04em] text-base-50 sm:text-6xl md:text-7xl"
+          >
+            Your computer,
+            <br />
+            adapting to you.
+          </motion.h1>
 
-        <motion.p
-          initial={reduceMotion ? undefined : { opacity: 0, y: 10 }}
-          animate={showCopy ? { opacity: 1, y: 0 } : undefined}
-          transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-          className="mt-6 max-w-xl text-balance text-base text-base-300 sm:text-lg"
-        >
-          Noma adapts to the apps, workflows, and tasks you&rsquo;re working on, giving you the right controls
-          when you need them.
-        </motion.p>
+          <motion.p
+            initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+            className="mx-auto mt-6 max-w-xl text-balance text-base leading-relaxed text-base-300 sm:text-lg"
+          >
+            Noma sees which application you are in and changes your controls to match. Then it learns the
+            sequences you repeat.
+          </motion.p>
+
+          <motion.div
+            initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-9 flex flex-wrap items-center justify-center gap-3"
+          >
+            <SiteLink
+              href="#beta"
+              className={`inline-flex items-center rounded-full px-6 py-3 text-sm font-medium tracking-tight ${GLASS_ACCENT}`}
+            >
+              Get Noma Beta
+            </SiteLink>
+            <SiteLink
+              href="#context"
+              className="inline-flex items-center rounded-full border border-base-600 px-6 py-3 text-sm font-medium tracking-tight text-base-200 transition-colors hover:border-base-400 hover:text-base-50"
+            >
+              See how it works
+            </SiteLink>
+          </motion.div>
+        </div>
 
         <motion.div
-          initial={reduceMotion ? undefined : { opacity: 0, y: 10 }}
-          animate={showCopy ? { opacity: 1, y: 0 } : undefined}
-          transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="mt-9"
+          initial={reduceMotion ? false : { opacity: 0, y: 28 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.9, delay: 0.26, ease: [0.16, 1, 0.3, 1] }}
+          className="mx-auto mt-16 max-w-2xl sm:mt-20"
         >
-          <a href="#waitlist" className={`inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-sm font-medium ${GLASS_ACCENT}`}>
-            Join the Waitlist <span aria-hidden>&rarr;</span>
-          </a>
+          <AdaptiveSurface appId={CYCLE[index]} size="lg" />
+
+          {/* The label under the surface is the only instruction on the page.
+              Without it a first-time visitor can read the change as decoration;
+              with it, the next switch is understood as the product working. */}
+          <p className="mt-6 text-center font-mono text-[11px] uppercase tracking-[0.18em] text-base-500">
+            Same four controls · different application
+          </p>
         </motion.div>
       </div>
-
-      <motion.div
-        style={{ y: keyboardY, opacity: reduceMotion ? 1 : keyboardOpacity }}
-        initial={reduceMotion ? undefined : { opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-10 mx-auto mt-16 w-full max-w-4xl px-6 pb-20 sm:px-10"
-      >
-        <KeyboardVisual
-          appName="VS Code"
-          controls={poweredOn ? ['Run', 'Debug', 'Terminal', 'Search'] : []}
-          glow
-          float
-          showPinConnectors={false}
-        />
-      </motion.div>
-
-      <Reveal delay={reduceMotion ? 0 : 1.6} className="relative z-10 mx-auto mb-10 hidden text-xs text-base-500 sm:block">
-        Scroll to see it work &darr;
-      </Reveal>
-    </div>
-  )
-}
-
-// A tiny inline variant of ui/Reveal.tsx that fires once on mount (not on
-// scroll-into-view) — this line is already in the first viewport, so
-// "reveal on scroll" would never fire without the visitor scrolling first,
-// which defeats the point of a scroll *hint*.
-function Reveal({ children, delay, className }: { children: React.ReactNode; delay: number; className?: string }) {
-  return (
-    <motion.p
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 1, delay }}
-      className={className}
-    >
-      {children}
-    </motion.p>
+    </section>
   )
 }

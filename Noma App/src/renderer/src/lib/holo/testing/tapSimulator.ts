@@ -172,3 +172,150 @@ export const PALM_OFF_SPOTS: Record<'deskBeside' | 'keyboardDeck' | 'belowTrackp
   /** The palm-rest lip in front of the trackpad, between the two zones. */
   belowTrackpad: { clickCutoffHz: 5800, reflectionMs: 0.15, reflectionGain: 0.8, modeGains: [1, 0.7, 0.8, 0.6], clickGain: 1, modes: CHASSIS_MODES, level: 0.8 }
 }
+
+/**
+ * Everyday sounds that are NOT taps, for measuring false fires. Each is
+ * built from what physically separates it from a knuckle tap, not from
+ * whatever Holo happens to check today:
+ *
+ * - palmLand: a hand or wrist landing on the palm rest next to a zone. A big,
+ *   soft mass: several milliseconds to reach full force, so a dull attack.
+ *   The most tap-like of all, and exactly where the zones are.
+ * - fingerRest: a fingertip coming to rest (pad, not knuckle): soft and dull.
+ * - setDown: a cup or phone put on the desk: lands on one edge, then settles.
+ * - phoneBounce: something dropped a few centimetres: one hit, then a bounce.
+ * - scrape: a sleeve or object sliding: sustained, no single impact.
+ * - clap: airborne, broadband, room reverb, no chassis ringing.
+ * - knockFar: a door knock in the room: dull, reverberant, quiet.
+ * - keyClick: someone typing on another keyboard: short airborne clicks.
+ */
+export type NonTapKind = 'palmLand' | 'fingerRest' | 'setDown' | 'phoneBounce' | 'scrape' | 'clap' | 'knockFar' | 'keyClick'
+export const NON_TAP_KINDS: NonTapKind[] = ['palmLand', 'fingerRest', 'setDown', 'phoneBounce', 'scrape', 'clap', 'knockFar', 'keyClick']
+
+interface ImpactParams {
+  cutoffHz: number
+  /** Time for the contact force to build up (a knuckle is ~0.3 ms). */
+  riseMs: number
+  clickGain: number
+  modes: Array<[number, number]>
+  modeGains: number[]
+  level: number
+  /** Extra contacts: [delay ms, relative gain]. */
+  contacts?: Array<[number, number]>
+  /** Airborne room reverb instead of structural ringing. */
+  reverbMs?: number
+}
+
+function synthImpact(params: ImpactParams, rng: () => number, out: Float32Array, onset: number, amp: number): void {
+  const sr = SIM_SAMPLE_RATE
+  const alpha = 1 - Math.exp((-2 * Math.PI * params.cutoffHz) / sr)
+  const riseFrames = Math.max(1, Math.round((params.riseMs / 1000) * sr))
+  const hits: Array<[number, number]> = [[0, 1], ...(params.contacts ?? [])]
+  for (const [delayMs, gain] of hits) {
+    const start = onset + Math.round((delayMs / 1000) * sr)
+    const length = Math.round(sr * 0.004) + riseFrames
+    let lp = 0
+    for (let i = 0; i < length && start + i < SIM_WINDOW; i++) {
+      const envelope = i < riseFrames ? i / riseFrames : Math.exp(-(i - riseFrames) / (sr * 0.0015))
+      lp += alpha * ((rng() * 2 - 1) * envelope - lp)
+      out[start + i] += amp * gain * params.clickGain * lp
+    }
+    if (params.reverbMs) {
+      const tau = (params.reverbMs / 1000 / 6.9) * sr
+      let lpr = 0
+      for (let t = 0; start + t < SIM_WINDOW; t++) {
+        lpr += alpha * ((rng() * 2 - 1) - lpr)
+        out[start + t] += amp * gain * 0.25 * lpr * Math.exp(-t / tau) * Math.min(1, t / 48)
+      }
+    } else {
+      params.modes.forEach(([freq, decay], m) => {
+        const modeGain = (params.modeGains[m] ?? 0.3) * 0.35 * (1 + (rng() - 0.5) * 0.2)
+        const phase = rng() * Math.PI * 2
+        for (let t = 0; start + t < SIM_WINDOW; t++) {
+          const attack = t < riseFrames ? t / riseFrames : 1
+          out[start + t] += amp * gain * modeGain * attack * Math.sin((2 * Math.PI * freq * t) / sr + phase) * Math.exp(-t / (sr * decay))
+        }
+      })
+    }
+  }
+}
+
+/** One non-tap sound, as a mono window with its onset around frame 1000. */
+export function simulateNonTap(kind: NonTapKind, options: { seed: number; noiseDb?: number }): Float32Array {
+  const rng = makeRng(options.seed)
+  const sr = SIM_SAMPLE_RATE
+  const out = new Float32Array(SIM_WINDOW)
+  const onset = 900 + Math.floor(rng() * 200)
+  const r = (lo: number, hi: number): number => lo + (hi - lo) * rng()
+  const loudness = r(0.15, 1)
+
+  switch (kind) {
+    case 'palmLand':
+      synthImpact(
+        { cutoffHz: r(500, 1600), riseMs: r(3, 12), clickGain: 1, modes: CHASSIS_MODES, modeGains: [1, 0.6, 0.25, 0.1], level: 1 },
+        rng, out, onset, (0.1 + 0.45 * loudness) * r(0.6, 1)
+      )
+      break
+    case 'fingerRest':
+      synthImpact(
+        { cutoffHz: r(1200, 2800), riseMs: r(1.5, 5), clickGain: 1, modes: CHASSIS_MODES, modeGains: [1, 0.8, 0.45, 0.2], level: 1 },
+        rng, out, onset, 0.06 + 0.2 * loudness
+      )
+      break
+    case 'setDown':
+      synthImpact(
+        {
+          cutoffHz: r(2000, 4500), riseMs: r(0.5, 2), clickGain: 1, modes: DESK_MODES, modeGains: [1, 0.9, 0.6, 0.4, 0.2], level: 1,
+          contacts: [[r(4, 30), r(0.4, 1.1)]]
+        },
+        rng, out, onset, 0.08 + 0.35 * loudness
+      )
+      break
+    case 'phoneBounce':
+      synthImpact(
+        {
+          cutoffHz: r(3000, 7000), riseMs: r(0.2, 0.8), clickGain: 1.1, modes: DESK_MODES, modeGains: [0.8, 1, 0.7, 0.5, 0.3], level: 1,
+          contacts: [[r(25, 70), r(0.2, 0.5)]]
+        },
+        rng, out, onset, 0.1 + 0.35 * loudness
+      )
+      break
+    case 'scrape': {
+      const length = Math.round(r(0.08, 0.3) * sr)
+      const alpha = 1 - Math.exp((-2 * Math.PI * r(1500, 5000)) / sr)
+      let lp = 0
+      const amp = 0.03 + 0.12 * loudness
+      for (let i = 0; i < length && onset + i < SIM_WINDOW; i++) {
+        const envelope = Math.sin((Math.PI * i) / length) * (0.6 + 0.4 * Math.sin(i / r(200, 600)))
+        lp += alpha * ((rng() * 2 - 1) - lp)
+        out[onset + i] += amp * envelope * lp
+      }
+      break
+    }
+    case 'clap':
+      synthImpact(
+        { cutoffHz: r(3000, 9000), riseMs: r(0.2, 0.6), clickGain: 1.3, modes: [], modeGains: [], level: 1, reverbMs: r(250, 600) },
+        rng, out, onset, 0.08 + 0.3 * loudness
+      )
+      break
+    case 'knockFar':
+      synthImpact(
+        {
+          cutoffHz: r(400, 900), riseMs: r(0.5, 2), clickGain: 1, modes: [], modeGains: [], level: 1, reverbMs: r(300, 700),
+          contacts: [[r(140, 220), r(0.7, 1)]]
+        },
+        rng, out, onset, 0.02 + 0.08 * loudness
+      )
+      break
+    case 'keyClick':
+      synthImpact(
+        { cutoffHz: r(4000, 9000), riseMs: r(0.1, 0.4), clickGain: 1, modes: [], modeGains: [], level: 1, reverbMs: r(150, 350) },
+        rng, out, onset, 0.02 + 0.08 * loudness
+      )
+      break
+  }
+
+  const noise = Math.pow(10, (options.noiseDb ?? -62) / 20)
+  for (let i = 0; i < SIM_WINDOW; i++) out[i] += (rng() * 2 - 1) * noise
+  return out
+}

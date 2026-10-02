@@ -349,6 +349,11 @@ export interface ImpactCheck {
    * isn't is a single event.
    */
   contacts: number
+  /** Time from 10% to 90% of the sound's peak, ms. See `measureAttack`. */
+  riseMs: number
+  /** How bright the first 2 ms are, in dB (0 ≈ white noise, very negative =
+   *  dull thud). See `measureAttack`. */
+  attackBrightnessDb: number
 }
 
 /** Windows measured from the onset. The first is late enough that a knock is
@@ -473,6 +478,63 @@ export function countContacts(samples: ArrayLike<number>, onset: number, sampleR
   return contacts
 }
 
+/**
+ * How the contact *started*: the difference between striking the surface and
+ * coming to rest on it.
+ *
+ * A knuckle, fingernail or firm fingertip is a hard, light body: it delivers
+ * its whole force in well under a millisecond, which makes a sharp, bright
+ * click. A finger pad settling onto the palm rest, a wrist landing, a hand
+ * shifting its weight: soft and heavy, so the force builds over several
+ * milliseconds and the start of the sound is dull. It's physics, like the
+ * decay test above, so it holds for contacts nobody demonstrated.
+ *
+ * On the benchmark this was the gap: a fingertip coming to rest on a zone
+ * fired Holo 87% of the time, because nothing else about it differs from a
+ * soft tap. Both limits come from the user's own calibration taps
+ * (`deriveGates`), so someone who deliberately taps with the pad of a finger
+ * sets their own bar and isn't rejected for it.
+ */
+export function measureAttack(
+  samples: ArrayLike<number>,
+  onset: number,
+  sampleRate: number
+): { riseMs: number; attackBrightnessDb: number } {
+  const from = Math.max(1, onset - Math.round(sampleRate * 0.002))
+  const to = Math.min(samples.length, onset + Math.round(sampleRate * 0.03))
+  let peak = 0
+  for (let i = from; i < to; i++) peak = Math.max(peak, Math.abs(samples[i]))
+  if (peak <= 0) return { riseMs: 0, attackBrightnessDb: 0 }
+
+  let start = -1
+  let top = -1
+  for (let i = from; i < to; i++) {
+    const level = Math.abs(samples[i])
+    if (start < 0 && level >= 0.1 * peak) start = i
+    if (level >= 0.9 * peak) {
+      top = i
+      break
+    }
+  }
+  if (start < 0 || top < 0) return { riseMs: 0, attackBrightnessDb: 0 }
+
+  // First-difference energy over plain energy: a first difference weights
+  // each frequency by how high it is, so the ratio rises with brightness and
+  // doesn't depend on loudness.
+  const end = Math.min(samples.length, start + Math.round(sampleRate * 0.002))
+  let energy = 0
+  let diffEnergy = 0
+  for (let i = start; i < end; i++) {
+    energy += samples[i] * samples[i]
+    const d = samples[i] - samples[i - 1]
+    diffEnergy += d * d
+  }
+  return {
+    riseMs: ((top - start) / sampleRate) * 1000,
+    attackBrightnessDb: energy > EPS ? clamp(toDb(diffEnergy) - toDb(energy), -60, 10) : 0
+  }
+}
+
 /** The impact measures for one channel's window. */
 export function measureImpact(samples: ArrayLike<number>, onset: number, sampleRate: number): ImpactCheck {
   const frames = (ms: number): number => Math.round((sampleRate * ms) / 1000)
@@ -492,7 +554,13 @@ export function measureImpact(samples: ArrayLike<number>, onset: number, sampleR
   const drivenDb = tailShort ? -80 : clamp(toDb(meanSquare(samples, tailFrom, tailTo)) - toDb(late), -80, 40)
   const periodicity = lateTo - lateFrom < frames(20) ? 0 : latePeriodicity(samples, lateFrom, lateTo, sampleRate)
 
-  return { sustainDb, drivenDb, periodicity, contacts: countContacts(samples, onset, sampleRate) }
+  return {
+    sustainDb,
+    drivenDb,
+    periodicity,
+    contacts: countContacts(samples, onset, sampleRate),
+    ...measureAttack(samples, onset, sampleRate)
+  }
 }
 
 /**
@@ -515,7 +583,10 @@ export function detectImpact(channels: ArrayLike<number>[], sampleRate: number):
     periodicity: Math.min(...checks.map((check) => check.periodicity)),
     // The fewest any channel saw: every channel must agree it was a series
     // of impacts before one is rejected for being one.
-    contacts: Math.min(...checks.map((check) => check.contacts))
+    contacts: Math.min(...checks.map((check) => check.contacts)),
+    // Same idea: a soft contact is only called one when every channel agrees.
+    riseMs: Math.min(...checks.map((check) => check.riseMs)),
+    attackBrightnessDb: Math.max(...checks.map((check) => check.attackBrightnessDb))
   }
 }
 
@@ -1031,6 +1102,7 @@ export type ClassificationReason =
   | 'not-a-tap'
   | 'voice'
   | 'set-down'
+  | 'soft-touch'
   | 'learned-ignore'
   | 'no-calibration'
 
@@ -1043,6 +1115,10 @@ export interface ClassificationResult {
   /** How far the sound was from the winning zone, in the units of
    *  `HoloGates.maxDistance`. Absent when it was rejected before ranking. */
   distance?: number
+  /** For 'ambiguous' only: the zone it was closest to. It passed every "is
+   *  this a tap" check and only failed "which zone, for sure", so the
+   *  second half of a double tap may still use it (see holoStore). */
+  candidate?: HoloZone
 }
 
 /** Used when a calibration predates the contact count being measured —
@@ -1105,9 +1181,27 @@ export function deriveGates(looDistances: number[], peakDbs: number[], impacts: 
     // bounces sets its own bar rather than being called a mouse.
     maxContacts: impacts.length
       ? Math.min(3, Math.max(1, percentile(impacts.map((impact) => impact.contacts), 0.9)))
-      : DEFAULT_MAX_CONTACTS
+      : DEFAULT_MAX_CONTACTS,
+    // Slowest / dullest of the user's own taps (90th / 10th percentile) plus
+    // a margin, so only contacts clearly softer than anything they tapped
+    // with are refused.
+    ...(impacts.length
+      ? {
+          maxRiseMs: percentile(impacts.map((impact) => impact.riseMs), 0.9) * RISE_HEADROOM + RISE_MARGIN_MS,
+          minAttackBrightnessDb:
+            percentile(impacts.map((impact) => impact.attackBrightnessDb), 0.1) - BRIGHTNESS_MARGIN_DB
+        }
+      : {})
   }
 }
+
+/** 1.2x the slowest ordinary tap: on the benchmark this let ~10% of
+ *  fingertips-coming-to-rest through (vs 21% at 1.5x) for about one point of
+ *  real taps; the double tap (doubleTap.ts) takes care of the rest. Tighter
+ *  than this started costing real taps faster than it caught soft contacts. */
+const RISE_HEADROOM = 1.2
+const RISE_MARGIN_MS = 0.5
+const BRIGHTNESS_MARGIN_DB = 6
 
 /**
  * The sensitivity control, applied to the gates as well as to the onset
@@ -1130,7 +1224,9 @@ export function relaxGates(gates: HoloGates, sensitivity: HoloSensitivity): Holo
     minPeakDb: gates.minPeakDb - 4 * lean,
     maxPeakDb: gates.maxPeakDb + 4 * lean,
     maxSustainDb: gates.maxSustainDb + 3 * lean,
-    maxDrivenDb: gates.maxDrivenDb + 3 * lean
+    maxDrivenDb: gates.maxDrivenDb + 3 * lean,
+    ...(gates.maxRiseMs !== undefined ? { maxRiseMs: gates.maxRiseMs * (1 + 0.25 * lean) } : {}),
+    ...(gates.minAttackBrightnessDb !== undefined ? { minAttackBrightnessDb: gates.minAttackBrightnessDb - 2 * lean } : {})
   }
 }
 
@@ -1189,6 +1285,13 @@ export function classifyZone(
   if (options.impact && options.impact.contacts > (gates.maxContacts ?? DEFAULT_MAX_CONTACTS)) {
     return { zone: null, confidence: 0, reason: 'set-down' }
   }
+  if (
+    options.impact &&
+    ((gates.maxRiseMs !== undefined && options.impact.riseMs > gates.maxRiseMs) ||
+      (gates.minAttackBrightnessDb !== undefined && options.impact.attackBrightnessDb < gates.minAttackBrightnessDb))
+  ) {
+    return { zone: null, confidence: 0, reason: 'soft-touch' }
+  }
 
   const ranked = profiles
     .map((profile) => ({
@@ -1236,7 +1339,7 @@ export function classifyZone(
   if (!runnerUp) return { zone: best.zone, confidence: 1, reason: 'ok', distance }
   if (posterior !== null) {
     if (posterior < (gates.minPosterior ?? MIN_ZONE_POSTERIOR)) {
-      return { zone: null, confidence: posterior, reason: 'ambiguous', distance }
+      return { zone: null, confidence: posterior, reason: 'ambiguous', distance, candidate: best.zone }
     }
     return { zone: best.zone, confidence: posterior, reason: 'ok', distance }
   }

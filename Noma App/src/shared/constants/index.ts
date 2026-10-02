@@ -65,6 +65,8 @@ export const IPC_CHANNELS = {
   SAVE_HOLO_CALIBRATION: 'flow:save-holo-calibration',
   CLEAR_HOLO_CALIBRATION: 'flow:clear-holo-calibration',
   GET_LAPTOP_INFO: 'flow:get-laptop-info',
+  HOLO_SAVE_RECORDING: 'flow:holo-save-recording',
+  HOLO_OPEN_RECORDINGS: 'flow:holo-open-recordings',
   HOLO_SET_INPUT_GATE: 'flow:holo-set-input-gate',
   HOLO_INPUT_ACTIVITY: 'flow:holo-input-activity',
 

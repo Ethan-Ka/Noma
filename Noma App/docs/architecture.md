@@ -405,6 +405,26 @@ are shown on the Holo page. The classifier's thresholds
 (`MAX_TRUSTED_DISTANCE`, `SENSITIVITY_MULTIPLIER`) are first-pass values
 validated against synthetic audio only — tune with real recordings.
 
+**Zones fire on a double tap (`lib/holo/doubleTap.ts`).** A zone mapped to
+something like "close tab" must never fire by accident, and per-sound checks
+alone can't get there: a fingertip coming to rest on a zone *is* a small
+soft tap. Two defences, measured on the simulated palm rest
+(`lib/holo/testing/`, regression-tested in `holo.falseTriggers.test.ts`):
+- **Attack gate** (`measureAttack`, classifier.ts): a knuckle or fingertip
+  strike reaches full force in well under a millisecond with a bright click;
+  a finger pad or palm settling takes several and is dull. Rise time and
+  first-2-ms brightness are gated against the user's own calibration taps
+  (`HoloGates.maxRiseMs` / `minAttackBrightnessDb`, reason `soft-touch`).
+  Fingertip-rest false fires went 87% → ~10%, palm landings 6% → 0%.
+- **Double tap**: two taps on the same zone 250–800 ms apart, within 15 dB of
+  each other. The lower bound exists because the impact gate reads 180 ms
+  past each tap (a second tap inside that would spoil the first) and it
+  also means a tap's own ringing can never pair with itself. The second tap
+  only needs to pass every "is it a tap" gate and have the armed zone as
+  its best match (`ClassificationResult.candidate` on an `ambiguous`
+  result), not be confident on its own. Accidental fires in a stream of
+  3,200 everyday sounds: 56 with single taps, 2 with double taps.
+
 **2-zone layout is trackpad-relative, not mic-relative (changed later).**
 `getHoloZones`/`getHoloZoneLabel` (shared/constants) originally put both
 2-zone positions on whichever side the built-in mic was on (front+rear),

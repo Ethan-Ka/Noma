@@ -12,7 +12,9 @@ export default function Section({ id, children, className = '', bordered = true 
   return (
     <section
       id={id}
-      className={`relative ${bordered ? 'border-t border-base-800' : ''} ${className}`}
+      /* scroll-mt clears the fixed nav pill, so a jump to `#flow` lands on
+         the heading rather than behind the bar covering it. */
+      className={`relative scroll-mt-28 ${bordered ? 'border-t border-base-800' : ''} ${className}`}
     >
       <div className="mx-auto max-w-6xl px-6 py-24 sm:px-8 md:py-32">{children}</div>
     </section>

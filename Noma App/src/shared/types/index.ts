@@ -504,6 +504,13 @@ export interface HoloGates {
   /** Least posterior probability the winning zone needs (see
    *  classifier.ts's `Discriminant`). Optional so older gates load. */
   minPosterior?: number
+  /** Slowest a tap may reach full force, and dullest its first 2 ms may be
+   *  (see classifier.ts's `measureAttack`): what separates a knuckle or
+   *  fingertip strike from a finger pad or palm coming to rest. Measured
+   *  from the user's own taps; optional so older gates load (and don't
+   *  apply). */
+  maxRiseMs?: number
+  minAttackBrightnessDb?: number
 }
 
 /**
@@ -520,9 +527,12 @@ export interface HoloGates {
  * zone instead of cleanly prompting recalibration. The version bump forces
  * the clean prompt instead. v6: the feature vector gained attack, early-echo
  * and loudness features (and the body spectrum's window changed), and zones
- * are now decided by a discriminant built from the stored taps.
+ * are now decided by a discriminant built from the stored taps. v7: gates
+ * gained the soft-contact limits (`maxRiseMs`, `minAttackBrightnessDb`),
+ * which only calibration can measure; without the bump an older calibration
+ * would silently skip that check.
  */
-export const HOLO_CALIBRATION_VERSION = 6
+export const HOLO_CALIBRATION_VERSION = 7
 
 /** A completed calibration — one profile per zone (all 4; there's no
  *  paywall/tier gate on Holo). */
@@ -552,6 +562,13 @@ export interface HoloCalibration {
    *  is the whole safety of the mechanism). Optional and additive: it starts
    *  empty, and an existing calibration keeps working without it. */
   ignoredSounds?: number[][]
+  /**
+   * The user's own double-tap rhythm, measured from the double taps made
+   * during calibration: how far apart a pair may be and still count as one
+   * double tap (see renderer lib/holo/doubleTap.ts). Optional: without it
+   * the fixed default window applies.
+   */
+  doubleTapWindow?: { minGapMs: number; maxGapMs: number }
   /** Leave-one-out accuracy (0..1) over the calibration taps — how
    *  separable the zones were on this setup. */
   accuracy: number
@@ -983,6 +1000,11 @@ export interface FlowApi {
   clearHoloCalibration(): Promise<void>
   /** Maker/model of this computer, read once; empty strings if unknown. */
   getLaptopInfo(): Promise<LaptopInfo>
+  /** Holo diagnostic recording (the Holo page's "Record a test session"
+   *  only): saves 16-bit PCM + a JSON log to Noma's folder on this computer
+   *  and resolves with the folder's path. */
+  saveHoloRecording(pcm: Int16Array, sampleRate: number, channels: number, meta: unknown): Promise<string>
+  openHoloRecordings(): Promise<void>
   /**
    * Holo: while enabled, main forwards the *timestamp only* of every
    * physical key/mouse event and trackpad/touchscreen touch (never which

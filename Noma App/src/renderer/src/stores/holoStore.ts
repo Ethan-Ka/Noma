@@ -9,6 +9,10 @@ import {
 } from '@shared/types'
 import { getHoloZones, recommendHoloZoneCount, type HoloZoneCount } from '@shared/constants'
 import { HoloCaptureEngine, type MicInfo } from '../lib/holo/holoCapture'
+import { DoubleTapDetector, fitDoubleTapWindow, pairMatcher } from '../lib/holo/doubleTap'
+
+/** Longest gap inside a calibration double tap that still counts as one. */
+const MAX_CALIBRATION_PAIR_GAP_MS = 1500
 import type { MicCandidate } from '../lib/holo/micKind'
 import {
   buildModel,
@@ -93,6 +97,8 @@ function writeStored(key: string, value: unknown): void {
  *  Holo page so "nothing happens" is never a mystery. */
 export type TapOutcome =
   | 'pressed'
+  | 'armed'
+  | 'soft-touch'
   | 'no-control'
   | 'ignored-input'
   | 'unrecognized'
@@ -150,7 +156,15 @@ async function appendIgnoredSounds(
   set({ calibration: saved })
 }
 
-export type CalibrationProgress = { phase: 'zone'; zone: HoloZone; zoneIndex: number; totalZones: number; tapIndex: number }
+export type CalibrationProgress = {
+  phase: 'zone'
+  zone: HoloZone
+  zoneIndex: number
+  totalZones: number
+  /** Which double tap of this zone (0-based), and which half of it. */
+  doubleTapIndex: number
+  half: 1 | 2
+}
 
 interface HoloStoreState {
   inputSource: InputSource
@@ -204,15 +218,26 @@ interface HoloStoreState {
   clearIgnoredSounds: () => Promise<void>
   /** True while `learnIgnoredSounds` is listening. */
   isLearningIgnored: boolean
+  /** The diagnostic recording in progress (Holo page > "Record a test
+   *  session"), or null. While one runs, Holo classifies as usual but
+   *  presses nothing: it's a dry run. */
+  diagnostic: { phases: DiagnosticPhase[]; index: number } | null
+  /** Where the last diagnostic recording was saved. */
+  diagnosticSavedTo: string | null
+  startDiagnostic: () => Promise<void>
+  /** Moves to the next phase, or saves the recording after the last one. */
+  nextDiagnosticPhase: () => Promise<void>
+  cancelDiagnostic: () => void
   setAllowExternalMic: (allow: boolean) => Promise<void>
   refreshAvailableMics: () => Promise<void>
   /**
-   * Walks through all 4 zones, `tapsPerZone` taps each; reports progress
-   * via `onProgress`. Computes the model + a leave-one-out accuracy and
+   * Walks through every active zone, `doubleTapsPerZone` double taps each
+   * (both halves kept as calibration taps); reports progress via
+   * `onProgress`. Computes the model + a leave-one-out accuracy and
    * saves it. Stray sounds (typing, clicks) are ignored automatically by
    * the input gate — there's no separate "teach it to ignore typing" step.
    */
-  calibrate: (tapsPerZone: number, onProgress: (update: CalibrationProgress) => void) => Promise<void>
+  calibrate: (doubleTapsPerZone: number, onProgress: (update: CalibrationProgress) => void) => Promise<void>
   clearCalibration: () => Promise<void>
 }
 
@@ -234,6 +259,76 @@ export const useHoloStore = create<HoloStoreState>((set, get) => ({
   pace: readStored<HoloPace>(COOLDOWN_KEY, 'normal'),
   coolingDown: false,
   isLearningIgnored: false,
+  diagnostic: null,
+  diagnosticSavedTo: null,
+
+  startDiagnostic: async () => {
+    set({ micError: null, diagnosticSavedTo: null })
+    try {
+      if (!engine.isRunning) {
+        await engine.start()
+        await enableInputGate()
+        set({ isListening: true, mics: engine.mics })
+      }
+      const phases: DiagnosticPhase[] = [
+        ...get().activeZones.map((zone): DiagnosticPhase => ({ kind: 'zone', zone })),
+        { kind: 'singles' },
+        { kind: 'everyday' },
+        { kind: 'typing' }
+      ]
+      diagnosticLog = { phaseStarts: [Date.now()], events: [] }
+      doubleTap.reset()
+      engine.startRecording()
+      set({ diagnostic: { phases, index: 0 } })
+    } catch (error) {
+      set({ micError: error instanceof Error ? error.message : 'Could not start the recording' })
+    }
+  },
+
+  nextDiagnosticPhase: async () => {
+    const diagnostic = get().diagnostic
+    if (!diagnostic || !diagnosticLog) return
+    if (diagnostic.index + 1 < diagnostic.phases.length) {
+      diagnosticLog.phaseStarts.push(Date.now())
+      doubleTap.reset()
+      set({ diagnostic: { ...diagnostic, index: diagnostic.index + 1 } })
+      return
+    }
+    const log = diagnosticLog
+    diagnosticLog = null
+    set({ diagnostic: null })
+    const recording = engine.stopRecording()
+    if (!recording) return
+    const { calibration, sensitivity, pace, laptop, mics, zoneCount } = get()
+    const at = (t: number): number => t - recording.startedAt
+    const ends = [...log.phaseStarts.slice(1), Date.now()]
+    const meta = {
+      version: 1,
+      sampleRate: recording.sampleRate,
+      channels: recording.channels,
+      phases: diagnostic.phases.map((phase, i) => ({ ...phase, startMs: at(log.phaseStarts[i]), endMs: at(ends[i]) })),
+      events: log.events.map((event) => ({ ...event, onsetMs: at(event.onsetAt) })),
+      inputActivityMs: recording.inputActivityMs,
+      settings: { sensitivity, pace, zoneCount },
+      laptop,
+      mics,
+      calibration: calibration
+        ? { version: calibration.version, accuracy: calibration.accuracy, gates: calibration.gates, layout: calibration.layout }
+        : null
+    }
+    try {
+      const folder = await window.flow.saveHoloRecording(recording.pcm, recording.sampleRate, recording.channels, meta)
+      set({ diagnosticSavedTo: folder })
+    } catch (error) {
+      set({ micError: error instanceof Error ? error.message : 'Could not save the recording' })
+    }
+  },
+
+  cancelDiagnostic: () => {
+    diagnosticLog = null
+    engine.stopRecording()
+    set({ diagnostic: null })
+  },
   level: 0,
   pausedForTyping: false,
   touchCoverage: null,
@@ -333,7 +428,7 @@ export const useHoloStore = create<HoloStoreState>((set, get) => ({
     }
   },
 
-  calibrate: async (tapsPerZone, onProgress) => {
+  calibrate: async (doubleTapsPerZone, onProgress) => {
     set({ isCalibrating: true, micError: null })
 
     try {
@@ -353,16 +448,30 @@ export const useHoloStore = create<HoloStoreState>((set, get) => ({
       // `deriveGates`) — which is the whole reason they're collected here
       // rather than only during listening.
       const tapsByZone: Array<{ zone: HoloZone; taps: number[][] }> = []
+      const doubleTapGaps: number[] = []
       const peakLevels: number[] = []
       const impacts: ImpactCheck[] = []
       for (let zoneIndex = 0; zoneIndex < zones.length; zoneIndex++) {
         const zone = zones[zoneIndex]
         const taps: number[][] = []
-        for (let tapIndex = 0; tapIndex < tapsPerZone; tapIndex++) {
-          onProgress({ phase: 'zone', zone, zoneIndex, totalZones: zones.length, tapIndex })
-          taps.push(await engine.captureNextTap())
-          peakLevels.push(engine.lastTapPeakDb)
-          if (engine.lastTapImpact) impacts.push(engine.lastTapImpact)
+        // Double taps, the way Holo is used: both halves are kept as
+        // calibration taps (a second tap lands a little differently from a
+        // first one, and the model should know both), and the gap between
+        // them sets this user's double-tap window.
+        for (let doubleTapIndex = 0; doubleTapIndex < doubleTapsPerZone; doubleTapIndex++) {
+          let firstOnset = 0
+          for (const half of [1, 2] as const) {
+            onProgress({ phase: 'zone', zone, zoneIndex, totalZones: zones.length, doubleTapIndex, half })
+            taps.push(await engine.captureNextTap())
+            peakLevels.push(engine.lastTapPeakDb)
+            if (engine.lastTapImpact) impacts.push(engine.lastTapImpact)
+            if (half === 1) firstOnset = engine.lastTapOnsetAt
+            // A pair the user split with a long pause is two taps, not a
+            // double tap: still good calibration taps, but no rhythm in it.
+            else if (engine.lastTapOnsetAt - firstOnset <= MAX_CALIBRATION_PAIR_GAP_MS) {
+              doubleTapGaps.push(engine.lastTapOnsetAt - firstOnset)
+            }
+          }
         }
         tapsByZone.push({ zone, taps })
       }
@@ -380,6 +489,7 @@ export const useHoloStore = create<HoloStoreState>((set, get) => ({
         levelRange: { minDb: Math.min(...peakLevels), maxDb: Math.max(...peakLevels) },
         gates: deriveGates(distances, peakLevels, impacts),
         accuracy,
+        ...(fitDoubleTapWindow(doubleTapGaps) ? { doubleTapWindow: fitDoubleTapWindow(doubleTapGaps)! } : {}),
         calibratedAt: Date.now()
       })
       engine.setCalibration(saved)
@@ -471,12 +581,56 @@ engine.onCalibrationLearned((calibration) => {
   }, LEARN_SAVE_DELAY_MS)
 })
 
-engine.onTap((event) => {
-  const { zone, confidence, reason, ignoredByInput, peakDb, impact, features } = event
-  const publish = (outcome: TapOutcome): void =>
-    useHoloStore.setState({ lastTap: { zone, confidence, outcome, at: Date.now(), peakDb, impact, features } })
+/** Zones fire on a double tap only — see lib/holo/doubleTap.ts for why. */
+const doubleTap = new DoubleTapDetector()
+/** Which calibration the double-tap sound-alike check was built from (it's
+ *  rebuilt whenever the calibration changes, learning included). */
+let pairMatcherFor: HoloCalibration | null = null
 
-  if (ignoredByInput) return publish('ignored-input')
+/** One step of the diagnostic recording: tapping a zone, everyday handling
+ *  with no taps, or typing and trackpad use with no taps. */
+export type DiagnosticPhase =
+  | { kind: 'zone'; zone: HoloZone }
+  | { kind: 'singles' }
+  | { kind: 'everyday' }
+  | { kind: 'typing' }
+
+/** What Holo decided about each sound during a diagnostic recording. */
+interface DiagnosticEvent {
+  onsetAt: number
+  outcome: TapOutcome
+  zone: HoloZone | null
+  reason: string
+  confidence: number
+  distance?: number
+  peakDb: number
+  impact: ImpactCheck | null
+}
+let diagnosticLog: { phaseStarts: number[]; events: DiagnosticEvent[] } | null = null
+
+engine.onTap((event) => {
+  const { confidence, reason, ignoredByInput, peakDb, impact, features, onsetAt, dipDb } = event
+  // The second half of a double tap only has to be a real tap (every gate
+  // passed) whose best match is the side already armed; it doesn't also
+  // have to be certain on its own. The first tap already settled which
+  // side. Without this, a double tap would need two confident taps in a
+  // row, which fails noticeably more often than one. Nothing here relaxes
+  // the "is it a tap at all" checks.
+  const zone =
+    event.zone ??
+    (reason === 'ambiguous' && event.candidate && doubleTap.armedZone(onsetAt) === event.candidate
+      ? event.candidate
+      : null)
+  const publish = (outcome: TapOutcome): void => {
+    diagnosticLog?.events.push({ onsetAt, outcome, zone, reason, confidence, distance: event.distance, peakDb, impact })
+    useHoloStore.setState({ lastTap: { zone, confidence, outcome, at: Date.now(), peakDb, impact, features } })
+  }
+
+  if (ignoredByInput) {
+    // Typing or trackpad use in between means the next tap starts over.
+    doubleTap.reset()
+    return publish('ignored-input')
+  }
   if (reason === 'no-calibration') {
     useHoloStore.setState({ layoutMismatch: true })
     return publish('layout-changed')
@@ -484,9 +638,20 @@ engine.onTap((event) => {
   if (!zone) {
     // Reasons the user gets told apart by name, because each one has its own
     // fix; anything else just reads as "that didn't match a zone".
-    const named: TapOutcome[] = ['ambiguous', 'wrong-level', 'voice', 'not-a-tap', 'set-down', 'learned-ignore']
+    const named: TapOutcome[] = ['ambiguous', 'wrong-level', 'voice', 'not-a-tap', 'set-down', 'soft-touch', 'learned-ignore']
     return publish(named.find((outcome) => outcome === reason) ?? 'unrecognized')
   }
+
+  const calibration = useHoloStore.getState().calibration
+  doubleTap.setWindow(calibration?.doubleTapWindow)
+  if (calibration !== pairMatcherFor) {
+    pairMatcherFor = calibration
+    doubleTap.setPairMatcher(calibration ? pairMatcher(calibration) : null)
+  }
+  if (doubleTap.tap(zone, onsetAt, peakDb, { features, dipDb }) === 'armed') return publish('armed')
+  // Dry run during a diagnostic recording: log what would have fired, press
+  // nothing (a test session must never close someone's tab).
+  if (diagnosticLog) return publish('pressed')
 
   // Which control this zone maps to depends on whichever application is
   // focused *right now* — the same 4 slots the physical/virtual keyboard
@@ -504,3 +669,13 @@ engine.onTap((event) => {
     publish('pressed')
   })
 })
+
+// In development, editing this file hot-reloads it, which creates a fresh
+// engine but would leave the old one running: still holding the mic, still
+// listening, still pressing controls with the old rules. Shut it down.
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    engine.stop()
+    void window.flow?.setHoloInputGate(false)
+  })
+}

@@ -109,6 +109,17 @@ export interface MicInfo {
 
 export interface HoloTapEvent extends ClassificationResult {
   features: number[]
+  /** When the sound started (Date.now() ms), not when Holo finished judging
+   *  it: double-tap timing is about the taps themselves. */
+  onsetAt: number
+  /**
+   * How far the sound level fell (dB, negative) between the loudest moment
+   * of the previous sound and this one starting. A real second knock comes
+   * after the first has died away; the tail of one tap still ringing, or a
+   * finger lifting off, doesn't. Used by the double-tap check
+   * (doubleTap.ts). 0 when it couldn't be measured.
+   */
+  dipDb: number
   /** True when the sound was discarded because a key/mouse event coincided. */
   ignoredByInput: boolean
   /** What was actually measured, so a misfire can be reported as numbers
@@ -118,6 +129,25 @@ export interface HoloTapEvent extends ClassificationResult {
 }
 
 export type HoloTapListener = (event: HoloTapEvent) => void
+
+/**
+ * A diagnostic recording: every sample the engine received, exactly as the
+ * detector saw it (silence included where the mic was muted for typing), plus
+ * the typing/trackpad timestamps. Only ever made during the Holo page's
+ * explicit "Record a test session", and only saved on this computer (see
+ * docs/privacy-and-legal.md). It's how Holo gets tuned on real taps from a
+ * real laptop instead of on simulated ones.
+ */
+export interface HoloRecording {
+  sampleRate: number
+  channels: number
+  /** Interleaved 16-bit PCM. */
+  pcm: Int16Array
+  /** Date.now() when the first recorded sample arrived. */
+  startedAt: number
+  /** Typing/clicking/trackpad timestamps, ms from `startedAt`. */
+  inputActivityMs: number[]
+}
 
 export interface HoloStatus {
   /** Loudest recent block energy as a multiple of the current trigger
@@ -158,6 +188,16 @@ export class HoloCaptureEngine {
   /** Recent key/mouse/trackpad timestamps (Date.now() ms), oldest first. */
   private inputActivity: number[] = []
   private decideTimer: ReturnType<typeof setTimeout> | null = null
+  private recording: { chunks: Int16Array[]; frames: number; channels: number; startedAt: number; inputActivity: number[] } | null =
+    null
+  /** Onset of the sound `decide` is currently reporting on. */
+  private decidingOnsetAt = 0
+  /** Loudest block since the last onset, and the quietest block after it:
+   *  how far the previous sound had died away when the next one started. */
+  private envelopePeak = 0
+  private envelopeTrough = Infinity
+  private onsetDipDb = 0
+  private decidingDipDb = 0
   private readonly tapListeners = new Set<HoloTapListener>()
   private readonly statusListeners = new Set<(status: HoloStatus) => void>()
   private pendingCapture: {
@@ -165,6 +205,9 @@ export class HoloCaptureEngine {
     reject: (error: Error) => void
   } | null = null
   private peakRatio = 0
+  /** When the most recent sound started (Date.now() ms) — the calibration
+   *  wizard uses it to measure the gap inside each double tap. */
+  lastTapOnsetAt = 0
   /** Peak level (dB) of the most recent accepted tap — used to find which side the mic is on. */
   lastTapPeakDb = -Infinity
   /** How the most recent sound decayed. Read by the calibration wizard so the
@@ -305,6 +348,7 @@ export class HoloCaptureEngine {
     this.unmuteTimer = null
     this.muted = false
     this.cooldownUntil = 0
+    this.recording = null
     for (const device of this.devices) {
       device.processor.onaudioprocess = null
       device.processor.disconnect()
@@ -390,6 +434,7 @@ export class HoloCaptureEngine {
    *  see inputActivityService.ts). Sounds coinciding with one are the user's
    *  typing, clicking or trackpad use. */
   noteInputActivity(timestamp: number): void {
+    this.recording?.inputActivity.push(timestamp)
     this.inputActivity.push(timestamp)
     const cutoff = timestamp - INPUT_HISTORY_MS
     while (this.inputActivity.length && this.inputActivity[0] < cutoff) this.inputActivity.shift()
@@ -464,9 +509,59 @@ export class HoloCaptureEngine {
 
   // -------------------------------------------------------------- internals
 
+  /** Starts a diagnostic recording (see `HoloRecording`). Needs the mic
+   *  to be open already. */
+  startRecording(): void {
+    const device = this.devices[0]
+    if (!device) throw new Error('Start listening before recording')
+    this.recording = { chunks: [], frames: 0, channels: device.ring.length, startedAt: 0, inputActivity: [] }
+  }
+
+  get isRecording(): boolean {
+    return this.recording !== null
+  }
+
+  /** Seconds recorded so far. */
+  get recordedSeconds(): number {
+    return this.recording && this.audioContext ? this.recording.frames / this.audioContext.sampleRate : 0
+  }
+
+  /** Ends the recording and hands it over (null if none was running). */
+  stopRecording(): HoloRecording | null {
+    const recording = this.recording
+    this.recording = null
+    if (!recording || !this.audioContext) return null
+    const pcm = new Int16Array(recording.frames * recording.channels)
+    let offset = 0
+    for (const chunk of recording.chunks) {
+      pcm.set(chunk, offset)
+      offset += chunk.length
+    }
+    return {
+      sampleRate: this.audioContext.sampleRate,
+      channels: recording.channels,
+      pcm,
+      startedAt: recording.startedAt,
+      inputActivityMs: recording.inputActivity.filter((t) => t >= recording.startedAt).map((t) => t - recording.startedAt)
+    }
+  }
+
   private handleBlock(device: DeviceInput, event: AudioProcessingEvent): void {
     const input = event.inputBuffer
     const frames = input.length
+    const recording = this.recording
+    if (recording) {
+      if (recording.frames === 0) recording.startedAt = Date.now()
+      const chunk = new Int16Array(frames * recording.channels)
+      for (let c = 0; c < recording.channels; c++) {
+        const data = input.getChannelData(Math.min(c, input.numberOfChannels - 1))
+        for (let i = 0; i < frames; i++) {
+          chunk[i * recording.channels + c] = Math.max(-32768, Math.min(32767, Math.round(data[i] * 32767)))
+        }
+      }
+      recording.chunks.push(chunk)
+      recording.frames += frames
+    }
     let energy = 0
     for (let c = 0; c < device.ring.length; c++) {
       const channelData = input.getChannelData(Math.min(c, input.numberOfChannels - 1))
@@ -488,10 +583,24 @@ export class HoloCaptureEngine {
       // The detector still runs through a cooldown so its noise floor and the
       // level meter stay live — only the decision to analyse is skipped.
       const isOnset = detectOnset(energy, device.detector, this.sensitivity)
+      const dipDb =
+        this.envelopePeak > 0 && Number.isFinite(this.envelopeTrough)
+          ? 10 * Math.log10(Math.max(this.envelopeTrough, 1e-14) / this.envelopePeak)
+          : 0
+      if (energy > this.envelopePeak) {
+        this.envelopePeak = energy
+        this.envelopeTrough = Infinity
+      } else {
+        this.envelopeTrough = Math.min(this.envelopeTrough, energy)
+      }
       const gated =
         this.pendingCapture === null && (now < this.cooldownUntil || now - this.lastOnsetAt < TAP_REFRACTORY_MS)
       if (isOnset && !this.finalizeTimer && !gated) {
         this.onsetAt = Date.now()
+        this.onsetDipDb = dipDb
+        // This sound is the new reference for the next one's dip.
+        this.envelopePeak = energy
+        this.envelopeTrough = Infinity
         this.lastOnsetAt = now
         this.finalizeTimer = setTimeout(() => this.finalizeTap(), FINALIZE_DELAY_MS)
       }
@@ -533,21 +642,25 @@ export class HoloCaptureEngine {
     // buffer, but the verdict waits until every input event that could
     // belong to this sound has had time to arrive (see INPUT_GATE_AFTER_MS).
     const onsetAt = this.onsetAt
+    const dipDb = this.onsetDipDb
     const wait = onsetAt + INPUT_GATE_AFTER_MS - Date.now()
     if (wait <= 0) {
-      this.decide(features, peakDb, impact, onsetAt)
+      this.decide(features, peakDb, impact, onsetAt, dipDb)
       return
     }
     if (this.decideTimer) clearTimeout(this.decideTimer)
     this.decideTimer = setTimeout(() => {
       this.decideTimer = null
-      if (this.isRunning) this.decide(features, peakDb, impact, onsetAt)
+      if (this.isRunning) this.decide(features, peakDb, impact, onsetAt, dipDb)
     }, wait)
   }
 
-  private decide(features: number[], peakDb: number, impact: ImpactCheck | null, onsetAt: number): void {
+  private decide(features: number[], peakDb: number, impact: ImpactCheck | null, onsetAt: number, dipDb: number): void {
+    this.decidingOnsetAt = onsetAt
+    this.decidingDipDb = dipDb
     this.lastTapPeakDb = peakDb
     this.lastTapImpact = impact
+    this.lastTapOnsetAt = onsetAt
 
     const ignoredByInput = this.inputCoincided(onsetAt)
     if (ignoredByInput) {
@@ -558,7 +671,9 @@ export class HoloCaptureEngine {
         features,
         ignoredByInput,
         peakDb: this.lastTapPeakDb,
-        impact: this.lastTapImpact
+        impact: this.lastTapImpact,
+        onsetAt,
+        dipDb
       }
       for (const listener of this.tapListeners) listener(result)
       return
@@ -587,7 +702,9 @@ export class HoloCaptureEngine {
         features,
         ignoredByInput: false,
         peakDb: this.lastTapPeakDb,
-        impact: this.lastTapImpact
+        impact: this.lastTapImpact,
+        onsetAt,
+        dipDb
       }
       for (const listener of this.tapListeners) listener(mismatch)
       return
@@ -604,7 +721,15 @@ export class HoloCaptureEngine {
       discriminant: this.discriminant
     })
     for (const listener of this.tapListeners) {
-      listener({ ...result, features, ignoredByInput: false, peakDb: this.lastTapPeakDb, impact: this.lastTapImpact })
+      listener({
+        ...result,
+        features,
+        ignoredByInput: false,
+        peakDb: this.lastTapPeakDb,
+        impact: this.lastTapImpact,
+        onsetAt: this.decidingOnsetAt,
+        dipDb: this.decidingDipDb
+      })
     }
 
     // Learning is judged against the calibration's own gates, not the

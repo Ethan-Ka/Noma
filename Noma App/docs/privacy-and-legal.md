@@ -177,9 +177,18 @@ reasoning:
   `extractTapFeatures` in `classifier.ts`) that discards content
   entirely. That derived vector, never the audio itself, is the only thing
   that can be persisted (as part of a calibration profile), and only when
-  the user explicitly runs the calibration wizard. **No raw audio buffer,
-  recording, or waveform is ever written to disk or sent anywhere** —
-  there is no code path in this feature that does either. Browser audio
+  the user explicitly runs the calibration wizard. **Raw audio is never
+  sent anywhere, and never written to disk except in one explicit case:**
+  the Holo page's "Record a test session", a guided few-minute diagnostic
+  the user starts themselves (tap each zone, then use the laptop normally),
+  which saves a WAV file and a JSON log of Holo's decisions to
+  `%APPDATA%/noma/holo-recordings/` on this computer only
+  (`main/holo/recordingStore.ts`). It exists to tune Holo on real taps from
+  real laptops. Nothing uploads it; "Open recordings folder" shows it and
+  it can be deleted like any file. A session can be cancelled mid-way, which
+  discards it without writing anything. Holo presses nothing while one runs.
+  Note the recording contains whatever the mic hears during those minutes,
+  including speech, so the Holo page says so before it starts. Browser audio
   processing (echo cancellation, noise suppression, auto gain) is turned
   off so taps aren't filtered away; this changes the audio's quality, not
   where it goes.

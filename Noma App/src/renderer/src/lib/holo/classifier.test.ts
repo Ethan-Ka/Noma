@@ -272,7 +272,7 @@ describe('separability weighting', () => {
 
 describe('gates derived from the calibration taps', () => {
   const impacts = (sustain: number, driven: number, count = 8): ImpactCheck[] =>
-    Array.from({ length: count }, () => ({ sustainDb: sustain, drivenDb: driven, periodicity: 0.1, contacts: 1 }))
+    Array.from({ length: count }, () => ({ sustainDb: sustain, drivenDb: driven, periodicity: 0.1, contacts: 1, riseMs: 0.3, attackBrightnessDb: -3 }))
 
   it('sets every bound from the taps the user actually made', () => {
     const gates = deriveGates([1.0, 1.1, 1.2, 1.3], [-24, -20, -16], impacts(-38, -26))
@@ -534,14 +534,16 @@ describe('objects being set down (counting contacts)', () => {
       sustainDb: -40,
       drivenDb: -30,
       periodicity: 0.1,
-      contacts: 2
+      contacts: 2,
+      riseMs: 0.3,
+      attackBrightnessDb: -3
     }))
     expect(deriveGates([1.2], [-20], bouncy).maxContacts).toBe(2)
     expect(deriveGates([1.2], [-20], impactsWithContacts(1)).maxContacts).toBe(1)
   })
 
   const impactsWithContacts = (contacts: number): ImpactCheck[] =>
-    Array.from({ length: 8 }, () => ({ sustainDb: -40, drivenDb: -30, periodicity: 0.1, contacts }))
+    Array.from({ length: 8 }, () => ({ sustainDb: -40, drivenDb: -30, periodicity: 0.1, contacts, riseMs: 0.3, attackBrightnessDb: -3 }))
 })
 
 describe('sounds the user has taught Noma to ignore', () => {
