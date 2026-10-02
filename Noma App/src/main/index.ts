@@ -29,6 +29,7 @@ if (TEST_USER_DATA_DIR) {
   console.log(`[TEST MODE] userData redirected to: ${TEST_USER_DATA_DIR}`)
 }
 import icon from '../../resources/icon.png?asset'
+import iconIco from '../../resources/icon.ico?asset'
 import { IPC_CHANNELS } from '@shared/constants'
 import { initDatabase } from './database/db'
 import { registerIpcHandlers } from './ipc/handlers'
@@ -179,6 +180,8 @@ function notifyActionFailed(controlLabel: string, reason: string | undefined): v
   new Notification({
     title: `Noma couldn't finish “${controlLabel}”`,
     body: reason ?? 'The action failed.',
+    // Without one, Windows shows the Electron icon in development.
+    icon: nativeImage.createFromPath(icon),
     silent: true
   }).show()
 }
@@ -197,7 +200,9 @@ function createMainWindow(): void {
     // bundle's icon (set at packaging time), which doesn't exist yet — see
     // "Prepare for STM32"/packaging notes; this only affects the
     // dev/unpackaged window on this machine.
-    icon,
+    // .ico on Windows: the format the taskbar actually uses (a 1254 px PNG
+    // has to be scaled on the fly and isn't always picked up).
+    icon: process.platform === 'win32' ? iconIco : icon,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       // Explicit, not relied-on-as-default: no Node access in the
@@ -212,6 +217,21 @@ function createMainWindow(): void {
       backgroundThrottling: false
     }
   })
+
+  // The taskbar groups windows by app ID, and can show the icon of the
+  // program behind that ID instead of the window's own. In development the
+  // app ID is electron.exe's path (electron-toolkit's setAppUserModelId), so
+  // the button showed Electron's icon. Naming the icon for this window's app
+  // ID explicitly makes the taskbar use Noma's. Same app ID as the process,
+  // so grouping and notifications are unchanged.
+  if (process.platform === 'win32') {
+    mainWindow.setAppDetails({
+      appId: is.dev ? process.execPath : 'com.noma.app',
+      appIconPath: iconIco,
+      appIconIndex: 0,
+      relaunchDisplayName: 'Noma'
+    })
+  }
 
   mainWindow.on('ready-to-show', () => {
     mainWindow?.show()
