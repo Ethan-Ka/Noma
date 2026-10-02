@@ -11,14 +11,17 @@ import { getHoloZones, recommendHoloZoneCount, type HoloZoneCount } from '@share
 import { HoloCaptureEngine, type MicInfo } from '../lib/holo/holoCapture'
 import { DoubleTapDetector, fitDoubleTapWindow, pairMatcher } from '../lib/holo/doubleTap'
 
-/** Longest gap inside a calibration double tap that still counts as one. */
-const MAX_CALIBRATION_PAIR_GAP_MS = 1500
+/** Longest gap inside a calibration double tap that still counts towards the
+ *  user's rhythm. Anything slower is someone pausing between the two knocks,
+ *  not a double tap, and once stretched a fitted window to 1.2 s. */
+const MAX_CALIBRATION_PAIR_GAP_MS = 600
 import type { MicCandidate } from '../lib/holo/micKind'
 import {
   buildModel,
   deriveGates,
   evaluateDiscriminant,
   MAX_IGNORED_SOUNDS,
+  type ClassificationResult,
   type HoloSensitivity,
   type ImpactCheck
 } from '../lib/holo/classifier'
@@ -586,6 +589,9 @@ const doubleTap = new DoubleTapDetector()
 /** Which calibration the double-tap sound-alike check was built from (it's
  *  rebuilt whenever the calibration changes, learning included). */
 let pairMatcherFor: HoloCalibration | null = null
+/** The first knock of a double tap in progress, kept to learn from once the
+ *  second one confirms it. */
+let armedKnock: { zone: HoloZone; features: number[]; result: ClassificationResult } | null = null
 
 /** One step of the diagnostic recording: tapping a zone, everyday handling
  *  with no taps, or typing and trackpad use with no taps. */
@@ -648,7 +654,16 @@ engine.onTap((event) => {
     pairMatcherFor = calibration
     doubleTap.setPairMatcher(calibration ? pairMatcher(calibration) : null)
   }
-  if (doubleTap.tap(zone, onsetAt, peakDb, { features, dipDb }) === 'armed') return publish('armed')
+  if (doubleTap.tap(zone, onsetAt, peakDb, { features, dipDb }) === 'armed') {
+    armedKnock = { zone, features, result: event }
+    return publish('armed')
+  }
+  // Learn from this confirmed double tap's two knocks (judged against the
+  // calibration's own gates inside, never the sensitivity-relaxed ones).
+  if (armedKnock && armedKnock.zone === zone) {
+    engine.learnFromDoubleTap([armedKnock, { zone, features, result: event }])
+  }
+  armedKnock = null
   // Dry run during a diagnostic recording: log what would have fired, press
   // nothing (a test session must never close someone's tab).
   if (diagnosticLog) return publish('pressed')

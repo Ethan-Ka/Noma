@@ -939,7 +939,8 @@ function choleskySolve(l: Float64Array, d: number, b: ArrayLike<number>): number
 
 export function buildDiscriminant(
   tapsByZone: Array<{ zone: HoloZone; taps: number[][] }>,
-  scale: number[]
+  scale: number[],
+  options: { minShrinkage?: number } = {}
 ): Discriminant | null {
   const usable = tapsByZone.filter((entry) => entry.taps.length > 0)
   if (usable.length < 2) return null
@@ -1001,7 +1002,7 @@ export function buildDiscriminant(
     spread += norm2 * norm2 - 2 * quad + covNorm2
   }
   spread /= n * n
-  const shrinkage = distance2 > EPS ? clamp(spread / distance2, 0, 1) : 1
+  const shrinkage = Math.max(options.minShrinkage ?? 0, distance2 > EPS ? clamp(spread / distance2, 0, 1) : 1)
   const floor = Math.max(mu, 1e-6)
   const shrunk = new Float64Array(d * d)
   for (let i = 0; i < d; i++) {
@@ -1407,6 +1408,55 @@ export function forgetLearnedTap(profiles: HoloZoneProfile[], features: number[]
   return profiles.map((profile) =>
     profile.learnedTaps?.some(same) ? { ...profile, learnedTaps: profile.learnedTaps.filter((tap) => !same(tap)) } : profile
   )
+}
+
+/**
+ * The "anchor": a discriminant built from the calibration taps alone, which
+ * learning can never change. Learning in use is only allowed to add a tap
+ * the anchor agrees with, and a learned tap the anchor disagrees with is
+ * dropped. Without it, one tap learned under the wrong zone makes the next
+ * mistake likelier, which makes the next wrongly learned tap likelier: on a
+ * real laptop, 3 of 72 learned taps had drifted to the wrong side, and
+ * removing them took wrong-side double taps on a real recording from 1 to 0
+ * (and correct ones from 22 to 24 of 27).
+ */
+export function anchorDiscriminant(profiles: HoloZoneProfile[], scale: number[]): Discriminant | null {
+  return buildDiscriminant(
+    profiles.map((profile) => ({ zone: profile.zone, taps: profile.taps ?? [] })),
+    scale
+  )
+}
+
+/** How sure the anchor must be before a tap may be learned for a zone. */
+export const ANCHOR_MIN_POSTERIOR = 0.9
+
+export function anchorAgrees(
+  features: number[],
+  zone: HoloZone,
+  anchor: Discriminant,
+  scale: number[],
+  minPosterior = ANCHOR_MIN_POSTERIOR
+): boolean {
+  const index = anchor.zones.indexOf(zone)
+  return index >= 0 && discriminantPosteriors(features, anchor, scale)[index] >= minPosterior
+}
+
+/** Drops learned taps the anchor thinks belong to another zone. Returns the
+ *  same array when nothing was dropped. */
+export function withoutMislabelledTaps(
+  profiles: HoloZoneProfile[],
+  anchor: Discriminant,
+  scale: number[]
+): HoloZoneProfile[] {
+  let changed = false
+  const cleaned = profiles.map((profile) => {
+    const learned = profile.learnedTaps ?? []
+    const kept = learned.filter((tap) => anchorAgrees(tap, profile.zone, anchor, scale, 0.5))
+    if (kept.length === learned.length) return profile
+    changed = true
+    return { ...profile, learnedTaps: kept }
+  })
+  return changed ? cleaned : profiles
 }
 
 /** Calibration taps plus learned ones: what the discriminant is built from. */

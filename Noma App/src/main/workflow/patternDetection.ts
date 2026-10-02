@@ -383,10 +383,25 @@ function buildWorkflowSteps(events: WorkflowEvent[]): WorkflowStepEvent[] {
     .sort((a, b) => a.timestamp - b.timestamp)
 
   const steps: WorkflowStepEvent[] = []
-  for (const event of relevant) {
+  relevant.forEach((event, index) => {
     if (event.eventType === 'appSwitch') {
+      // A pass-through: the app was in front for a moment on the way
+      // somewhere else, with nothing done in it. Clicking a taskbar button
+      // puts Windows Explorer (which owns the taskbar) in front for ~0.4 s,
+      // and Alt-Tab flicks through windows the same way; in real data 562
+      // switches into Explorer lasted under a second. Kept as steps, they
+      // turned every "go to Chrome" into "Explorer -> Chrome" and produced
+      // workflows nobody did.
+      const next = relevant[index + 1]
+      if (
+        next?.eventType === 'appSwitch' &&
+        next.applicationId !== event.applicationId &&
+        next.timestamp - event.timestamp < PASS_THROUGH_MS
+      ) {
+        return
+      }
       const last = steps[steps.length - 1]
-      if (last?.step.type === 'appSwitch' && last.step.applicationId === event.applicationId) continue
+      if (last?.step.type === 'appSwitch' && last.step.applicationId === event.applicationId) return
       steps.push({ timestamp: event.timestamp, step: { type: 'appSwitch', applicationId: event.applicationId } })
     } else if (event.eventType === 'click') {
       if (event.clickTarget) {
@@ -401,9 +416,13 @@ function buildWorkflowSteps(events: WorkflowEvent[]): WorkflowStepEvent[] {
         step: { type: 'shortcut', applicationId: event.applicationId, comboKeys: event.comboKeys }
       })
     }
-  }
+  })
   return steps
 }
+
+/** An app left again within this long, with nothing done in it, was only
+ *  passed through (see buildWorkflowSteps). */
+const PASS_THROUGH_MS = 800
 
 interface WorkflowOccurrence {
   /** Index of the pair's first step in the full `steps` array — kept

@@ -74,7 +74,8 @@ describe('Holo false triggers (simulated)', () => {
         const [zone, spot] = zones[rng() < 0.5 ? 0 : 1]
         const detector = new DoubleTapDetector()
         const t0 = 100000 * i
-        const gap = 300 + rng() * 350
+        // Real double taps: 150-220 ms apart in a recording of a real laptop.
+      const gap = 150 + rng() * 100
         const first = classify(simulateTap(spot, { seed: seed * 1_000_003 + i * 2 }))
         const second = classify(simulateTap(spot, { seed: seed * 1_000_003 + i * 2 + 1, force: undefined }))
         feed(detector, first, t0)

@@ -237,10 +237,10 @@ export function Holo() {
         {wizard.status === 'running' && wizard.phase === 'zone' && (
           <div className="mb-4 rounded-lg border border-accent/30 bg-accent/[0.08] px-4 py-3 text-sm text-holo-text">
             Zone {wizard.zoneIndex + 1} of {wizard.totalZones}: {getHoloZoneLabel(wizard.zone, zoneCount)}, double-tap
-            it now (double tap {wizard.doubleTapIndex + 1} of {DOUBLE_TAPS_PER_ZONE},{' '}
-            {wizard.half === 1 ? 'first tap' : 'second tap'}). Double-tap the way you actually will in use, a relaxed
-            knock-knock, varying your force and spot a little within the zone. Everything Holo accepts later,
-            including how far apart your two taps can be, is measured from these taps.
+            it now (double tap {wizard.doubleTapIndex + 1} of {DOUBLE_TAPS_PER_ZONE}). Both knocks in one go, the way
+            you actually will in use, then a short pause before the next double tap. Vary your force and spot a little
+            within the zone: everything Holo accepts later, including how far apart your two knocks can be, is measured
+            from these taps.
           </div>
         )}
         {(wizard.status === 'error' || micError) && (

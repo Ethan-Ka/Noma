@@ -13,7 +13,8 @@ import { join } from 'path'
 import Database from 'better-sqlite3'
 import type { HoloCalibration } from '@shared/types'
 import { classifySounds, detectSounds, parseWav, type RecordingMeta } from '../src/renderer/src/lib/holo/testing/replay'
-import { DoubleTapDetector } from '../src/renderer/src/lib/holo/doubleTap'
+import { DoubleTapDetector, pairMatcher } from '../src/renderer/src/lib/holo/doubleTap'
+import { anchorDiscriminant, withoutMislabelledTaps } from '../src/renderer/src/lib/holo/classifier'
 
 const root = join(process.env.APPDATA ?? '', 'noma')
 const recordings = join(root, 'holo-recordings')
@@ -25,7 +26,11 @@ const { pcm } = parseWav(readFileSync(join(folder, 'session.wav')))
 const db = new Database(join(root, 'noma.db'), { readonly: true })
 const row = db.prepare("SELECT value FROM settings WHERE key='holoCalibration'").get() as { value: string } | undefined
 if (!row) throw new Error('No calibration saved')
-const calibration = JSON.parse(row.value) as HoloCalibration
+const saved = JSON.parse(row.value) as HoloCalibration
+// As the app does on load: drop learned taps the calibration-only anchor
+// puts on the other side.
+const anchor = anchorDiscriminant(saved.zones, saved.scale)
+const calibration: HoloCalibration = anchor ? { ...saved, zones: withoutMislabelledTaps(saved.zones, anchor, saved.scale) } : saved
 const sensitivity = meta.settings?.sensitivity ?? 'medium'
 
 console.log(`recording ${folder}`)
@@ -33,7 +38,12 @@ console.log(`${(pcm.length / meta.channels / meta.sampleRate).toFixed(1)} s, ${m
 console.log('gates', JSON.stringify(calibration.gates))
 
 const sounds = classifySounds(detectSounds(pcm, meta, sensitivity), calibration, sensitivity)
+// Same double-tap rules as holoStore's onTap (window, dip, sound-alike,
+// and an 'ambiguous' second half completing an armed zone).
 const detector = new DoubleTapDetector()
+detector.setWindow(calibration.doubleTapWindow)
+detector.setPairMatcher(pairMatcher(calibration))
+const dipsAtSecondHalf: number[] = []
 for (const phase of meta.phases) {
   const inPhase = sounds.filter((s) => s.onsetMs >= phase.startMs && s.onsetMs < phase.endMs)
   const outcomes: Record<string, number> = {}
@@ -43,8 +53,11 @@ for (const phase of meta.phases) {
   for (const s of inPhase) {
     const key = s.ignoredByInput ? 'typing-gate' : (s.result?.zone ?? s.result?.reason ?? 'no-features')
     outcomes[key] = (outcomes[key] ?? 0) + 1
-    const zone = s.result?.zone
-    if (zone && detector.tap(zone, s.onsetMs, s.peakDb) === 'fire') {
+    const r = s.result
+    const zone =
+      r?.zone ?? (r?.reason === 'ambiguous' && r.candidate && detector.armedZone(s.onsetMs) === r.candidate ? r.candidate : null)
+    if (zone && detector.armedZone(s.onsetMs) === zone) dipsAtSecondHalf.push(s.dipDb)
+    if (zone && detector.tap(zone, s.onsetMs, s.peakDb, { features: s.features ?? undefined, dipDb: s.dipDb }) === 'fire') {
       fires++
       if (zone === s.label) right++
     }
@@ -75,3 +88,6 @@ for (const [name, get] of [
   const b = others.map(get).filter((v) => !Number.isNaN(v))
   console.log(`   ${name.padEnd(15)} taps ${row5(a).padEnd(40)} non-taps ${row5(b)}`)
 }
+
+console.log(`
+dip before a would-be second half (dB): ${[...dipsAtSecondHalf].sort((a, b) => a - b).map((d) => d.toFixed(0)).join(' ')}`)

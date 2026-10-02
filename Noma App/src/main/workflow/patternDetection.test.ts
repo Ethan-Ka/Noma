@@ -467,3 +467,36 @@ describe('detectPatterns — multi-step workflow learning', () => {
     expect(second).toEqual(first)
   })
 })
+
+describe('detectPatterns — passing through an app is not a step', () => {
+  // Clicking a taskbar button puts Explorer (which owns the taskbar) in
+  // front for a moment before the target app.
+  const viaTaskbar = (start: number): WorkflowEvent[] => [
+    appSwitchEvent('chrome', start),
+    shortcutEvent(['Control', 'C'], start + 2_000, 'chrome'),
+    appSwitchEvent('explorer', start + 4_000),
+    appSwitchEvent('code', start + 4_400),
+    shortcutEvent(['Control', 'V'], start + 6_000, 'code')
+  ]
+
+  it('drops a switch the user left again within a moment without doing anything', () => {
+    const events = [0, 60_000, 120_000, 180_000].flatMap(viaTaskbar)
+    const patterns = detectPatterns(events)
+    const chains = patterns.filter((p) => p.kind === 'multiStepWorkflow' || p.kind === 'crossAppWorkflow')
+    expect(chains.length).toBeGreaterThan(0)
+    for (const chain of chains) {
+      expect(JSON.stringify(chain)).not.toContain('explorer')
+    }
+  })
+
+  it('keeps a quick visit in which something was actually done', () => {
+    const events = [0, 60_000, 120_000, 180_000].flatMap((start) => [
+      appSwitchEvent('chrome', start),
+      shortcutEvent(['Control', 'C'], start + 2_000, 'chrome'),
+      appSwitchEvent('explorer', start + 4_000),
+      shortcutEvent(['Control', 'V'], start + 4_300, 'explorer'),
+      appSwitchEvent('code', start + 4_700)
+    ])
+    expect(JSON.stringify(detectPatterns(events))).toContain('explorer')
+  })
+})

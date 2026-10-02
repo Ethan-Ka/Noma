@@ -29,7 +29,7 @@ import {
 const BLOCK_FRAMES = 512
 const TAP_WINDOW_FRAMES = 12288
 const FINALIZE_DELAY_MS = 190
-const TAP_REFRACTORY_MS = 220
+const TAP_REFRACTORY_MS = 100
 const INPUT_GATE_MS = 220
 const UNMUTE_SETTLE_MS = 120
 
@@ -47,6 +47,8 @@ export interface ReplayedSound {
   label: HoloZone | null
   phase: string
   ignoredByInput: boolean
+  /** See HoloTapEvent.dipDb. */
+  dipDb: number
   features: number[] | null
   peakDb: number
   impact: ImpactCheck | null
@@ -68,8 +70,11 @@ export function detectSounds(
   }
   const detector = createOnsetDetectorState()
   const sounds: ReplayedSound[] = []
+  const onsetFrames: number[] = []
+  const dips: number[] = []
+  let envelopePeak = 0
+  let envelopeTrough = Infinity
   let lastOnsetMs = -Infinity
-  let pendingUntil = -Infinity
   let settleUntilMs = 0
   let wasMuted = false
 
@@ -95,18 +100,45 @@ export function detectSounds(
     if (endMs < settleUntilMs) continue
 
     const isOnset = detectOnset(energy, detector, sensitivity)
-    if (!isOnset || endMs < pendingUntil || endMs - lastOnsetMs < TAP_REFRACTORY_MS) continue
+    const dipDb =
+      envelopePeak > 0 && Number.isFinite(envelopeTrough)
+        ? 10 * Math.log10(Math.max(envelopeTrough, 1e-14) / envelopePeak)
+        : 0
+    if (energy > envelopePeak) {
+      envelopePeak = energy
+      envelopeTrough = Infinity
+    } else {
+      envelopeTrough = Math.min(envelopeTrough, energy)
+    }
+    if (!isOnset || endMs - lastOnsetMs < TAP_REFRACTORY_MS) continue
     lastOnsetMs = endMs
-    pendingUntil = endMs + FINALIZE_DELAY_MS
+    envelopePeak = energy
+    envelopeTrough = Infinity
+    onsetFrames.push(start + BLOCK_FRAMES)
+    dips.push(dipDb)
+  }
 
-    const finalizeFrame = Math.min(frames, Math.round(((endMs + FINALIZE_DELAY_MS) / 1000) * sr))
-    const windows = Array.from({ length: channels }, (_, c) => channel(c, finalizeFrame - TAP_WINDOW_FRAMES, finalizeFrame))
+  // Second pass: analyse each knock with any later knock (detected before
+  // its analysis ran) cut out of its audio, as holoCapture's finalizeTap does.
+  for (let k = 0; k < onsetFrames.length; k++) {
+    const onsetFrame = onsetFrames[k]
+    const endMs = (onsetFrame / sr) * 1000
+    const finalizeFrame = Math.min(frames, onsetFrame + Math.round((FINALIZE_DELAY_MS / 1000) * sr))
+    const next = onsetFrames[k + 1]
+    const windows = Array.from({ length: channels }, (_, c) => {
+      const window = channel(c, finalizeFrame - TAP_WINDOW_FRAMES, finalizeFrame)
+      if (next !== undefined && next <= finalizeFrame) {
+        window.fill(0, Math.max(0, next - BLOCK_FRAMES - (finalizeFrame - TAP_WINDOW_FRAMES)))
+      }
+      return window
+    })
     const phase = meta.phases.find((p) => endMs >= p.startMs && endMs < p.endMs)
     sounds.push({
       onsetMs: endMs,
       label: phase?.kind === 'zone' ? (phase.zone ?? null) : null,
       phase: phase ? (phase.kind === 'zone' ? `zone:${phase.zone}` : phase.kind) : 'none',
       ignoredByInput: meta.inputActivityMs.some((t) => Math.abs(t - endMs) <= INPUT_GATE_MS),
+      dipDb: dips[k],
       features: extractTapFeatures(windows, new Array(channels).fill(0), sr),
       peakDb: tapPeakDb(windows),
       impact: detectImpact(windows, sr)

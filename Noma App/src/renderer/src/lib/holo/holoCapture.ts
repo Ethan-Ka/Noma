@@ -1,4 +1,4 @@
-import type { HoloCalibration } from '@shared/types'
+import type { HoloCalibration, HoloZone } from '@shared/types'
 import { classifyMic, pickMicrophone, type MicCandidate, type MicKind } from './micKind'
 import {
   blockEnergy,
@@ -10,6 +10,9 @@ import {
   detectOnset,
   extractTapFeatures,
   relaxGates,
+  anchorAgrees,
+  anchorDiscriminant,
+  withoutMislabelledTaps,
   forgetLearnedTap,
   learnFromTap,
   shouldLearnFrom,
@@ -58,24 +61,19 @@ const TAP_WINDOW_FRAMES = 12288
  * like a direct response.
  */
 const FINALIZE_DELAY_MS = 190
-/** A real tap's own ringing can wobble back over the threshold — without
- *  this one physical tap could register several times. Measured from the
- *  onset, not from the finalize that follows it, so the analysis delay above
- *  doesn't quietly become dead time on top of it and swallow a deliberate
- *  second tap.
+/** After an onset, ignore new onsets for this long. Short on purpose: it
+ *  only has to swallow the bounces of one knock (a knuckle that lands and
+ *  rebounds: 20-40 ms apart in real recordings), not the second knock of a
+ *  double tap. People double-tap fast, 150-220 ms apart in a real recording
+ *  of the user's own laptop; the old 220 ms here threw every second knock
+ *  away, so a double tap was heard as a single tap. Each knock is analysed
+ *  separately, with any later knock cut out of its audio (see
+ *  `finalizeTap`), so they can't spoil each other's measurements.
  *
  *  Deliberately separate from the cooldown that follows a control actually
- *  firing (`beginCooldown`): this one is about one sound arriving twice and
- *  has to stay short, because a tap Holo *rejected* is a tap the user is
- *  about to make again, and swallowing the retry is exactly what made it
- *  feel like it takes three tries.
- *
- *  Skipped entirely (along with the post-press cooldown) while a
- *  calibration capture is pending: the wizard is already waiting for one
- *  specific tap and resolves the instant it hears one, so there's nothing
- *  for a refractory window to protect against — only a reason the next
- *  deliberate tap in a fast sequence would get swallowed. */
-const TAP_REFRACTORY_MS = 220
+ *  firing (`beginCooldown`). Skipped entirely (along with that cooldown)
+ *  while a calibration capture is pending. */
+const TAP_REFRACTORY_MS = 100
 /** A key/mouse/trackpad event within this long *before* or *after* an
  *  acoustic onset means the sound was the user's typing, clicking or
  *  trackpad use, never a desk tap.
@@ -166,6 +164,8 @@ interface DeviceInput {
   processor: ScriptProcessorNode
   ring: Float32Array[]
   writeIndex: number
+  /** Total frames ever written, so onsets can be located in the ring. */
+  frameCount: number
   detector: OnsetDetectorState
 }
 
@@ -173,11 +173,14 @@ export class HoloCaptureEngine {
   private audioContext: AudioContext | null = null
   private devices: DeviceInput[] = []
   private silentSink: GainNode | null = null
-  private finalizeTimer: ReturnType<typeof setTimeout> | null = null
+  /** Knocks detected but not analysed yet, plus recent ones, so each can be
+   *  cut short where the next one starts. */
+  private onsets: Array<{ frame: number; at: number; dipDb: number }> = []
+  private readonly timers = new Set<ReturnType<typeof setTimeout>>()
   private lastOnsetAt = -Infinity
-  private onsetAt = 0
   private calibration: HoloCalibration | null = null
   private discriminant: Discriminant | null = null
+  private anchor: Discriminant | null = null
   private readonly learnListeners = new Set<(calibration: HoloCalibration) => void>()
   private sensitivity: HoloSensitivity = 'medium'
   private allowExternalMic = false
@@ -187,7 +190,6 @@ export class HoloCaptureEngine {
   private cooldownUntil = 0
   /** Recent key/mouse/trackpad timestamps (Date.now() ms), oldest first. */
   private inputActivity: number[] = []
-  private decideTimer: ReturnType<typeof setTimeout> | null = null
   private recording: { chunks: Int16Array[]; frames: number; channels: number; startedAt: number; inputActivity: number[] } | null =
     null
   /** Onset of the sound `decide` is currently reporting on. */
@@ -196,7 +198,6 @@ export class HoloCaptureEngine {
    *  how far the previous sound had died away when the next one started. */
   private envelopePeak = 0
   private envelopeTrough = Infinity
-  private onsetDipDb = 0
   private decidingDipDb = 0
   private readonly tapListeners = new Set<HoloTapListener>()
   private readonly statusListeners = new Set<(status: HoloStatus) => void>()
@@ -326,6 +327,7 @@ export class HoloCaptureEngine {
       processor,
       ring: Array.from({ length: channels }, () => new Float32Array(RING_FRAMES)),
       writeIndex: 0,
+      frameCount: 0,
       detector: createOnsetDetectorState()
     }
     processor.onaudioprocess = (event) => this.handleBlock(device, event)
@@ -339,10 +341,9 @@ export class HoloCaptureEngine {
 
   /** Releases the mic. Idempotent. */
   stop(): void {
-    if (this.finalizeTimer) clearTimeout(this.finalizeTimer)
-    this.finalizeTimer = null
-    if (this.decideTimer) clearTimeout(this.decideTimer)
-    this.decideTimer = null
+    for (const timer of this.timers) clearTimeout(timer)
+    this.timers.clear()
+    this.onsets = []
     this.inputActivity = []
     if (this.unmuteTimer) clearTimeout(this.unmuteTimer)
     this.unmuteTimer = null
@@ -365,10 +366,47 @@ export class HoloCaptureEngine {
   }
 
   setCalibration(calibration: HoloCalibration | null): void {
+    this.anchor = calibration ? anchorDiscriminant(calibration.zones, calibration.scale) : null
+    // A tap learned under the wrong zone in the past is dropped, and the
+    // cleaned calibration saved (see `anchorDiscriminant`).
+    if (calibration && this.anchor) {
+      const zones = withoutMislabelledTaps(calibration.zones, this.anchor, calibration.scale)
+      if (zones !== calibration.zones) {
+        calibration = { ...calibration, zones }
+        this.calibration = calibration
+        this.discriminant = buildDiscriminant(trainingTaps(zones), calibration.scale)
+        for (const listener of this.learnListeners) listener(calibration)
+        return
+      }
+    }
     this.calibration = calibration
     // Rebuilt from the stored taps rather than persisted: it's a few
     // milliseconds of arithmetic, and it can never go stale against them.
     this.discriminant = calibration ? buildDiscriminant(trainingTaps(calibration.zones), calibration.scale) : null
+  }
+
+  /**
+   * Learns from the two knocks of a double tap that actually fired, the
+   * strongest evidence of where the user meant to tap there is: two knocks,
+   * both recognized, both on the same side. Each knock must also clear the
+   * usual near-certainty bar and be agreed by the anchor. Single knocks are
+   * never learned from any more; that's how mislabelled taps used to creep in.
+   */
+  learnFromDoubleTap(knocks: Array<{ zone: HoloZone; features: number[]; result: ClassificationResult }>): void {
+    const calibration = this.calibration
+    const anchor = this.anchor
+    if (!calibration || !anchor) return
+    const gates = calibration.gates ?? DEFAULT_GATES
+    let zones = calibration.zones
+    for (const knock of knocks) {
+      if (!shouldLearnFrom({ ...knock.result, zone: knock.zone }, gates)) continue
+      if (!anchorAgrees(knock.features, knock.zone, anchor, calibration.scale)) continue
+      zones = learnFromTap(zones, knock.zone, knock.features)
+    }
+    if (zones === calibration.zones) return
+    const learned = { ...calibration, zones }
+    this.setCalibration(learned)
+    for (const listener of this.learnListeners) listener(learned)
   }
 
   /** Called with the updated calibration whenever Holo learns from a tap in
@@ -570,6 +608,7 @@ export class HoloCaptureEngine {
       energy = Math.max(energy, blockEnergy(channelData))
     }
     device.writeIndex = (device.writeIndex + frames) % RING_FRAMES
+    device.frameCount += frames
 
     const now = performance.now()
     // While muted (or just resuming) the detector is skipped entirely, so
@@ -595,14 +634,14 @@ export class HoloCaptureEngine {
       }
       const gated =
         this.pendingCapture === null && (now < this.cooldownUntil || now - this.lastOnsetAt < TAP_REFRACTORY_MS)
-      if (isOnset && !this.finalizeTimer && !gated) {
-        this.onsetAt = Date.now()
-        this.onsetDipDb = dipDb
+      if (isOnset && !gated) {
         // This sound is the new reference for the next one's dip.
         this.envelopePeak = energy
         this.envelopeTrough = Infinity
         this.lastOnsetAt = now
-        this.finalizeTimer = setTimeout(() => this.finalizeTap(), FINALIZE_DELAY_MS)
+        const onset = { frame: device.frameCount, at: Date.now(), dipDb }
+        this.onsets.push(onset)
+        this.schedule(() => this.finalizeTap(onset), FINALIZE_DELAY_MS)
       }
     }
 
@@ -614,10 +653,26 @@ export class HoloCaptureEngine {
     }
   }
 
-  private finalizeTap(): void {
-    this.finalizeTimer = null
+  private schedule(run: () => void, ms: number): void {
+    const timer = setTimeout(() => {
+      this.timers.delete(timer)
+      run()
+    }, ms)
+    this.timers.add(timer)
+  }
+
+  private finalizeTap(onset: { frame: number; at: number; dipDb: number }): void {
     const context = this.audioContext
     if (!context) return
+    // Keep only knocks that could still overlap a window still to be analysed.
+    this.onsets = this.onsets.filter((other) => other.frame >= onset.frame - TAP_WINDOW_FRAMES)
+    // The next knock after this one, if it has started already: cut it out of
+    // this knock's audio, so a fast double tap's second knock can't spoil the
+    // first one's measurements. Cut a block early: an onset is detected at the
+    // end of the block it starts in.
+    const next = this.onsets.find((other) => other.frame > onset.frame)
+    const device0 = this.devices[0]
+    const cutFrom = next && device0 ? next.frame - BLOCK_FRAMES - (device0.frameCount - TAP_WINDOW_FRAMES) : Infinity
 
     const span = TAP_WINDOW_FRAMES
     const channels: Float32Array[] = []
@@ -625,7 +680,7 @@ export class HoloCaptureEngine {
     this.devices.forEach((device, deviceIndex) => {
       for (const ring of device.ring) {
         const out = new Float32Array(span)
-        for (let i = 0; i < span; i++) {
+        for (let i = 0; i < span && i < cutFrom; i++) {
           out[i] = ring[(device.writeIndex - span + i + RING_FRAMES * 2) % RING_FRAMES]
         }
         channels.push(out)
@@ -641,16 +696,13 @@ export class HoloCaptureEngine {
     // The audio is captured now, while the tap is still inside the ring
     // buffer, but the verdict waits until every input event that could
     // belong to this sound has had time to arrive (see INPUT_GATE_AFTER_MS).
-    const onsetAt = this.onsetAt
-    const dipDb = this.onsetDipDb
+    const { at: onsetAt, dipDb } = onset
     const wait = onsetAt + INPUT_GATE_AFTER_MS - Date.now()
     if (wait <= 0) {
       this.decide(features, peakDb, impact, onsetAt, dipDb)
       return
     }
-    if (this.decideTimer) clearTimeout(this.decideTimer)
-    this.decideTimer = setTimeout(() => {
-      this.decideTimer = null
+    this.schedule(() => {
       if (this.isRunning) this.decide(features, peakDb, impact, onsetAt, dipDb)
     }, wait)
   }
@@ -730,15 +782,6 @@ export class HoloCaptureEngine {
         onsetAt: this.decidingOnsetAt,
         dipDb: this.decidingDipDb
       })
-    }
-
-    // Learning is judged against the calibration's own gates, not the
-    // sensitivity-relaxed ones: "Light taps" should make Holo act on less
-    // certain taps, never make it learn from them.
-    if (result.zone && shouldLearnFrom(result, calibration.gates ?? DEFAULT_GATES)) {
-      const learned = { ...calibration, zones: learnFromTap(calibration.zones, result.zone, features) }
-      this.setCalibration(learned)
-      for (const listener of this.learnListeners) listener(learned)
     }
   }
 }

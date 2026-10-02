@@ -28,6 +28,9 @@ import {
   shouldLearnFrom,
   trainingTaps,
   MAX_LEARNED_TAPS,
+  anchorAgrees,
+  anchorDiscriminant,
+  withoutMislabelledTaps,
   type ImpactCheck
 } from './classifier'
 import type { HoloGates, HoloZone, HoloZoneProfile } from '@shared/types'
@@ -703,5 +706,31 @@ describe('onset detector noise floor', () => {
     const state = createOnsetDetectorState(1e-5)
     for (let i = 0; i < 200; i++) detectOnset(1e-2, state)
     expect(state.noiseFloor).toBeGreaterThan(1e-3)
+  })
+})
+
+describe('the anchor (learning can never drift a zone onto the other side)', () => {
+  const tap = (x: number, jitter: number): number[] => [x + jitter, 1 - x - jitter * 0.5, jitter]
+  const profiles: HoloZoneProfile[] = [
+    { zone: 'frontLeft', features: [0, 1, 0], taps: [-0.1, -0.05, 0, 0.05, 0.1].map((j) => tap(0, j)), sampleCount: 5 },
+    { zone: 'frontRight', features: [1, 0, 0], taps: [-0.1, -0.05, 0, 0.05, 0.1].map((j) => tap(1, j)), sampleCount: 5 }
+  ]
+  const scale = [0.2, 0.2, 0.2]
+  const anchor = anchorDiscriminant(profiles, scale)!
+
+  it('agrees with a tap on its own side and not with one from the other', () => {
+    expect(anchorAgrees(tap(0, 0.02), 'frontLeft', anchor, scale)).toBe(true)
+    expect(anchorAgrees(tap(1, 0.02), 'frontLeft', anchor, scale)).toBe(false)
+  })
+
+  it('drops a learned tap that belongs to the other side, keeps the rest', () => {
+    const withMistake = profiles.map((p) => (p.zone === 'frontLeft' ? { ...p, learnedTaps: [tap(0, 0.03), tap(1, 0)] } : p))
+    const cleaned = withoutMislabelledTaps(withMistake, anchor, scale)
+    expect(cleaned[0].learnedTaps).toEqual([tap(0, 0.03)])
+    expect(cleaned[0].taps).toEqual(profiles[0].taps)
+  })
+
+  it('returns the same profiles when there is nothing to drop', () => {
+    expect(withoutMislabelledTaps(profiles, anchor, scale)).toBe(profiles)
   })
 })

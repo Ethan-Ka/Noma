@@ -62,16 +62,25 @@ describe('DoubleTapDetector', () => {
 })
 
 describe('fitDoubleTapWindow (the user\'s own rhythm)', () => {
-  it('fits a quick knocker a tighter, earlier window', () => {
-    const window = fitDoubleTapWindow([280, 300, 310, 320, 330, 350])!
+  it('fits a quick knocker (the real recording: 150-220 ms) a tight window', () => {
+    const window = fitDoubleTapWindow([150, 165, 185, 190, 205, 210, 215, 220])!
     expect(window.minGapMs).toBe(DOUBLE_TAP_MIN_GAP_MS)
     expect(window.maxGapMs).toBeLessThan(DOUBLE_TAP_MAX_GAP_MS)
+    // ...which still takes in every gap that was demonstrated.
+    expect(window.maxGapMs).toBeGreaterThan(220)
   })
 
-  it('gives a slow knocker a longer window than the default', () => {
+  it('never widens past the default, however slowly someone knocked in the wizard', () => {
     const window = fitDoubleTapWindow([600, 650, 700, 720, 750])!
-    expect(window.maxGapMs).toBeGreaterThan(DOUBLE_TAP_MAX_GAP_MS)
-    expect(window.minGapMs).toBeGreaterThan(DOUBLE_TAP_MIN_GAP_MS)
+    expect(window.maxGapMs).toBe(DOUBLE_TAP_MAX_GAP_MS)
+  })
+
+  it('caps an already-saved wide window when it is applied', () => {
+    const detector = new DoubleTapDetector()
+    detector.setWindow({ minGapMs: 120, maxGapMs: 1200 })
+    detector.tap('frontLeft', 1000, -20)
+    // 700 ms apart: two separate sounds, not a double tap.
+    expect(detector.tap('frontLeft', 1700, -20)).toBe('armed')
   })
 
   it('never goes below the structural floor', () => {
@@ -84,10 +93,10 @@ describe('fitDoubleTapWindow (the user\'s own rhythm)', () => {
 
   it('is what the detector then uses', () => {
     const detector = new DoubleTapDetector()
-    detector.setWindow({ minGapMs: 500, maxGapMs: 1100 })
+    detector.setWindow({ minGapMs: 150, maxGapMs: 400 })
     detector.tap('frontLeft', 1000, -20)
-    expect(detector.tap('frontLeft', 1400, -20)).toBe('armed')
-    expect(detector.tap('frontLeft', 2400, -20)).toBe('fire')
+    expect(detector.tap('frontLeft', 1450, -20)).toBe('armed')
+    expect(detector.tap('frontLeft', 1650, -20)).toBe('fire')
   })
 })
 

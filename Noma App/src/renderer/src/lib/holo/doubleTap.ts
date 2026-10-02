@@ -17,9 +17,13 @@ import { scaledDistance } from './classifier'
  *
  * The rules, each there for a reason:
  * - Same zone. A tap on each side is two single taps, not a double.
- * - At least MIN_GAP_MS apart. The classifier judges a sound by the 180 ms
- *   after it (how it decays), so a second tap inside that window spoils the
- *   first. It also means a tap's own ringing can never be its second half.
+ * - At least MIN_GAP_MS apart: past the bounces of a single knock (20-40 ms
+ *   in real recordings). People double-tap fast: 150-220 ms apart in a
+ *   recording of the user's own laptop. An earlier 250 ms floor here (plus
+ *   the engine ignoring anything within 220 ms of a knock) meant every
+ *   second knock was thrown away and a double tap was heard as one tap; the
+ *   engine now analyses each knock separately with the next one cut out of
+ *   its audio, so a fast second knock can't spoil the first.
  * - At most MAX_GAP_MS apart. Slower than that is two separate taps.
  * - Similar loudness (MAX_LEVEL_DIFF_DB). Two deliberate taps land with
  *   similar force; a big mismatch is one tap plus some other sound.
@@ -35,8 +39,8 @@ import { scaledDistance } from './classifier'
  *     one spot are close in every feature, while a ringing tail or a lift-off
  *     sounds nothing like the knock that caused it.
  */
-export const DOUBLE_TAP_MIN_GAP_MS = 250
-export const DOUBLE_TAP_MAX_GAP_MS = 800
+export const DOUBLE_TAP_MIN_GAP_MS = 120
+export const DOUBLE_TAP_MAX_GAP_MS = 500
 export const DOUBLE_TAP_MAX_LEVEL_DIFF_DB = 15
 /** How far (dB) the level must fall between the two taps. */
 export const DOUBLE_TAP_MIN_DIP_DB = -15
@@ -50,11 +54,12 @@ export interface DoubleTapWindow {
 
 /**
  * Fits the double-tap window to the gaps between the two taps of each
- * double tap made during calibration, so someone who knocks quickly isn't
- * held to a slow window and vice versa. Generous either side of what was
+ * double tap made during calibration. Only ever narrows the default: a
+ * quick knocker (150-220 ms in a real recording) gets a tight window, so
+ * two unrelated sounds a few hundred ms apart can't pair up. Generous either side of what was
  * demonstrated (people are less careful in use than in a wizard), but never
- * below DOUBLE_TAP_MIN_GAP_MS: that floor is structural (a second tap any
- * sooner spoils how the first is judged), not a preference. Null with too
+ * below DOUBLE_TAP_MIN_GAP_MS, which keeps a single knock's bounces from
+ * counting as a second tap. Null with too
  * few gaps to say anything.
  */
 export function fitDoubleTapWindow(gapsMs: number[]): DoubleTapWindow | null {
@@ -63,7 +68,7 @@ export function fitDoubleTapWindow(gapsMs: number[]): DoubleTapWindow | null {
   const low = sorted[Math.floor(0.1 * (sorted.length - 1))]
   const high = sorted[Math.ceil(0.9 * (sorted.length - 1))]
   const minGapMs = Math.max(DOUBLE_TAP_MIN_GAP_MS, Math.round(low * 0.6))
-  const maxGapMs = Math.min(1200, Math.max(minGapMs + 250, Math.round(high * 1.6)))
+  const maxGapMs = Math.min(DOUBLE_TAP_MAX_GAP_MS, Math.max(minGapMs + 250, Math.round(high * 1.8)))
   return { minGapMs, maxGapMs }
 }
 
@@ -118,9 +123,14 @@ export class DoubleTapDetector {
     this.pairMatches = matches
   }
 
-  /** Uses the user's own rhythm (see `fitDoubleTapWindow`), or the default. */
+  /** Uses the user's own rhythm (see `fitDoubleTapWindow`), or the default.
+   *  Never wider than the default: an earlier fit allowed up to 1.2 s, which
+   *  let two everyday sounds 405 ms apart fire on a real recording. */
   setWindow(window: DoubleTapWindow | null | undefined): void {
-    this.window = window ?? { minGapMs: DOUBLE_TAP_MIN_GAP_MS, maxGapMs: DOUBLE_TAP_MAX_GAP_MS }
+    this.window = {
+      minGapMs: Math.max(DOUBLE_TAP_MIN_GAP_MS, window?.minGapMs ?? DOUBLE_TAP_MIN_GAP_MS),
+      maxGapMs: Math.min(DOUBLE_TAP_MAX_GAP_MS, window?.maxGapMs ?? DOUBLE_TAP_MAX_GAP_MS)
+    }
   }
 
   /** A recognized tap on `zone`. Returns 'fire' when it completes a double
