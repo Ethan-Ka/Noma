@@ -64,9 +64,10 @@ import {
 import { detectPatterns } from '../workflow/patternDetection'
 import { startOfTodayMs } from '../workflow/timeWindows'
 import {
-  executeControlAction,
+  executeControlActionExclusively,
   executeMacroSteps,
-  isKeystrokeExecutionEnabled
+  isKeystrokeExecutionEnabled,
+  runActionExclusively
 } from '../actions/actionExecutor'
 import {
   DEMO_APPLICATIONS,
@@ -210,7 +211,7 @@ export function registerIpcHandlers(
   })
 
   ipcMain.handle(IPC_CHANNELS.TEST_CONTROL_ACTION, async (_event, action: ControlAction) => {
-    const result = await executeControlAction(action, getTargetWindowHandle())
+    const result = await executeControlActionExclusively(action, getTargetWindowHandle())
     return { ok: result.ok, reason: result.reason }
   })
 
@@ -250,7 +251,7 @@ export function registerIpcHandlers(
   )
 
   ipcMain.handle(IPC_CHANNELS.TEST_MACRO_STEPS, async (_event, actions: MacroStep[]) => {
-    const result = await executeMacroSteps(actions, getTargetWindowHandle())
+    const result = await runActionExclusively(() => executeMacroSteps(actions, getTargetWindowHandle()))
     return { ok: result.ok, reason: result.reason }
   })
 

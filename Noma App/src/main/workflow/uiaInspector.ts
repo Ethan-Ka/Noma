@@ -14,7 +14,10 @@ export interface ClickInspector {
   dispose(): void
 }
 
-const INSPECT_TIMEOUT_MS = 600
+/** Hit-testing plus, for WinUI/Electron containers, a search of the window
+ *  for the control under the point: ~50-200 ms, sometimes ~600 ms right
+ *  after the helper starts. Past this the click falls back to a grid zone. */
+const INSPECT_TIMEOUT_MS = 1000
 const MAX_PENDING = 4
 
 /**
@@ -46,6 +49,16 @@ public class FlowDpi { [DllImport("user32.dll")] public static extern bool SetPr
 
 $walker = [System.Windows.Automation.TreeWalker]::ControlViewWalker
 $root = [System.Windows.Automation.AutomationElement]::RootElement
+$AE = [System.Windows.Automation.AutomationElement]
+$CT = [System.Windows.Automation.ControlType]
+$commandTypes = @($CT::Button, $CT::SplitButton, $CT::MenuItem, $CT::CheckBox, $CT::RadioButton)
+$commandCond = New-Object System.Windows.Automation.OrCondition(@($commandTypes | ForEach-Object {
+  New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty, $_)
+}))
+# What a hit-test may land on in place of the real control: the host window of
+# a WinUI/XAML island (new Notepad, Settings, Terminal) or a Chromium/Electron
+# web area. Hit-testing stops at those instead of descending into them.
+$containerNames = @('ControlType.Pane', 'ControlType.Window', 'ControlType.Group', 'ControlType.Custom', 'ControlType.Document')
 while ($true) {
   $line = [Console]::In.ReadLine()
   if ($line -eq $null) { break }
@@ -54,6 +67,31 @@ while ($true) {
   try {
     $pt = New-Object System.Windows.Point ([double]$parts[1]), ([double]$parts[2])
     $el = [System.Windows.Automation.AutomationElement]::FromPoint($pt)
+    # Landed on a container: look inside it for the command control under the
+    # point (the smallest one that contains it). Only command controls are
+    # looked for, so this can't widen what's recorded; clickTarget.ts still
+    # decides what may be kept.
+    if ($el -ne $null -and $containerNames -contains $el.Current.ControlType.ProgrammaticName) {
+      # Search the whole top-level window the point is in, not just the
+      # container: an app like Notepad hosts its menu bar in one island and
+      # its document in another, and the hit-test can land on either.
+      $scope = $el
+      for ($i = 0; $i -lt 25; $i++) {
+        $parent = $walker.GetParent($scope)
+        if ($parent -eq $null -or $parent -eq $root) { break }
+        $scope = $parent
+      }
+      $best = $null; $bestArea = [double]::MaxValue
+      try {
+        foreach ($candidate in $scope.FindAll([System.Windows.Automation.TreeScope]::Descendants, $commandCond)) {
+          $r = $candidate.Current.BoundingRectangle
+          if ($r.IsEmpty -or -not $r.Contains($pt)) { continue }
+          $area = $r.Width * $r.Height
+          if ($area -lt $bestArea) { $best = $candidate; $bestArea = $area }
+        }
+      } catch { }
+      if ($best -ne $null) { $el = $best }
+    }
     if ($el -ne $null) {
       $out.controlType = $el.Current.ControlType.ProgrammaticName
       $name = $el.Current.Name

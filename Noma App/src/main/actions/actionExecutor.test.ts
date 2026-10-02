@@ -9,8 +9,10 @@ import { findMainWindowHandleForProcess } from './processWindow'
 import { focusWindowAndVerify } from './windowFocus'
 import { executeClick } from './click'
 import {
+  ACTION_BUSY_REASON,
   executeControlAction,
   executeMacroSteps,
+  runActionExclusively,
   isBlockedShortcut,
   isKeystrokeExecutionEnabled,
   isKnownFlowAction,
@@ -460,5 +462,22 @@ describe('focusApplication (WORKFLOW LEARNING — switching to an already-runnin
     // 3 shortcut steps: screenshot, paste, enter — focusApplication itself
     // sends no keystroke.
     expect(uIOhook.keyTap).toHaveBeenCalledTimes(3)
+  })
+})
+
+describe('one action at a time', () => {
+  it('refuses a second press while the first is still running, then accepts the next one', async () => {
+    let finish: (value: { ok: boolean }) => void = () => {}
+    const first = runActionExclusively(() => new Promise((resolve) => (finish = resolve)))
+    const second = await runActionExclusively(async () => ({ ok: true }))
+    expect(second).toEqual({ ok: false, reason: ACTION_BUSY_REASON })
+    finish({ ok: true })
+    expect(await first).toEqual({ ok: true })
+    expect(await runActionExclusively(async () => ({ ok: true }))).toEqual({ ok: true })
+  })
+
+  it('releases the lock even when the action throws', async () => {
+    await expect(runActionExclusively(async () => Promise.reject(new Error('boom')))).rejects.toThrow('boom')
+    expect(await runActionExclusively(async () => ({ ok: true }))).toEqual({ ok: true })
   })
 })

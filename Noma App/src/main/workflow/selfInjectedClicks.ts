@@ -7,31 +7,35 @@
  * captured as if the user had clicked it, manufacturing a fake repeated
  * pattern purely from Flow replaying its own workflow.
  *
- * Simpler than the keyed version: a click has no "combo" identity to match,
- * so this is just a short-lived flag rather than a list of pending entries —
- * markSelfInjectedClick() is called immediately before SendInput, and the
- * very next mousedown the hook sees within the TTL is assumed to be it.
+ * A click has no "combo" identity to match, so each mark is just an expiry
+ * time: markSelfInjectedClick() is called immediately before the synthetic
+ * press, and each mousedown the hook sees within the TTL consumes one mark.
+ * One mark per click, not a single flag: with a single flag, two synthetic
+ * clicks close together shared one mark, the first consumed it, and the
+ * second was recorded as if the user had clicked it.
  */
 
 const SUPPRESS_MS = 500
 
-let suppressUntil = 0
+let pending: number[] = []
 
-/** Call immediately before firing a synthetic click via SendInput. */
+/** Call immediately before firing a synthetic press via SendInput. */
 export function markSelfInjectedClick(): void {
-  suppressUntil = Date.now() + SUPPRESS_MS
+  pending.push(Date.now() + SUPPRESS_MS)
 }
 
 /** Reports whether a mousedown right now is (most likely) Flow's own
- *  synthetic click, and consumes the mark so a genuine next click isn't
+ *  synthetic click, and consumes that mark so a genuine next click isn't
  *  also swallowed. */
 export function isSelfInjectedClick(): boolean {
-  if (Date.now() > suppressUntil) return false
-  suppressUntil = 0
+  const now = Date.now()
+  pending = pending.filter((expiry) => expiry >= now)
+  if (pending.length === 0) return false
+  pending.shift()
   return true
 }
 
 /** Test-only: resets state between tests. */
 export function __resetSelfInjectedClickGuardForTesting(): void {
-  suppressUntil = 0
+  pending = []
 }

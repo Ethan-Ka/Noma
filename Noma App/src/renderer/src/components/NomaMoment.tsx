@@ -84,7 +84,17 @@ export function NomaMoment({
       return
     }
     const result = await window.flow.getProfileForApplication(suggestion.applicationId)
-    setProfile(result)
+    if (result || !suggestion.action) {
+      setProfile(result)
+      return
+    }
+    // An actionable workflow learned in an app that has no controls yet
+    // (anything but the few apps Noma ships profiles for). The user just
+    // asked to turn it into an action, so set the app up with the same 4
+    // empty slots the Profiles page creates, rather than only bookmarking it.
+    const summaries = await window.flow.listApplicationProfileSummaries()
+    const application = summaries.find((entry) => entry.application.id === suggestion.applicationId)?.application
+    setProfile(application ? await window.flow.createProfileForApplication(application, application.name) : null)
   }
 
   const handleAssign = async (slot: number): Promise<void> => {

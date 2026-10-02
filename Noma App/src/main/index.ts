@@ -1,5 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification } from 'electron'
 import { join } from 'path'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
 /**
@@ -48,7 +49,7 @@ import { simulateDemoMultiStepWorkflow } from './demo/demoService'
 import { getApplicationById } from './database/repositories/applicationsRepository'
 import { LocalRuleBasedProvider } from './ai/localProvider'
 import { SuggestionEngine } from './ai/suggestionEngine'
-import { executeControlAction } from './actions/actionExecutor'
+import { executeControlActionExclusively } from './actions/actionExecutor'
 import { WorkflowNotifier } from './notifications/workflowNotifier'
 import {
   closeWorkflowNoticeWindow,
@@ -151,6 +152,27 @@ const clickCaptureService = new ClickCaptureService((event) => {
  * Noma's own window isn't the one being looked at, and only for failures:
  * a success is already visible in whatever the action did.
  */
+/**
+ * A local record of what each control press did: the control's label, its
+ * action type, whether it worked and, if not, the step and reason it stopped
+ * at. For diagnosing replay ("it stops at Select all, sometimes") from what
+ * actually happened rather than from memory. Never what was typed or
+ * clicked on, and never leaves this computer; trimmed to the last ~500
+ * presses. %APPDATA%/noma/logs/actions.jsonl.
+ */
+function logActionResult(controlLabel: string, actionType: string, result: { ok: boolean; reason?: string }): void {
+  try {
+    const folder = join(app.getPath('userData'), 'logs')
+    mkdirSync(folder, { recursive: true })
+    const file = join(folder, 'actions.jsonl')
+    const line = JSON.stringify({ at: new Date().toISOString(), control: controlLabel, actionType, ok: result.ok, reason: result.reason })
+    const previous = existsSync(file) ? readFileSync(file, 'utf8').split(/\r?\n/).filter(Boolean).slice(-499) : []
+    writeFileSync(file, [...previous, line, ''].join('\n'))
+  } catch {
+    // Diagnostics only: never let logging break a press.
+  }
+}
+
 function notifyActionFailed(controlLabel: string, reason: string | undefined): void {
   if (mainWindow?.isVisible() && mainWindow.isFocused()) return
   if (!Notification.isSupported()) return
@@ -421,9 +443,10 @@ app.whenReady().then(() => {
         .getContext()
         .profile?.controls.find((item) => item.id === event.controlId)
       if (control) {
-        void executeControlAction(control.action, osAdapter.getLastKnownWindowHandle()).then(
+        void executeControlActionExclusively(control.action, osAdapter.getLastKnownWindowHandle()).then(
           (result) => {
             if (!result.ok) notifyActionFailed(control.label, result.reason)
+            logActionResult(control.label, control.action.type, result)
             mainWindow?.webContents.send(IPC_CHANNELS.ACTION_EXECUTED, {
               controlId: event.controlId,
               ok: result.ok,

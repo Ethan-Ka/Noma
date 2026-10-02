@@ -17,13 +17,22 @@ vi.mock('./win32', () => ({
     return true
   }),
   IsWindow: vi.fn(() => true),
-  SendInput: vi.fn(() => 2),
+  GetSystemMetrics: vi.fn((index: number) => ({ 76: 0, 77: 0, 78: 1600, 79: 1000 })[index] ?? 0),
+  // One event per call: approach moves, then press, then release.
+  SendInput: vi.fn(() => 1),
   SetCursorPos: vi.fn(() => true),
   WindowFromPoint: vi.fn(() => 100),
   INPUT_MOUSE: 0,
   INPUT_SIZE: 40,
   MOUSEEVENTF_LEFTDOWN: 2,
-  MOUSEEVENTF_LEFTUP: 4
+  MOUSEEVENTF_LEFTUP: 4,
+  MOUSEEVENTF_MOVE: 1,
+  MOUSEEVENTF_ABSOLUTE: 0x8000,
+  MOUSEEVENTF_VIRTUALDESK: 0x4000,
+  SM_XVIRTUALSCREEN: 76,
+  SM_YVIRTUALSCREEN: 77,
+  SM_CXVIRTUALSCREEN: 78,
+  SM_CYVIRTUALSCREEN: 79
 }))
 vi.mock('./windowProcess', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./windowProcess')>()),
@@ -115,6 +124,19 @@ describe('executeClick: a named control is found again, not guessed', () => {
     expect(result.ok).toBe(false)
     expect(result.reason).toContain("Couldn't find “Render”")
     expect(SendInput).not.toHaveBeenCalled()
+  })
+})
+
+describe('executeClick: clicks like a hand, not a teleport', () => {
+  it('moves onto the target before pressing, then presses and releases', async () => {
+    vi.mocked(uiaControlFinder.find).mockResolvedValue({ status: 'found', x: 812, y: 44 })
+    await executeClick('label:Edit', 'resolve')
+    const calls = vi.mocked(SendInput).mock.calls.map((call) => (call[1] as Array<{ u: { mi: { dwFlags: number } } }>)[0].u.mi.dwFlags)
+    const press = calls.indexOf(2)
+    expect(press).toBeGreaterThan(0)
+    // Every event before the press is a move, and the release follows it.
+    expect(calls.slice(0, press).every((flags) => (flags & 1) === 1)).toBe(true)
+    expect(calls[press + 1]).toBe(4)
   })
 })
 

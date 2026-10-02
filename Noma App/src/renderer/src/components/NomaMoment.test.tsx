@@ -119,11 +119,30 @@ describe('NomaMoment', () => {
     render(<NomaMoment suggestion={informational} onReject={vi.fn()} onDismiss={vi.fn()} />)
 
     fireEvent.click(screen.getByText('Sounds right'))
-    expect(await screen.findByText(/accepting just remembers/)).toBeInTheDocument()
+    expect(await screen.findByText(/accepting just remembers/i)).toBeInTheDocument()
 
     fireEvent.click(screen.getByText('Accept'))
     await waitFor(() => expect(resolveSuggestion).toHaveBeenCalledWith(informational.id, 'accepted'))
     expect(await screen.findByText('Noted')).toBeInTheDocument()
+  })
+
+  it('sets up controls for an app that has none yet, instead of only bookmarking the workflow', async () => {
+    const notepad = { id: 'notepad', name: 'Notepad', processName: 'notepad.exe' }
+    const created: ApplicationProfile = { ...PROFILE, id: 'notepad-1', applicationId: 'notepad', name: 'Notepad' }
+    const getProfileForApplication = vi.fn().mockResolvedValue(null)
+    const listApplicationProfileSummaries = vi
+      .fn()
+      .mockResolvedValue([{ application: notepad, hasProfile: false }])
+    const createProfileForApplication = vi.fn().mockResolvedValue(created)
+    window.flow = mockFlow({ getProfileForApplication, listApplicationProfileSummaries, createProfileForApplication })
+
+    const inNotepad: Suggestion = { ...WORKFLOW_SUGGESTION, applicationId: 'notepad', applicationName: 'Notepad' }
+    render(<NomaMoment suggestion={inNotepad} onReject={vi.fn()} onDismiss={vi.fn()} />)
+    fireEvent.click(screen.getByText('Create action'))
+
+    await waitFor(() => expect(createProfileForApplication).toHaveBeenCalledWith(notepad, 'Notepad'))
+    expect(await screen.findByText(/Which control should this replace/)).toBeInTheDocument()
+    expect(screen.queryByText(/accepting just remembers/i)).not.toBeInTheDocument()
   })
 
   it('calls onDismiss for "Not now" and onReject for "Not useful", never resolving on its own', () => {

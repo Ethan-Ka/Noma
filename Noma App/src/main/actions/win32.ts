@@ -147,3 +147,13 @@ koffi.struct('POINT', { x: 'long', y: 'long' }) // registered by name for the si
 export const WindowFromPoint = user32.func('intptr_t __stdcall WindowFromPoint(POINT point)')
 export const GetAncestor = user32.func('intptr_t __stdcall GetAncestor(intptr_t hwnd, uint32_t gaFlags)')
 export const GA_ROOT = 2
+
+/** Virtual-desktop bounds, for absolute mouse moves (click.ts). */
+export const GetSystemMetrics = user32.func('int __stdcall GetSystemMetrics(int nIndex)')
+export const SM_XVIRTUALSCREEN = 76
+export const SM_YVIRTUALSCREEN = 77
+export const SM_CXVIRTUALSCREEN = 78
+export const SM_CYVIRTUALSCREEN = 79
+export const MOUSEEVENTF_MOVE = 0x0001
+export const MOUSEEVENTF_ABSOLUTE = 0x8000
+export const MOUSEEVENTF_VIRTUALDESK = 0x4000

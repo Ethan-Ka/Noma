@@ -2,6 +2,7 @@ import {
   GA_ROOT,
   GetAncestor,
   GetForegroundWindow,
+  GetSystemMetrics,
   GetWindowRect,
   IsWindow,
   SendInput,
@@ -9,8 +10,15 @@ import {
   WindowFromPoint,
   INPUT_MOUSE,
   INPUT_SIZE,
+  MOUSEEVENTF_ABSOLUTE,
   MOUSEEVENTF_LEFTDOWN,
-  MOUSEEVENTF_LEFTUP
+  MOUSEEVENTF_LEFTUP,
+  MOUSEEVENTF_MOVE,
+  MOUSEEVENTF_VIRTUALDESK,
+  SM_CXVIRTUALSCREEN,
+  SM_CYVIRTUALSCREEN,
+  SM_XVIRTUALSCREEN,
+  SM_YVIRTUALSCREEN
 } from './win32'
 import { ZONE_COLUMNS, ZONE_ROWS, MIN_WINDOW_SIZE, type ScreenRect } from '../workflow/clickTarget'
 import { markSelfInjectedClick } from '../workflow/selfInjectedClicks'
@@ -103,7 +111,7 @@ async function clickNamedControl(label: string, processId: number | null): Promi
       if (processForWindow(atPoint)?.pid !== processId) {
         return { ok: false, reason: `Something is covering “${label}”. Nothing was clicked` }
       }
-      return sendClick(found.x, found.y)
+      return await sendClick(found.x, found.y)
     }
     if (found.status === 'several') {
       return { ok: false, reason: `Found ${found.count} buttons named “${label}” and couldn't tell which one. Nothing was clicked` }
@@ -118,12 +126,60 @@ async function clickNamedControl(label: string, processId: number | null): Promi
   }
 }
 
-function sendClick(x: number, y: number): ExecutionResult {
-  markSelfInjectedClick()
+/** Mouse path onto the target before pressing: a few steps in from just
+ *  below-left of it, like a hand arriving. */
+const APPROACH_OFFSETS: Array<[number, number]> = [
+  [-12, 10],
+  [-8, 6],
+  [-4, 3],
+  [0, 0]
+]
+const APPROACH_STEP_MS = 12
+/** Time over the target before pressing: long enough for the app to
+ *  register the pointer as hovering it. */
+const HOVER_MS = 80
+const PRESS_MS = 40
+
+/**
+ * Clicks the way a hand does: moves onto the target, pauses, presses,
+ * releases. Not just "put the cursor there and click".
+ *
+ * Apps built on newer Windows UI frameworks (new Notepad, Settings,
+ * Terminal; WinUI 3 / XAML) only treat a press as a click on a control once
+ * the pointer has actually *moved* over that control. A cursor teleported
+ * with SetCursorPos and pressed at once was hit-or-miss there: replaying
+ * "Edit -> Select all" in Notepad opened the Edit menu only some of the
+ * time, so the next step found no "Select all" and the macro stopped (in a
+ * test: 2 of 3 opened that way, 3 of 3 with real movement first). The moves
+ * are absolute (exact pixels, unaffected by pointer acceleration), and a
+ * final SetCursorPos pins the exact spot.
+ */
+async function sendClick(x: number, y: number): Promise<ExecutionResult> {
+  for (const [dx, dy] of APPROACH_OFFSETS) {
+    SendInput(1, [absoluteMove(x + dx, y + dy)], INPUT_SIZE)
+    await sleep(APPROACH_STEP_MS)
+  }
   SetCursorPos(x, y)
-  const events = [mouseEvent(MOUSEEVENTF_LEFTDOWN), mouseEvent(MOUSEEVENTF_LEFTUP)]
-  const sent: number = SendInput(events.length, events, INPUT_SIZE)
-  return sent === events.length ? { ok: true } : { ok: false, reason: 'The OS refused the synthetic click' }
+  await sleep(HOVER_MS)
+  // Right before the press, which is what the capture hook reacts to.
+  markSelfInjectedClick()
+  const down: number = SendInput(1, [mouseEvent(MOUSEEVENTF_LEFTDOWN)], INPUT_SIZE)
+  await sleep(PRESS_MS)
+  const up: number = SendInput(1, [mouseEvent(MOUSEEVENTF_LEFTUP)], INPUT_SIZE)
+  return down === 1 && up === 1 ? { ok: true } : { ok: false, reason: 'The OS refused the synthetic click' }
+}
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+
+/** An absolute move to screen pixel (x, y), across all monitors. */
+function absoluteMove(x: number, y: number): ReturnType<typeof mouseEvent> {
+  const left = GetSystemMetrics(SM_XVIRTUALSCREEN)
+  const top = GetSystemMetrics(SM_YVIRTUALSCREEN)
+  const width = Math.max(2, GetSystemMetrics(SM_CXVIRTUALSCREEN))
+  const height = Math.max(2, GetSystemMetrics(SM_CYVIRTUALSCREEN))
+  const nx = Math.round(((x - left) * 65535) / (width - 1))
+  const ny = Math.round(((y - top) * 65535) / (height - 1))
+  return mouseEvent(MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK, nx, ny)
 }
 
 function windowRect(hwnd: number): ScreenRect | null {
@@ -138,9 +194,13 @@ function windowRect(hwnd: number): ScreenRect | null {
   return rect
 }
 
-function mouseEvent(flags: number): {
+function mouseEvent(
+  flags: number,
+  dx = 0,
+  dy = 0
+): {
   type: number
   u: { mi: { dx: number; dy: number; mouseData: number; dwFlags: number; time: number; dwExtraInfo: number } }
 } {
-  return { type: INPUT_MOUSE, u: { mi: { dx: 0, dy: 0, mouseData: 0, dwFlags: flags, time: 0, dwExtraInfo: 0 } } }
+  return { type: INPUT_MOUSE, u: { mi: { dx, dy, mouseData: 0, dwFlags: flags, time: 0, dwExtraInfo: 0 } } }
 }

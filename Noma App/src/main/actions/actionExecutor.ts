@@ -336,6 +336,43 @@ async function executeMacroStep(
   }
 }
 
+let actionInProgress = false
+
+/** Shown (and logged) when a press arrives while another is still running. */
+export const ACTION_BUSY_REASON = 'Still finishing the previous action, so this press was ignored. Press again once it is done'
+
+/**
+ * Runs a control's action, one at a time. A press that arrives while another
+ * action is still running is refused, not queued and not run alongside it.
+ *
+ * A learned workflow replays at the pace it was recorded, so it can take a
+ * few seconds, and pressing again because nothing seemed to happen yet is
+ * natural. Two runs at once drive the same mouse and keyboard and undo each
+ * other: on a real test, a second press 1.85 s into a Notepad "Edit -> Select
+ * all -> Copy" replay clicked Edit again, closing the menu the first run had
+ * just opened, and both runs failed at "Select all". Refusing is safer than
+ * queueing: an action that fires seconds after the press, after the user has
+ * moved on, is worse than one that didn't fire.
+ */
+export function executeControlActionExclusively(
+  action: ControlAction,
+  targetHwnd: number | null
+): Promise<ExecutionResult> {
+  return runActionExclusively(() => executeControlAction(action, targetHwnd))
+}
+
+/** The lock itself, shared by every way an action can be started (a press,
+ *  and the editors' Test buttons). */
+export async function runActionExclusively(run: () => Promise<ExecutionResult>): Promise<ExecutionResult> {
+  if (actionInProgress) return { ok: false, reason: ACTION_BUSY_REASON }
+  actionInProgress = true
+  try {
+    return await run()
+  } finally {
+    actionInProgress = false
+  }
+}
+
 /**
  * Executes whatever a control's configured action says to do, against a
  * specific target window (or null for "whatever's already focused").
