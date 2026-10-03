@@ -1,4 +1,6 @@
 import { GetForegroundWindow, IsWindow, SetForegroundWindow } from './win32'
+import { frontmostPid, requestActivation } from './macos'
+import { isMac } from '../platform'
 
 /**
  * Focuses the target window and confirms the switch actually landed
@@ -25,8 +27,32 @@ import { GetForegroundWindow, IsWindow, SetForegroundWindow } from './win32'
  * ordinary, sanctioned case the API exists for, not an edge case being
  * routed around.
  */
-export function focusWindowAndVerify(targetHwnd: number): boolean {
+export async function focusWindowAndVerify(targetHwnd: number): Promise<boolean> {
+  if (isMac) return focusAppAndVerify(targetHwnd)
   if (!IsWindow(targetHwnd)) return false
   SetForegroundWindow(targetHwnd)
   return GetForegroundWindow() === targetHwnd
+}
+
+/** How long macOS gets to bring an app forward: activation there is
+ *  asynchronous, unlike SetForegroundWindow. */
+const MAC_ACTIVATION_WAIT_MS = 600
+const MAC_ACTIVATION_POLL_MS = 30
+
+/**
+ * macOS: the "handle" is the target app's pid (see macAdapter.ts). Usually
+ * that app is already in front (the user pressed a key or tapped while in
+ * it), so nothing changes. Otherwise it is asked to come forward, and the
+ * same rule applies as on Windows: no confirmation, no keystroke.
+ */
+async function focusAppAndVerify(pid: number): Promise<boolean> {
+  if (pid <= 0) return false
+  if (frontmostPid() === pid) return true
+  if (!requestActivation(pid)) return false
+  const deadline = Date.now() + MAC_ACTIVATION_WAIT_MS
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, MAC_ACTIVATION_POLL_MS))
+    if (frontmostPid() === pid) return true
+  }
+  return false
 }

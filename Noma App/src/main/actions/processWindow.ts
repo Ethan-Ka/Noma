@@ -1,4 +1,5 @@
-import { spawn } from 'child_process'
+import { execFile, spawn } from 'child_process'
+import { isMac } from '../platform'
 
 /**
  * Resolves a running process's main window handle by process name — the
@@ -48,6 +49,7 @@ function toPowerShellSingleQuotedLiteral(value: string): string {
 export function findMainWindowHandleForProcess(processName: string): Promise<number | null> {
   const bareName = normalizeProcessNameForLookup(processName)
   if (!bareName) return Promise.resolve(null)
+  if (isMac) return findMacAppPid(processName)
 
   const script = `
     $proc = Get-Process -Name ${toPowerShellSingleQuotedLiteral(bareName)} -ErrorAction SilentlyContinue |
@@ -78,5 +80,41 @@ export function findMainWindowHandleForProcess(processName: string): Promise<num
       resolve(trimmed.length > 0 && Number.isFinite(value) && value !== 0 ? value : null)
     })
     child.on('error', () => resolve(null))
+  })
+}
+
+/**
+ * macOS: the pid of a running, regular (Dock-visible) app whose executable
+ * is `processName`, found through NSWorkspace in a one-shot JavaScript for
+ * Automation script. The name is passed as an argument, never spliced into
+ * the script. On macOS the pid is the "window handle" focusWindowAndVerify
+ * takes (see macAdapter.ts).
+ */
+const MAC_FIND_APP_SCRIPT = `
+ObjC.import('AppKit');
+function run(argv) {
+  var wanted = argv[0].toLowerCase();
+  var apps = $.NSWorkspace.sharedWorkspace.runningApplications;
+  for (var i = 0; i < apps.count; i++) {
+    var app = apps.objectAtIndex(i);
+    if (app.activationPolicy !== 0 || app.executableURL.isNil()) continue;
+    var exe = ObjC.unwrap(app.executableURL.lastPathComponent);
+    if (exe && exe.toLowerCase() === wanted) return String(app.processIdentifier);
+  }
+  return '';
+}
+`
+
+function findMacAppPid(processName: string): Promise<number | null> {
+  return new Promise((resolve) => {
+    execFile(
+      'osascript',
+      ['-l', 'JavaScript', '-e', MAC_FIND_APP_SCRIPT, processName],
+      { timeout: 5000 },
+      (error, stdout) => {
+        const value = Number(String(stdout).trim())
+        resolve(!error && Number.isInteger(value) && value > 0 ? value : null)
+      }
+    )
   })
 }

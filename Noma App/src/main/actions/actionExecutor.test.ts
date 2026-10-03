@@ -446,7 +446,7 @@ describe('focusApplication (WORKFLOW LEARNING — switching to an already-runnin
   it('runs the remaining macro steps once focusApplication succeeds', async () => {
     insertApplication('claude', 'Claude Code', 'Claude.exe')
     vi.mocked(findMainWindowHandleForProcess).mockResolvedValue(4242)
-    vi.mocked(focusWindowAndVerify).mockReturnValue(true) // simulates a real, confirmed focus switch
+    vi.mocked(focusWindowAndVerify).mockResolvedValue(true) // simulates a real, confirmed focus switch
 
     const steps: MacroStep[] = [
       { type: 'shortcut', keys: ['Meta', 'Shift', 'S'] }, // screenshot

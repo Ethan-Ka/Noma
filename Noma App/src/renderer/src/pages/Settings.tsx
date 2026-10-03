@@ -2,10 +2,11 @@ import { WorkflowMonitoringPanel } from '../components/WorkflowMonitoringPanel'
 import { InputSourcePanel } from '../components/InputSourcePanel'
 import { DataManagementPanel } from '../components/DataManagementPanel'
 import { CARD } from '../lib/surfaces'
+import { COMMAND_MODIFIERS_COPY } from '../lib/platform'
 
 const COLLECTED = [
   'Which application is active',
-  'Shortcuts that hold Control, Alt, or the Windows key',
+  `Shortcuts that hold ${COMMAND_MODIFIERS_COPY}`,
   'Which of your controls you use',
   'Timestamps, to notice repetition',
   'Patterns Flow finds in the above'

@@ -26,6 +26,16 @@ import { getApplicationById } from '../database/repositories/applicationsReposit
 import { processForWindow, sameProcess } from './windowProcess'
 import { uiaControlFinder } from './uiaControlFinder'
 import type { ExecutionResult } from './actionExecutor'
+import {
+  CG_LEFT_MOUSE_DOWN,
+  CG_LEFT_MOUSE_UP,
+  CG_MOUSE_MOVED,
+  elementAtPoint,
+  focusedWindowRect,
+  frontmostPid,
+  postMouseEvent
+} from './macos'
+import { isMac } from '../platform'
 
 /** A window minimized (or otherwise off-screen) reports coordinates around
  *  -32000 on Windows — nowhere close to a real, clickable position. */
@@ -65,7 +75,8 @@ const FIND_RETRY_MS = 200
  *    Noma never records exact pixels (see clickTarget.ts).
  */
 export async function executeClick(target: string, applicationId?: string): Promise<ExecutionResult> {
-  const hwnd = GetForegroundWindow()
+  // On macOS the "handle" is the frontmost app's pid (see macAdapter.ts).
+  const hwnd = isMac ? (frontmostPid() ?? 0) : GetForegroundWindow()
   const owner = processForWindow(hwnd)
 
   if (applicationId) {
@@ -107,8 +118,7 @@ async function clickNamedControl(label: string, processId: number | null): Promi
   for (;;) {
     const found = await uiaControlFinder.find(processId, label)
     if (found.status === 'found') {
-      const atPoint = GetAncestor(WindowFromPoint({ x: found.x, y: found.y }), GA_ROOT)
-      if (processForWindow(atPoint)?.pid !== processId) {
+      if (ownerPidAt(found.x, found.y) !== processId) {
         return { ok: false, reason: `Something is covering “${label}”. Nothing was clicked` }
       }
       return await sendClick(found.x, found.y)
@@ -117,7 +127,7 @@ async function clickNamedControl(label: string, processId: number | null): Promi
       return { ok: false, reason: `Found ${found.count} buttons named “${label}” and couldn't tell which one. Nothing was clicked` }
     }
     if (found.status === 'unavailable') {
-      return { ok: false, reason: `Couldn't search the app for “${label}” (Windows UI Automation didn't answer)` }
+      return { ok: false, reason: `Couldn't search the app for “${label}” (${isMac ? 'macOS Accessibility' : 'Windows UI Automation'} didn't answer)` }
     }
     if (Date.now() >= deadline) {
       return { ok: false, reason: `Couldn't find “${label}” in the app. It may be hidden, disabled or renamed` }
@@ -155,6 +165,7 @@ const PRESS_MS = 40
  * final SetCursorPos pins the exact spot.
  */
 async function sendClick(x: number, y: number): Promise<ExecutionResult> {
+  if (isMac) return sendMacClick(x, y)
   for (const [dx, dy] of APPROACH_OFFSETS) {
     SendInput(1, [absoluteMove(x + dx, y + dy)], INPUT_SIZE)
     await sleep(APPROACH_STEP_MS)
@@ -182,10 +193,38 @@ function absoluteMove(x: number, y: number): ReturnType<typeof mouseEvent> {
   return mouseEvent(MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_VIRTUALDESK, nx, ny)
 }
 
+/** The process whose window is at a screen point (something else could be
+ *  covering the control that was found). */
+function ownerPidAt(x: number, y: number): number | null {
+  if (isMac) return elementAtPoint(x, y)?.pid ?? null
+  return processForWindow(GetAncestor(WindowFromPoint({ x, y }), GA_ROOT))?.pid ?? null
+}
+
+/** The same hand-like move, pause, press and release as sendClick, posted as
+ *  CoreGraphics events. Needs Accessibility permission. */
+async function sendMacClick(x: number, y: number): Promise<ExecutionResult> {
+  for (const [dx, dy] of APPROACH_OFFSETS) {
+    postMouseEvent(CG_MOUSE_MOVED, x + dx, y + dy)
+    await sleep(APPROACH_STEP_MS)
+  }
+  await sleep(HOVER_MS)
+  markSelfInjectedClick()
+  const down = postMouseEvent(CG_LEFT_MOUSE_DOWN, x, y)
+  await sleep(PRESS_MS)
+  const up = postMouseEvent(CG_LEFT_MOUSE_UP, x, y)
+  return down && up ? { ok: true } : { ok: false, reason: 'macOS refused the synthetic click (is Accessibility allowed for Noma?)' }
+}
+
 function windowRect(hwnd: number): ScreenRect | null {
-  if (!IsWindow(hwnd)) return null
   const rect: ScreenRect = { left: 0, top: 0, right: 0, bottom: 0 }
-  if (!GetWindowRect(hwnd, rect)) return null
+  if (isMac) {
+    const frame = focusedWindowRect(hwnd)
+    if (!frame) return null
+    Object.assign(rect, frame)
+  } else {
+    if (!IsWindow(hwnd)) return null
+    if (!GetWindowRect(hwnd, rect)) return null
+  }
   if (rect.left <= OFFSCREEN_COORD_THRESHOLD || rect.top <= OFFSCREEN_COORD_THRESHOLD) return null
 
   const width = rect.right - rect.left

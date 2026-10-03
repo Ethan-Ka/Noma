@@ -1,0 +1,41 @@
+# Every change to Noma App is checked on both Windows and macOS, so a change
+# that only works on one of them shows up before it reaches a release.
+name: Noma App CI
+
+on:
+  push:
+    branches: [main]
+    paths: ['Noma App/**', '.github/workflows/noma-app-*.yml']
+  pull_request:
+    paths: ['Noma App/**', '.github/workflows/noma-app-*.yml']
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: Noma App
+
+jobs:
+  check:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Noma App/package-lock.json
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      # An unpacked app (no installer, nothing published): proves packaging
+      # still works on this OS.
+      - name: Package (unpacked)
+        shell: bash
+        run: npx electron-builder --dir --publish never -c.mac.identity=null
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false

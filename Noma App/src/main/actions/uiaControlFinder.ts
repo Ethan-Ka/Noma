@@ -1,5 +1,17 @@
 import { spawn, type ChildProcess } from 'child_process'
 import { createInterface } from 'readline'
+import { findNamedControls } from './macos'
+import { isMac } from '../platform'
+
+/** The helper script's Normalize, for the macOS search: "&Delete" ->
+ *  "Delete", trailing "..." dropped, whitespace collapsed. */
+function normalizeControlName(name: string): string {
+  return name
+    .replace(/&(?=\S)/g, '')
+    .replace(/(\.{3}|…)\s*$/, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
 
 /**
  * Finds a named command control (button, menu item, check/radio box) in a
@@ -111,10 +123,12 @@ class UiaControlFinder {
   /** Starts the helper ahead of the first search (a macro that's about to
    *  need it calls this at its start). */
   warmUp(): void {
+    if (isMac) return // the AX search runs in-process; nothing to start
     this.ensureStarted()
   }
 
   find(processId: number, label: string): Promise<FindResult> {
+    if (isMac) return findNamedControls(processId, label, normalizeControlName)
     const child = this.ensureStarted()
     if (!child?.stdin?.writable) return Promise.resolve({ status: 'unavailable' })
     const id = String(this.nextId++)

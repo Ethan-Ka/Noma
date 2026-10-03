@@ -1,0 +1,60 @@
+# Packaging for Windows and macOS. One codebase, one version number: CI
+# builds both installers from the same tag and publishes them to the same
+# GitHub release, which is also where installed copies look for updates
+# (src/main/updater.ts). See RELEASING.md.
+appId: com.noma.app
+productName: Noma
+copyright: Copyright © 2026 Noma
+directories:
+  buildResources: build
+  output: dist
+files:
+  - out/**
+  - resources/**
+  - package.json
+# Every native dependency ships prebuilt N-API binaries for both platforms
+# (better-sqlite3, uiohook-napi, koffi), so nothing is recompiled.
+npmRebuild: false
+asarUnpack:
+  - resources/**
+  - '**/node_modules/better-sqlite3/**'
+  - '**/node_modules/uiohook-napi/**'
+  - '**/node_modules/koffi/**'
+  - '**/node_modules/@koromix/**'
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: resources/icon.ico
+nsis:
+  # Per-user install, no admin prompt — easiest for pilot users, and what
+  # lets updates install silently.
+  oneClick: true
+  perMachine: false
+  shortcutName: Noma
+  artifactName: Noma-Setup-${version}.${ext}
+
+mac:
+  target:
+    # dmg for people installing; zip is what the auto-updater downloads.
+    - target: dmg
+      arch: [arm64, x64]
+    - target: zip
+      arch: [arm64, x64]
+  icon: resources/icon.png
+  category: public.app-category.productivity
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  extendInfo:
+    NSMicrophoneUsageDescription: Holo listens for double-taps on your palm rests. The sound is analysed on this Mac and is never recorded or sent anywhere.
+dmg:
+  artifactName: Noma-${version}-${arch}.${ext}
+
+publish:
+  provider: github
+  owner: awnsh
+  repo: Noma
+  releaseType: release

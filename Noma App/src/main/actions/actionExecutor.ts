@@ -99,7 +99,13 @@ const BLOCKED_COMBOS: string[][] = [
   ['Alt', 'F4'],
   ['Control', 'Shift', 'W'],
   ['Control', 'Q'],
-  ['Control', 'F4']
+  ['Control', 'F4'],
+  // macOS: Cmd+Q quits the app, Cmd+Option+W closes all its windows, and
+  // Cmd+Shift+W closes the whole window in most apps. Cmd+W (close a tab)
+  // stays allowed, matching Ctrl+W above.
+  ['Meta', 'Q'],
+  ['Meta', 'Alt', 'W'],
+  ['Meta', 'Shift', 'W']
 ]
 
 function comboSetKey(keys: string[]): string {
@@ -203,7 +209,7 @@ async function focusApplicationById(applicationId: string): Promise<ExecutionRes
     }
   }
 
-  return focusWindowAndVerify(hwnd)
+  return (await focusWindowAndVerify(hwnd))
     ? { ok: true }
     : { ok: false, reason: `Could not confirm focus on ${application.name}` }
 }
@@ -215,9 +221,9 @@ async function focusApplicationById(applicationId: string): Promise<ExecutionRes
  * `targetHwnd: null` means "send without refocusing" (used for the
  * currently-focused app, where no refocus is needed).
  */
-function focusThenSend(comboKeys: string[], targetHwnd: number | null): ExecutionResult {
+async function focusThenSend(comboKeys: string[], targetHwnd: number | null): Promise<ExecutionResult> {
   if (targetHwnd !== null) {
-    const focused = focusWindowAndVerify(targetHwnd)
+    const focused = await focusWindowAndVerify(targetHwnd)
     if (!focused) {
       return { ok: false, reason: 'Could not confirm focus on the target window, refused to send' }
     }
@@ -411,7 +417,7 @@ export async function executeControlAction(
       if (!macro) return { ok: false, reason: 'Macro not found' }
       if (!macro.enabled) return { ok: false, reason: 'Macro is disabled' }
 
-      if (targetHwnd !== null && !focusWindowAndVerify(targetHwnd)) {
+      if (targetHwnd !== null && !(await focusWindowAndVerify(targetHwnd))) {
         return { ok: false, reason: 'Could not confirm focus on the target window, refused to send' }
       }
 

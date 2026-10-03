@@ -1,6 +1,8 @@
 import { spawn, type ChildProcess } from 'child_process'
 import { createInterface } from 'readline'
 import type { RawClickInspection } from './clickTarget'
+import { elementAtPoint } from '../actions/macos'
+import { isMac } from '../platform'
 
 /** What the helper reports about the control under a screen point. `name`
  *  is the RAW accessible name — it never leaves the main process unsanitized
@@ -123,6 +125,27 @@ interface HelperAnswer {
   t: number | null
   r: number | null
   b: number | null
+}
+
+/**
+ * macOS: the same question asked of the Accessibility API, in-process
+ * (actions/macos.ts). One hit-test plus a few attribute reads, so it's quick
+ * enough not to need a helper process. Roles are reported as the UI
+ * Automation control-type names, so clickTarget.ts's rules apply unchanged.
+ */
+export class MacAxClickInspector implements ClickInspector {
+  async inspect(x: number, y: number): Promise<ClickInspection | null> {
+    const element = elementAtPoint(x, y)
+    if (!element) return null
+    return { controlType: element.controlType, name: element.name, processId: element.pid, window: element.window }
+  }
+
+  dispose(): void {}
+}
+
+/** The inspector for this OS. */
+export function createClickInspector(): ClickInspector {
+  return isMac ? new MacAxClickInspector() : new UiaClickInspector()
 }
 
 export class UiaClickInspector implements ClickInspector {

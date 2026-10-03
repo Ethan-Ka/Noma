@@ -1,18 +1,33 @@
 import { randomUUID } from 'crypto'
 import type Database from 'better-sqlite3'
 import type { ControlAction } from '@shared/types'
+import { isMac } from '../platform'
 
 interface SeedControl {
   slot: number
   label: string
   action: ControlAction
+  /** The same shortcut on macOS, where it differs (usually Cmd for Ctrl). */
+  macKeys?: string[]
+}
+
+/** A seed control's action for the OS Noma is running on. */
+function actionForPlatform(control: SeedControl): ControlAction {
+  if (isMac && control.macKeys && control.action.type === 'shortcut') {
+    return { ...control.action, keys: control.macKeys }
+  }
+  return control.action
 }
 
 interface SeedApplication {
-  /** Must match the id WindowsOSAdapter derives from the exe filename (lowercased, no .exe). */
+  /** Must match the id the OS adapter derives: the exe filename on Windows
+   *  (lowercased, no .exe); on macOS the same id via macAdapter.ts's aliases. */
   id: string
   name: string
   processName: string
+  /** The executable inside the .app bundle. Only a first guess: live
+   *  detection replaces it (applicationsRepository.upsertApplication). */
+  macProcessName: string
   profileName: string
   controls: SeedControl[]
 }
@@ -29,21 +44,23 @@ const SEED_APPLICATIONS: SeedApplication[] = [
     id: 'code',
     name: 'Visual Studio Code',
     processName: 'Code.exe',
+    macProcessName: 'Electron',
     profileName: 'Developer',
     controls: [
       { slot: 1, label: 'RUN', action: { type: 'shortcut', keys: ['Control', 'F5'] } },
       { slot: 2, label: 'DEBUG', action: { type: 'shortcut', keys: ['F5'] } },
       { slot: 3, label: 'TERMINAL', action: { type: 'shortcut', keys: ['Control', 'Backquote'] } },
-      { slot: 4, label: 'SEARCH', action: { type: 'shortcut', keys: ['Control', 'Shift', 'F'] } }
+      { slot: 4, label: 'SEARCH', action: { type: 'shortcut', keys: ['Control', 'Shift', 'F'] }, macKeys: ['Meta', 'Shift', 'F'] }
     ]
   },
   {
     id: 'chrome',
     name: 'Google Chrome',
     processName: 'chrome.exe',
+    macProcessName: 'Google Chrome',
     profileName: 'Browsing',
     controls: [
-      { slot: 1, label: 'NEW TAB', action: { type: 'shortcut', keys: ['Control', 'T'] } },
+      { slot: 1, label: 'NEW TAB', action: { type: 'shortcut', keys: ['Control', 'T'] }, macKeys: ['Meta', 'T'] },
       // Not Ctrl+W, even though that's no longer a blocked keystroke combo
       // (see actionExecutor.ts's BLOCKED_COMBOS — Ctrl+W was later
       // deliberately unblocked by explicit user request, 2026-09-07): this
@@ -52,19 +69,20 @@ const SEED_APPLICATIONS: SeedApplication[] = [
       // gracefully the same way clicking X does. A user is still free to
       // remap this control to a raw Ctrl+W shortcut themselves.
       { slot: 2, label: 'CLOSE WINDOW', action: { type: 'flowAction', action: 'closeWindow' } },
-      { slot: 3, label: 'RELOAD', action: { type: 'shortcut', keys: ['Control', 'R'] } },
-      { slot: 4, label: 'FIND', action: { type: 'shortcut', keys: ['Control', 'F'] } }
+      { slot: 3, label: 'RELOAD', action: { type: 'shortcut', keys: ['Control', 'R'] }, macKeys: ['Meta', 'R'] },
+      { slot: 4, label: 'FIND', action: { type: 'shortcut', keys: ['Control', 'F'] }, macKeys: ['Meta', 'F'] }
     ]
   },
   {
     id: 'spotify',
     name: 'Spotify',
     processName: 'Spotify.exe',
+    macProcessName: 'Spotify',
     profileName: 'Music',
     controls: [
-      { slot: 1, label: 'PREVIOUS', action: { type: 'shortcut', keys: ['Control', 'ArrowLeft'] } },
+      { slot: 1, label: 'PREVIOUS', action: { type: 'shortcut', keys: ['Control', 'ArrowLeft'] }, macKeys: ['Meta', 'ArrowLeft'] },
       { slot: 2, label: 'PLAY / PAUSE', action: { type: 'shortcut', keys: ['Space'] } },
-      { slot: 3, label: 'NEXT', action: { type: 'shortcut', keys: ['Control', 'ArrowRight'] } },
+      { slot: 3, label: 'NEXT', action: { type: 'shortcut', keys: ['Control', 'ArrowRight'] }, macKeys: ['Meta', 'ArrowRight'] },
       // A single button can't do continuous volume (that's what a future
       // Rotary Encoder Module is for) — mute/unmute toggle is the honest,
       // demonstrable action a discrete control can actually perform.
@@ -86,7 +104,7 @@ export function getSeedDefaultControl(
 ): { label: string; action: ControlAction } | null {
   const application = SEED_APPLICATIONS.find((app) => app.id === applicationId)
   const control = application?.controls.find((c) => c.slot === slot)
-  return control ? { label: control.label, action: control.action } : null
+  return control ? { label: control.label, action: actionForPlatform(control) } : null
 }
 
 /** Seeds starter profiles once, on an empty database. Never overwrites user data. */
@@ -112,7 +130,7 @@ export function seedDefaultProfiles(db: Database.Database): void {
       insertApplication.run({
         id: application.id,
         name: application.name,
-        processName: application.processName
+        processName: isMac ? application.macProcessName : application.processName
       })
 
       const profileId = `${application.id}-default`
@@ -125,7 +143,7 @@ export function seedDefaultProfiles(db: Database.Database): void {
           slot: control.slot,
           label: control.label,
           actionType: control.action.type,
-          actionPayload: JSON.stringify(control.action)
+          actionPayload: JSON.stringify(actionForPlatform(control))
         })
       }
     }

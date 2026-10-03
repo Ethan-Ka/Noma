@@ -40,7 +40,7 @@ export function getApplicationById(id: string): Application | null {
 
 /**
  * Inserts an application row if it doesn't already exist. On conflict,
- * deliberately leaves `name`/`process_name`/`icon` untouched — a seeded or
+ * deliberately leaves `name`/`icon` untouched — a seeded or
  * user-chosen display name (e.g. "Google Chrome") shouldn't be clobbered by
  * a later live-detection re-insert carrying the raw process name (e.g.
  * "chrome"). Required before a profile can be created for this application
@@ -57,6 +57,11 @@ export function getApplicationById(id: string): Application | null {
  * process is actually detected running. Real OS-icon extraction
  * (iconService.ts) needs that path, so this had to be an update, not an
  * insert-only guard.
+ *
+ * `process_name` is also refreshed from live detection: it is never shown to
+ * the user, and the running executable is the truth that focus and click
+ * replay compare against. This matters on macOS, where one id covers an
+ * executable whose name a seed can only guess (VS Code's is "Electron").
  */
 export function upsertApplication(application: Application): void {
   getDatabase()
@@ -64,6 +69,7 @@ export function upsertApplication(application: Application): void {
       `INSERT INTO applications (id, name, process_name, icon, executable_path)
        VALUES (@id, @name, @processName, @icon, @executablePath)
        ON CONFLICT(id) DO UPDATE SET
+         process_name = excluded.process_name,
          executable_path = COALESCE(excluded.executable_path, applications.executable_path)`
     )
     .run({

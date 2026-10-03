@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification, systemPreferences } from 'electron'
 import { join } from 'path'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -33,13 +33,15 @@ import iconIco from '../../resources/icon.ico?asset'
 import { IPC_CHANNELS } from '@shared/constants'
 import { initDatabase } from './database/db'
 import { registerIpcHandlers } from './ipc/handlers'
-import { WindowsOSAdapter } from './os/windowsAdapter'
+import { createOSAdapter } from './os/createOSAdapter'
+import { isMac } from './platform'
+import { installUpdateNow, startAutoUpdates } from './updater'
 import { ApplicationContextService } from './applications/contextService'
 import { getDefaultHardwareDevice } from './hardware/virtualDevice'
 import { DeviceTransportServer } from './hardware/deviceTransportServer'
 import { CaptureService } from './workflow/captureService'
 import { ClickCaptureService } from './workflow/clickCaptureService'
-import { UiaClickInspector } from './workflow/uiaInspector'
+import { createClickInspector } from './workflow/uiaInspector'
 import { InputActivityService } from './holo/inputActivityService'
 import { openRecordingsFolder, saveHoloRecording } from './holo/recordingStore'
 import { getLaptopInfo } from './holo/laptopInfo'
@@ -83,7 +85,7 @@ const inputActivityService = new InputActivityService(
   () => mainWindow
 )
 
-const osAdapter = new WindowsOSAdapter()
+const osAdapter = createOSAdapter()
 const contextService = new ApplicationContextService(osAdapter)
 const hardwareDevice = getDefaultHardwareDevice()
 const deviceTransportServer = new DeviceTransportServer(hardwareDevice)
@@ -142,7 +144,7 @@ const clickCaptureService = new ClickCaptureService((event) => {
     timestamp: event.timestamp
   })
   void refreshSuggestions()
-}, new UiaClickInspector())
+}, createClickInspector())
 
 /**
  * A control usually fires while the user is in some other app (that's the
@@ -310,9 +312,22 @@ function createTray(): void {
   const trayIcon = nativeImage.createFromPath(icon).resize({ width: 16, height: 16 })
   tray = new Tray(trayIcon)
   tray.setToolTip(TEST_USER_DATA_DIR ? 'Noma — TEST PROFILE, running in the background' : 'Noma — running in the background')
-  tray.setContextMenu(
+  updateTrayMenu(null)
+  tray.on('click', () => {
+    if (mainWindow?.isVisible()) mainWindow.hide()
+    else showMainWindow()
+  })
+}
+
+/** The tray menu, plus "Restart to update" once an update has downloaded
+ *  (updater.ts). */
+function updateTrayMenu(readyUpdateVersion: string | null): void {
+  tray?.setContextMenu(
     Menu.buildFromTemplate([
       { label: 'Open Noma', click: () => showMainWindow() },
+      ...(readyUpdateVersion
+        ? [{ label: `Restart to update to ${readyUpdateVersion}`, click: () => installUpdateNow() }]
+        : []),
       { type: 'separator' },
       // Flips `isQuitting` via the app-wide `before-quit` listener, not
       // here directly — the same flag has to be true for an OS shutdown or
@@ -320,14 +335,29 @@ function createTray(): void {
       { label: 'Quit Noma', click: () => app.quit() }
     ])
   )
-  tray.on('click', () => {
-    if (mainWindow?.isVisible()) mainWindow.hide()
-    else showMainWindow()
-  })
+}
+
+/**
+ * macOS gates everything Noma does with other apps (seeing shortcuts,
+ * sending them, clicking, focusing a window) behind Accessibility
+ * permission. Asking here shows the system prompt that opens the right
+ * Settings pane; until it's granted, actions fail closed with a reason
+ * rather than doing anything unexpected. Detecting the frontmost app needs
+ * no permission, so context switching works either way.
+ */
+function requestMacAccessibility(): void {
+  if (!isMac || TEST_USER_DATA_DIR) return
+  if (!systemPreferences.isTrustedAccessibilityClient(false)) {
+    systemPreferences.isTrustedAccessibilityClient(true)
+  }
 }
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.noma.app')
+  // In development the Dock shows Electron's icon; a packaged build uses the
+  // bundle's own.
+  if (isMac && is.dev) app.dock?.setIcon(icon)
+  requestMacAccessibility()
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -514,6 +544,7 @@ app.whenReady().then(() => {
 
   createMainWindow()
   createTray()
+  startAutoUpdates((version) => updateTrayMenu(version))
 
   app.on('activate', function () {
     // Minimizing/closing now hides the window rather than destroying it

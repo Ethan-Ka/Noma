@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useWorkflowStore } from '../stores/workflowStore'
 import { ToggleSwitch } from './ToggleSwitch'
+import { COMMAND_MODIFIERS_COPY } from '../lib/platform'
 
 export function WorkflowMonitoringPanel() {
   const { enabled, clickCaptureEnabled, patterns, refresh, setEnabled, setClickCaptureEnabled } = useWorkflowStore()
@@ -17,8 +18,8 @@ export function WorkflowMonitoringPanel() {
             Workflow Monitoring
           </div>
           <p className="mt-2 max-w-md text-sm text-neutral-400">
-            When enabled, Flow watches for keyboard shortcuts that hold down Control, Alt, or the
-            Windows key, never single keys, never what you type. Nothing leaves this device. See{' '}
+            When enabled, Flow watches for keyboard shortcuts that hold down {COMMAND_MODIFIERS_COPY},
+            never single keys, never what you type. Nothing leaves this device. See{' '}
             <span className="text-neutral-300">docs/privacy-and-legal.md</span> for the full policy.
           </p>
         </div>

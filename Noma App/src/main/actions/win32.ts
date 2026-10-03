@@ -1,4 +1,5 @@
-import koffi from 'koffi'
+import koffi, { type LibraryHandle } from 'koffi'
+import { isWindows } from '../platform'
 
 /**
  * The single place user32.dll gets loaded and its functions declared —
@@ -12,17 +13,34 @@ import koffi from 'koffi'
  * call from Flow's own process — see windowFocus.ts for why that
  * distinction is exactly what makes the redesigned focus mechanism safe.
  */
-const user32 = koffi.load('user32.dll')
+const user32 = isWindows ? koffi.load('user32.dll') : null
 
-export const GetForegroundWindow = user32.func('intptr_t GetForegroundWindow()')
-export const SetForegroundWindow = user32.func('bool SetForegroundWindow(intptr_t hwnd)')
-export const IsWindow = user32.func('bool IsWindow(intptr_t hwnd)')
+type NativeFunction = ReturnType<LibraryHandle['func']>
+
+/**
+ * On macOS there is no user32.dll, and loading it at import time would
+ * crash the whole main process. Every declaration below becomes a function
+ * that throws if called there instead: the callers branch to their macOS
+ * implementation (macos.ts) before reaching any of these, so a throw means
+ * a missed branch, never a silent no-op.
+ */
+function declare(lib: LibraryHandle | null, definition: string): NativeFunction {
+  if (lib) return lib.func(definition)
+  const unavailable = (): never => {
+    throw new Error(`Win32 call used on ${process.platform}: ${definition}`)
+  }
+  return Object.assign(unavailable, { async: unavailable }) as unknown as NativeFunction
+}
+
+export const GetForegroundWindow = declare(user32, 'intptr_t GetForegroundWindow()')
+export const SetForegroundWindow = declare(user32, 'bool SetForegroundWindow(intptr_t hwnd)')
+export const IsWindow = declare(user32, 'bool IsWindow(intptr_t hwnd)')
 // user32.dll exports PostMessageW/PostMessageA, not "PostMessage" itself —
 // that name is only a C-header macro that resolves to one or the other.
-export const PostMessage = user32.func(
+export const PostMessage = declare(user32, 
   'bool PostMessageW(intptr_t hwnd, uint32_t msg, uintptr_t wParam, intptr_t lParam)'
 )
-export const KeybdEvent = user32.func(
+export const KeybdEvent = declare(user32, 
   'void keybd_event(uint8_t bVk, uint8_t bScan, uint32_t dwFlags, uintptr_t dwExtraInfo)'
 )
 
@@ -44,8 +62,8 @@ export const RECT = koffi.struct('RECT', {
   right: 'int32_t',
   bottom: 'int32_t'
 })
-export const GetWindowRect = user32.func('bool GetWindowRect(intptr_t hwnd, _Out_ RECT *rect)')
-export const SetCursorPos = user32.func('bool SetCursorPos(int32_t x, int32_t y)')
+export const GetWindowRect = declare(user32, 'bool GetWindowRect(intptr_t hwnd, _Out_ RECT *rect)')
+export const SetCursorPos = declare(user32, 'bool SetCursorPos(int32_t x, int32_t y)')
 
 const MOUSEINPUT = koffi.struct('MOUSEINPUT', {
   dx: 'long',
@@ -64,7 +82,7 @@ const INPUT = koffi.struct('INPUT', {
   type: 'uint32_t',
   u: koffi.union({ mi: MOUSEINPUT })
 })
-export const SendInput = user32.func(
+export const SendInput = declare(user32, 
   'unsigned int __stdcall SendInput(unsigned int cInputs, INPUT *pInputs, int cbSize)'
 )
 export const INPUT_SIZE = koffi.sizeof(INPUT)
@@ -90,10 +108,10 @@ const RAWINPUTHEADER = koffi.struct('RAWINPUTHEADER', {
   hDevice: 'intptr_t',
   wParam: 'uintptr_t'
 })
-export const RegisterRawInputDevices = user32.func(
+export const RegisterRawInputDevices = declare(user32, 
   'bool __stdcall RegisterRawInputDevices(RAWINPUTDEVICE *pRawInputDevices, uint32_t uiNumDevices, uint32_t cbSize)'
 )
-export const GetRawInputData = user32.func(
+export const GetRawInputData = declare(user32, 
   'uint32_t __stdcall GetRawInputData(intptr_t hRawInput, uint32_t uiCommand, _Out_ RAWINPUTHEADER *pData, _Inout_ uint32_t *pcbSize, uint32_t cbSizeHeader)'
 )
 export const RAWINPUTDEVICE_SIZE = koffi.sizeof(RAWINPUTDEVICE)
@@ -105,10 +123,10 @@ export const RID_HEADER = 0x10000005
 export const RIM_TYPEHID = 2
 /** Buffer-based (not koffi structs): RID_DEVICE_INFO is a union whose HID
  *  member is read at fixed offsets in touchActivity.ts. */
-export const GetRawInputDeviceList = user32.func(
+export const GetRawInputDeviceList = declare(user32, 
   'uint32_t __stdcall GetRawInputDeviceList(void *pRawInputDeviceList, _Inout_ uint32_t *puiNumDevices, uint32_t cbSize)'
 )
-export const GetRawInputDeviceInfoW = user32.func(
+export const GetRawInputDeviceInfoW = declare(user32, 
   'uint32_t __stdcall GetRawInputDeviceInfoW(intptr_t hDevice, uint32_t uiCommand, void *pData, _Inout_ uint32_t *pcbSize)'
 )
 export const RAWINPUTDEVICELIST_SIZE = koffi.sizeof('intptr_t') * 2
@@ -127,29 +145,29 @@ export const HID_USAGE_DIGITIZER_TOUCH_PAD = 0x05
  * windowProcess.ts). PROCESS_QUERY_LIMITED_INFORMATION is the least access
  * that can read an image name, and works for elevated processes too.
  */
-const kernel32 = koffi.load('kernel32.dll')
-export const GetWindowThreadProcessId = user32.func(
+const kernel32 = isWindows ? koffi.load('kernel32.dll') : null
+export const GetWindowThreadProcessId = declare(user32, 
   'uint32_t __stdcall GetWindowThreadProcessId(intptr_t hwnd, _Out_ uint32_t *lpdwProcessId)'
 )
-export const OpenProcess = kernel32.func(
+export const OpenProcess = declare(kernel32, 
   'intptr_t __stdcall OpenProcess(uint32_t dwDesiredAccess, bool bInheritHandle, uint32_t dwProcessId)'
 )
-export const QueryFullProcessImageNameW = kernel32.func(
+export const QueryFullProcessImageNameW = declare(kernel32, 
   'bool __stdcall QueryFullProcessImageNameW(intptr_t hProcess, uint32_t dwFlags, void *lpExeName, _Inout_ uint32_t *lpdwSize)'
 )
-export const CloseHandle = kernel32.func('bool __stdcall CloseHandle(intptr_t hObject)')
+export const CloseHandle = declare(kernel32, 'bool __stdcall CloseHandle(intptr_t hObject)')
 export const PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 
 /** Which top-level window is at a screen point — replay checks a found
  *  control's point is really inside the expected app before clicking it
  *  (something else could be covering it). */
 koffi.struct('POINT', { x: 'long', y: 'long' }) // registered by name for the signature below
-export const WindowFromPoint = user32.func('intptr_t __stdcall WindowFromPoint(POINT point)')
-export const GetAncestor = user32.func('intptr_t __stdcall GetAncestor(intptr_t hwnd, uint32_t gaFlags)')
+export const WindowFromPoint = declare(user32, 'intptr_t __stdcall WindowFromPoint(POINT point)')
+export const GetAncestor = declare(user32, 'intptr_t __stdcall GetAncestor(intptr_t hwnd, uint32_t gaFlags)')
 export const GA_ROOT = 2
 
 /** Virtual-desktop bounds, for absolute mouse moves (click.ts). */
-export const GetSystemMetrics = user32.func('int __stdcall GetSystemMetrics(int nIndex)')
+export const GetSystemMetrics = declare(user32, 'int __stdcall GetSystemMetrics(int nIndex)')
 export const SM_XVIRTUALSCREEN = 76
 export const SM_YVIRTUALSCREEN = 77
 export const SM_CXVIRTUALSCREEN = 78

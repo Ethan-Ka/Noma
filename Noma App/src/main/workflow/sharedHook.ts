@@ -10,7 +10,16 @@ import { uIOhook } from 'uiohook-napi'
 let holders = 0
 
 export function acquireHook(): void {
-  if (holders++ === 0) uIOhook.start()
+  if (holders++ !== 0) return
+  try {
+    uIOhook.start()
+  } catch (error) {
+    // macOS refuses the hook until Noma has Accessibility (and Input
+    // Monitoring) permission. Capture then simply sees nothing; it must
+    // never take the rest of startup down with it.
+    // eslint-disable-next-line no-console
+    console.warn('[hook] could not start the global input hook:', error)
+  }
 }
 
 export function releaseHook(): void {

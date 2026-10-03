@@ -1,0 +1,97 @@
+# Builds Noma for Windows and macOS from one tag and publishes both to the
+# same GitHub release. Installed copies check that release for updates
+# (Noma App/src/main/updater.ts). Start one with `npm run release` in
+# Noma App, then push. See Noma App/RELEASING.md.
+name: Noma App release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: Noma App
+
+jobs:
+  test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Noma App/package-lock.json
+      # --ignore-scripts: every native module ships prebuilt binaries for
+      # both platforms; compiling one here would replace them with a binary
+      # for this runner's CPU only.
+      - run: npm ci --ignore-scripts
+      - run: npm run typecheck
+      - run: npm test
+
+  # Created once up front, so the two packaging jobs upload into the same
+  # release instead of racing to create it.
+  release:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create the GitHub release
+        working-directory: .
+        run: gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Noma $GITHUB_REF_NAME" --generate-notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  package:
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Noma App/package-lock.json
+      - run: npm ci --ignore-scripts
+      # npm only installs koffi's binary for this runner's CPU (Apple
+      # silicon); the Intel build needs the x64 one too.
+      - name: Add Intel koffi binary
+        if: runner.os == 'macOS'
+        run: |
+          KOFFI_VERSION=$(node -p "require('koffi/package.json').version")
+          npm install --no-save --force --ignore-scripts "@koromix/koffi-darwin-x64@$KOFFI_VERSION" "@koromix/koffi-darwin-arm64@$KOFFI_VERSION"
+      - run: npm run build
+
+      - name: Package and publish (Windows)
+        if: runner.os == 'Windows'
+        run: npx electron-builder --win --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Signed + notarized when the Apple secrets exist (see RELEASING.md);
+      # otherwise ad-hoc signed, which runs after "Open Anyway" but can't
+      # update itself.
+      - name: Package and publish (macOS)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          if [ -n "$CSC_LINK" ]; then
+            npx electron-builder --mac --publish always -c.mac.notarize=true
+          else
+            unset CSC_LINK CSC_KEY_PASSWORD
+            export CSC_IDENTITY_AUTO_DISCOVERY=false
+            npx electron-builder --mac --publish always -c.mac.identity=-
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.MAC_CERTIFICATE_P12_BASE64 }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}

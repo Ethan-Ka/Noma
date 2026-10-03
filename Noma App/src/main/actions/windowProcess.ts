@@ -5,6 +5,8 @@ import {
   PROCESS_QUERY_LIMITED_INFORMATION,
   QueryFullProcessImageNameW
 } from './win32'
+import { processNameForPid } from './macos'
+import { isMac } from '../platform'
 
 export interface WindowProcess {
   pid: number
@@ -14,6 +16,11 @@ export interface WindowProcess {
 
 /** The process that owns `hwnd`, or null if it can't be read. Never throws. */
 export function processForWindow(hwnd: number): WindowProcess | null {
+  // macOS: the "handle" already is the pid (see macAdapter.ts).
+  if (isMac) {
+    const processName = processNameForPid(hwnd)
+    return processName === null ? null : { pid: hwnd, processName }
+  }
   try {
     const pid = [0]
     GetWindowThreadProcessId(hwnd, pid)

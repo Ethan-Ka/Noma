@@ -7,7 +7,8 @@
  * learned model (ai/workflowQuality.ts) covers whatever this doesn't.
  *
  * Application ids are the lowercased executable name without ".exe" (see
- * windowsAdapter.ts), e.g. "code", "chrome", "resolve".
+ * windowsAdapter.ts), e.g. "code", "chrome", "resolve". On macOS,
+ * macAdapter.ts maps well-known bundle ids onto these same names.
  */
 
 export type AppCategory =
@@ -36,7 +37,7 @@ interface CategoryRule {
 }
 
 const CATEGORY_RULES: CategoryRule[] = [
-  { category: 'browser', ids: ['chrome', 'msedge', 'firefox', 'brave', 'opera', 'vivaldi', 'arc'] },
+  { category: 'browser', ids: ['chrome', 'msedge', 'firefox', 'brave', 'opera', 'vivaldi', 'arc', 'safari'] },
   {
     category: 'editor',
     ids: ['code', 'code - insiders', 'cursor', 'windsurf', 'devenv', 'sublime_text', 'notepad++', 'zed'],
@@ -44,16 +45,16 @@ const CATEGORY_RULES: CategoryRule[] = [
   },
   {
     category: 'terminal',
-    ids: ['windowsterminal', 'wt', 'cmd', 'powershell', 'pwsh', 'conhost', 'mintty', 'alacritty', 'hyper'],
+    ids: ['windowsterminal', 'wt', 'cmd', 'powershell', 'pwsh', 'conhost', 'mintty', 'alacritty', 'hyper', 'terminal', 'iterm2', 'warp', 'ghostty', 'kitty'],
     contains: ['wezterm']
   },
-  { category: 'fileManager', ids: ['explorer', 'totalcmd64', 'files'] },
+  { category: 'fileManager', ids: ['explorer', 'totalcmd64', 'files', 'finder'] },
   { category: 'vcs', ids: ['githubdesktop', 'gitkraken', 'sourcetree', 'fork', 'tortoisegitproc', 'git-gui'] },
   { category: 'ai', ids: ['claude', 'chatgpt'], contains: ['claude', 'chatgpt'] },
   { category: 'chat', ids: ['slack', 'discord', 'telegram', 'whatsapp', 'signal', 'teams', 'ms-teams'] },
   { category: 'meeting', ids: ['zoom', 'webex', 'webexmta'] },
-  { category: 'notes', ids: ['notion', 'obsidian', 'onenote', 'evernote', 'logseq', 'notepad'] },
-  { category: 'office', ids: ['winword', 'excel', 'powerpnt', 'outlook', 'acrobat', 'acrord32', 'soffice'] },
+  { category: 'notes', ids: ['notion', 'obsidian', 'onenote', 'evernote', 'logseq', 'notepad', 'notes', 'textedit'] },
+  { category: 'office', ids: ['winword', 'excel', 'powerpnt', 'outlook', 'acrobat', 'acrord32', 'soffice', 'pages', 'numbers', 'keynote', 'preview'] },
   {
     category: 'design',
     ids: ['photoshop', 'illustrator', 'figma', 'xd', 'indesign', 'blender', 'canva'],
@@ -61,10 +62,10 @@ const CATEGORY_RULES: CategoryRule[] = [
   },
   {
     category: 'video',
-    ids: ['resolve', 'afterfx', 'obs', 'obs64', 'vegas', 'capcut', 'audacity', 'reaper', 'fl64'],
+    ids: ['resolve', 'afterfx', 'obs', 'obs64', 'vegas', 'capcut', 'audacity', 'reaper', 'fl64', 'final cut pro', 'imovie', 'logic pro x'],
     contains: ['premiere', 'ableton']
   },
-  { category: 'capture', ids: ['snippingtool', 'screenclippinghost', 'sharex', 'snagit32', 'screensketch'] },
+  { category: 'capture', ids: ['snippingtool', 'screenclippinghost', 'sharex', 'snagit32', 'screensketch', 'screenshot', 'cleanshot x'] },
   { category: 'ambient', ids: ['spotify', 'itunes', 'musicbee', 'vlc', 'wmplayer', 'tidal'], contains: ['music'] }
 ]
 

@@ -1,4 +1,6 @@
 import { IsWindow, PostMessage, WM_CLOSE } from './win32'
+import { closeFocusedWindow } from './macos'
+import { isMac } from '../platform'
 
 /**
  * Posts WM_CLOSE directly to a window handle — the exact same message a
@@ -13,6 +15,9 @@ import { IsWindow, PostMessage, WM_CLOSE } from './win32'
  * window actually closed — that's the app's call, same as a real click.
  */
 export function closeWindowGracefully(targetHwnd: number): boolean {
+  // macOS: the handle is the app's pid; its focused window's close button is
+  // pressed, the same thing a click on the red button does.
+  if (isMac) return closeFocusedWindow(targetHwnd)
   if (!IsWindow(targetHwnd)) return false
   return PostMessage(targetHwnd, WM_CLOSE, 0, 0)
 }

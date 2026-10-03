@@ -8,6 +8,9 @@ import { getApplicationById } from '../database/repositories/applicationsReposit
 // Real input and real UI Automation are mocked: these tests are about the
 // checks click.ts makes *before* it will click, which is the part that
 // decides whether a replayed workflow lands where it should.
+// These cases exercise the Windows path; pin it so they mean the same on a
+// macOS CI runner.
+vi.mock('../platform', () => ({ isMac: false, isWindows: true }))
 vi.mock('./win32', () => ({
   GA_ROOT: 2,
   GetAncestor: vi.fn((hwnd: number) => hwnd),
