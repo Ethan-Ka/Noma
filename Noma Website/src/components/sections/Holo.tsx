@@ -3,12 +3,12 @@ import Reveal from '../ui/Reveal'
 import HoloDemo from '../visuals/HoloDemo'
 
 /**
- * The pillar that needs nothing but the laptop already on the desk.
+ * The pillar that needs nothing but the laptop you already have.
  *
- * Shown by letting the visitor do it: tap a zone on the plan view, watch the
- * control fire underneath. The geometry is the explanation — any amount of
- * prose about acoustic classification would explain it worse than one desk
- * seen from above with four places to hit.
+ * Shown by letting the visitor do it: double-tap a side of the trackpad on
+ * the plan view, watch the control fire underneath. The geometry is the
+ * explanation — any amount of prose about acoustic classification would
+ * explain it worse than one palm rest seen from above with two places to hit.
  */
 
 export default function Holo() {
@@ -18,14 +18,15 @@ export default function Holo() {
         <div>
           <Reveal>
             <h2 className="max-w-md text-balance font-display text-3xl font-semibold leading-[1.08] tracking-[-0.035em] text-base-50 sm:text-4xl">
-              Or just tap the desk.
+              Or double-tap beside the trackpad.
             </h2>
           </Reveal>
           <Reveal delay={0.08}>
             <p className="mt-6 max-w-md text-base leading-relaxed text-base-300">
-              Holo turns the bare desk around your laptop into four controls. It listens through the
-              microphone already in the lid, learns how your desk sounds when you tap each spot, and tells
-              those spots apart from then on.
+              Holo turns the two empty spaces either side of your trackpad into controls. It listens
+              through the microphone already in your laptop, learns how each side sounds when you tap it,
+              and tells them apart from then on. It waits for a double tap, so resting your hands there
+              never sets anything off.
             </p>
           </Reveal>
           <Reveal delay={0.14}>

@@ -18,7 +18,8 @@ Noma is one product with three parts. The website must carry all three.
 1. **The software (Flow)** — real and working today. Detects the foreground
    application, swaps four contextual controls, captures workflow metadata,
    recognises repeated patterns, and proposes them. Windows.
-2. **Holo** — tap the desk around your laptop. Acoustic zone detection through
+2. **Holo** — double-tap the empty palm-rest space either side of the
+   trackpad. Acoustic zone detection through
    the built-in microphone, so the adaptive interface needs no purchase at
    all. Free, in the beta.
 3. **The device** — a physical surface whose controls and display change
