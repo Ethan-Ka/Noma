@@ -1,131 +1,22 @@
-import { useEffect, useState } from 'react'
-import {
-  HOLO_COOLDOWN_MS,
-  useHoloStore,
-  type CalibrationProgress,
-  type HoloPace,
-  type TapOutcome
-} from '../stores/holoStore'
+import { useEffect } from 'react'
+import { useHoloStore } from '../stores/holoStore'
 import { useFlowStore } from '../stores/flowStore'
-import { HoloZoneTile } from '../components/HoloZoneTile'
-import { HoloDiagnosticCard } from '../components/HoloDiagnosticCard'
 import { HoloTrackpadPanel } from '../components/HoloTrackpadPanel'
 import { AppIcon } from '../components/AppIcon'
-import { getHoloZoneLabel } from '@shared/constants'
-import type { HoloInputGateStatus, HoloMethod, HoloZone } from '@shared/types'
-import type { HoloSensitivity } from '../lib/holo/classifier'
-
-/** Double taps per zone, i.e. 12 calibration taps: more is more accurate
- *  but a longer wizard. 12 taps is where the discriminant cleared 95%
- *  right-zone on the simulated benchmark (classifier.accuracy.test.ts). Taken
- *  as double taps because that's how Holo is used (see doubleTap.ts). */
-const DOUBLE_TAPS_PER_ZONE = 6
-/** Examples taken per "teach Noma a sound to ignore" run. A few, varied,
- *  beats one: the same mouse never lands twice the same way. */
-const IGNORE_SAMPLES = 4
-
-/** How long a zone tile stays visibly flashed after a recognized tap. */
-const FLASH_MS = 500
-
-type WizardState =
-  | { status: 'idle' }
-  | ({ status: 'running' } & CalibrationProgress)
-  | { status: 'error'; message: string }
-
-const OUTCOME_MESSAGES: Record<TapOutcome, string> = {
-  pressed: 'Double tap recognized. Control pressed.',
-  armed: 'Heard one tap. Tap the same spot again right away to fire (a quick knock-knock).',
-  'soft-touch': 'Ignored: that was a soft contact, like a finger or palm coming to rest, not a tap.',
-  'no-control': 'Recognized, but this zone has no control assigned in the current app.',
-  'ignored-input': 'Ignored: that sound came with a key press, mouse click or trackpad touch.',
-  unrecognized: "Heard a sound that didn't match any zone. Tap with a knuckle on the desk, or recalibrate.",
-  'wrong-level': 'Ignored: much louder or softer than your calibration taps, so probably not a tap.',
-  voice: 'Ignored: that sounded like a voice, not a tap.',
-  'not-a-tap': "Ignored: that kept going instead of dying away like a tap — a cough, a scrape, or something moving.",
-  'set-down': 'Ignored: that landed and settled, like something being put down rather than tapped.',
-  'learned-ignore': 'Ignored: that matches a sound you told Noma to ignore.',
-  ambiguous: 'Heard a tap between two zones. Tap closer to the middle of a zone, or recalibrate.',
-  'layout-changed': 'Your microphone setup changed since calibration. Recalibrate to continue.'
-}
-
-const PACE_OPTIONS: Array<{ value: HoloPace; label: string }> = [
-  { value: 'rapid', label: 'Rapid' },
-  { value: 'normal', label: 'Normal' },
-  { value: 'deliberate', label: 'Deliberate' }
-]
-
-const METHOD_OPTIONS: Array<{ value: HoloMethod; label: string }> = [
-  { value: 'desk', label: 'Desk taps' },
-  { value: 'trackpad', label: 'Trackpad swipe-in (prototype)' }
-]
-
-const SENSITIVITY_OPTIONS: Array<{ value: HoloSensitivity; label: string }> = [
-  { value: 'low', label: 'Firm taps' },
-  { value: 'medium', label: 'Normal' },
-  { value: 'high', label: 'Light taps' }
-]
 
 export function Holo() {
-  const {
-    inputSource,
-    method,
-    setMethod,
-    calibration,
-    isListening,
-    isCalibrating,
-    micError,
-    lastTap,
-    mics,
-    availableMics,
-    allowExternalMic,
-    sensitivity,
-    pace,
-    coolingDown,
-    level,
-    pausedForTyping,
-    touchCoverage,
-    layoutMismatch,
-    laptop,
-    zoneOverride,
-    zoneCount,
-    zoneReason,
-    setZoneOverride,
-    activeZones,
-    setSensitivity,
-    setPace,
-    ignoreLastSound,
-    learnIgnoredSounds,
-    clearIgnoredSounds,
-    isLearningIgnored,
-    setAllowExternalMic,
-    refreshAvailableMics,
-    refresh,
-    startListening,
-    stopListening,
-    calibrate,
-    clearCalibration
-  } = useHoloStore()
+  const { inputSource, error, refresh, stopListening } = useHoloStore()
   const { context, refresh: refreshContext, subscribeToContext } = useFlowStore()
-  const [wizard, setWizard] = useState<WizardState>({ status: 'idle' })
-  const [flashingZone, setFlashingZone] = useState<HoloZone | null>(null)
-  const [showTapDetail, setShowTapDetail] = useState(false)
-  const [ignoreProgress, setIgnoreProgress] = useState<{ index: number; total: number } | null>(null)
-  const ignoredCount = calibration?.ignoredSounds?.length ?? 0
 
   useEffect(() => {
-    refresh()
+    void refresh()
     refreshContext()
     return subscribeToContext()
   }, [refresh, refreshContext, subscribeToContext])
 
-  useEffect(() => {
-    void refreshAvailableMics()
-  }, [refreshAvailableMics])
-
-  // Holo exists to work while the user is in *other* apps, so listening
-  // survives leaving this page when Holo is the chosen Input Source. As a
-  // test-only session (Input Source = Keyboard) it still stops on leave, so
-  // the mic is never left open unattended.
+  // Holo exists to work while the user is in *other* apps, so it stays on
+  // after leaving this page when Holo is the chosen Input Source. As a
+  // test-only session (Input Source = Keyboard) it stops on leave.
   useEffect(
     () => () => {
       if (useHoloStore.getState().inputSource !== 'holo') stopListening()
@@ -133,431 +24,46 @@ export function Holo() {
     [stopListening]
   )
 
-  // Only a completed double tap lights a tile. A single knock's side is a
-  // guess the pair can still overrule (about one knock in ten reads as the
-  // other side on a real laptop), and flashing it showed people the wrong
-  // side when the double tap itself came out right.
-  useEffect(() => {
-    if (!lastTap?.zone || (lastTap.outcome !== 'pressed' && lastTap.outcome !== 'no-control')) return
-    setFlashingZone(lastTap.zone)
-    const timeout = window.setTimeout(() => setFlashingZone(null), FLASH_MS)
-    return () => window.clearTimeout(timeout)
-  }, [lastTap])
-
-  const calibratedZones = new Set(calibration?.zones.map((zone) => zone.zone) ?? [])
-  const learnedTapCount = calibration?.zones.reduce((sum, zone) => sum + (zone.learnedTaps?.length ?? 0), 0) ?? 0
-  const isFullyCalibrated =
-    activeZones.every((zone) => calibratedZones.has(zone)) && calibratedZones.size === activeZones.length
-
-  const runCalibration = async (): Promise<void> => {
-    stopListening()
-    try {
-      await calibrate(DOUBLE_TAPS_PER_ZONE, (progress) => setWizard({ status: 'running', ...progress }))
-      // calibrate() catches its own errors into micError rather than
-      // throwing — check it here instead of a try/catch around a promise
-      // that never rejects.
-      const failure = useHoloStore.getState().micError
-      setWizard(failure ? { status: 'error', message: failure } : { status: 'idle' })
-    } catch (error) {
-      setWizard({ status: 'error', message: error instanceof Error ? error.message : 'Calibration failed' })
-    }
-  }
-
   return (
     <div className="mx-auto max-w-3xl px-10 py-10">
       <div className="mb-8">
         <h1 className="font-display text-xl font-semibold text-neutral-100">Holo</h1>
         <p className="mt-1 max-w-xl text-sm text-neutral-600">
-          No physical keyboard needed. Double-tap one of Holo's zones (the desk around your laptop,
-          or on most laptops the empty space beside your trackpad) with a relaxed knock-knock, and
-          Noma presses the matching control, exactly as if a real button were pressed. It takes two
-          taps so that a resting finger or a bumped desk never fires anything by accident. Free, and
-          keeps listening in the background while Holo is your chosen input (Settings).
+          No physical keyboard needed. Swipe a finger onto your trackpad from the empty space beside it, and Noma
+          presses the control for that side, exactly as if a real button were pressed. Free, and keeps working in the
+          background while Holo is your chosen input (Settings).
         </p>
       </div>
 
       {inputSource !== 'holo' && (
         <div className="mb-6 rounded-lg border border-base-700 bg-base-900 px-4 py-3 text-xs text-neutral-600">
-          Input Source is currently <span className="text-neutral-100">Keyboard</span>. Holo still
-          works here for testing, but won't fire outside this page until you switch Input Source to
-          Holo in Settings.
+          Input Source is currently <span className="text-neutral-100">Keyboard</span>. Holo still works here for
+          testing, but stops when you leave this page until you switch Input Source to Holo in Settings.
         </div>
       )}
 
-      <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-neutral-600">
-        <span className="mr-1">How you use Holo</span>
-        {METHOD_OPTIONS.map((option) => (
-          <button
-            key={option.value}
-            type="button"
-            disabled={isCalibrating}
-            onClick={() => setMethod(option.value)}
-            className={`rounded-full border px-3 py-1 text-[11px] disabled:opacity-40 ${
-              method === option.value
-                ? 'border-accent/50 bg-accent/10 text-accent'
-                : 'border-base-700 hover:text-neutral-100'
-            }`}
-          >
-            {option.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Holo's own self-contained dark surface — "a piece of Noma
-          hardware translated into software," deliberately not the app's
-          light canvas. Uses the dedicated `holo` color group, never
-          `base`/`neutral`, so it stays dark regardless of the app theme. */}
-      {method === 'trackpad' ? (
-        <>
-          {micError && (
-            <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/[0.08] px-4 py-3 text-sm text-red-400">
-              {micError}
-            </div>
-          )}
-          <HoloTrackpadPanel controls={context.profile?.controls ?? []} />
-        </>
-      ) : (
-      <div className="rounded-2xl bg-holo-bg p-6">
-        <div className="mb-3 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            {context.application && (
-              <AppIcon applicationId={context.application.id} name={context.application.name} size={26} variant="tile" />
-            )}
-            <span className="text-sm text-holo-text">
-              {context.application ? context.application.name : 'No application detected'}
-            </span>
-          </div>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => void runCalibration()}
-              disabled={isCalibrating}
-              className="rounded-full border border-holo-border px-3 py-1 text-[11px] text-holo-text/80 hover:border-holo-text/30 hover:text-holo-text disabled:opacity-40"
-            >
-              {calibration ? 'Recalibrate' : 'Calibrate'}
-            </button>
-            {calibration && (
-              <button
-                type="button"
-                onClick={() => void clearCalibration()}
-                disabled={isCalibrating}
-                className="rounded-full border border-holo-border px-3 py-1 text-[11px] text-holo-muted hover:border-holo-text/30 hover:text-holo-text disabled:opacity-40"
-              >
-                Clear
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => void (isListening ? stopListening() : startListening())}
-              disabled={!isFullyCalibrated || isCalibrating}
-              className={`rounded-full border px-3 py-1 text-[11px] disabled:opacity-40 ${
-                isListening
-                  ? 'border-accent/50 bg-accent/10 text-accent'
-                  : 'border-holo-border text-holo-text/80 hover:border-holo-text/30 hover:text-holo-text'
-              }`}
-            >
-              {isListening ? 'Listening…' : 'Start Listening'}
-            </button>
-          </div>
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/[0.08] px-4 py-3 text-sm text-red-400">
+          {error}
         </div>
+      )}
 
-        <div className="mb-6 grid grid-cols-2 gap-3">
-          {activeZones.map((zone, index) => (
-            <HoloZoneTile
-              key={zone}
-              zone={zone}
-              slot={index + 1}
-              zoneCount={zoneCount}
-              control={context.profile?.controls.find((control) => control.slot === index + 1)}
-              isCalibrated={calibratedZones.has(zone)}
-              isFlashing={flashingZone === zone}
-            />
-          ))}
-        </div>
-
-        {wizard.status === 'running' && wizard.phase === 'zone' && (
-          <div className="mb-4 rounded-lg border border-accent/30 bg-accent/[0.08] px-4 py-3 text-sm text-holo-text">
-            Zone {wizard.zoneIndex + 1} of {wizard.totalZones}: {getHoloZoneLabel(wizard.zone, zoneCount)}, double-tap
-            it now (double tap {wizard.doubleTapIndex + 1} of {DOUBLE_TAPS_PER_ZONE}). Both knocks in one go, the way
-            you actually will in use, then a short pause before the next double tap. Vary your force and spot a little
-            within the zone: everything Holo accepts later, including how far apart your two knocks can be, is measured
-            from these taps.
-          </div>
+      <div className="mb-3 flex items-center gap-2.5 text-sm text-neutral-600">
+        {context.application && (
+          <AppIcon applicationId={context.application.id} name={context.application.name} size={22} variant="tile" />
         )}
-        {(wizard.status === 'error' || micError) && (
-          // A brighter red than the app-wide `error` token (chosen for
-          // light surfaces) on purpose — this sits on Holo's own dark
-          // surface, where a muted light-mode red would read too dim.
-          <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/[0.08] px-4 py-3 text-sm text-red-300">
-            {wizard.status === 'error' ? wizard.message : micError}
-          </div>
-        )}
-
-        {isListening && (
-          <div className="mb-4 space-y-3 rounded-lg border border-holo-border px-4 py-3 text-xs text-holo-muted">
-            <div className="flex items-center gap-3">
-              <span className="w-16 shrink-0">Input level</span>
-              <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-holo-border">
-                <div
-                  className={`h-full rounded-full transition-[width] duration-75 ${level >= 1 ? 'bg-accent' : 'bg-holo-text/40'}`}
-                  style={{ width: `${Math.min(100, (level / 1.5) * 100)}%` }}
-                />
-                <div className="absolute inset-y-0 w-px bg-holo-text/60" style={{ left: `${(1 / 1.5) * 100}%` }} />
-              </div>
-            </div>
-            <div>
-              {pausedForTyping ? (
-                <span className="text-holo-text">Mic paused while you type, click or use the trackpad. </span>
-              ) : coolingDown ? (
-                <>Just fired — waiting a moment before the next tap. </>
-              ) : (
-                <>Mic on. It switches off while you type, click or touch the trackpad so those sounds are never heard. </>
-              )}
-              Listening on the built-in microphone
-              {mics[0] && <> ({mics[0].label})</>}
-              {mics[0]?.kind === 'external' && (
-                <span className="text-amber-200">. This is an external mic, so zone accuracy is not guaranteed.</span>
-              )}
-            </div>
-            {touchCoverage && <TouchCoverageNote coverage={touchCoverage} />}
-            {lastTap && (
-              <div className={lastTap.outcome === 'pressed' ? 'text-accent' : ''}>
-                {OUTCOME_MESSAGES[lastTap.outcome]}{' '}
-                <button
-                  type="button"
-                  onClick={() => setShowTapDetail((shown) => !shown)}
-                  className="text-holo-muted underline decoration-dotted underline-offset-2 hover:text-holo-text"
-                >
-                  {showTapDetail ? 'Hide details' : 'Details'}
-                </button>
-                {lastTap.features.length > 0 && lastTap.outcome !== 'ignored-input' && (
-                  <>
-                    {' · '}
-                    <button
-                      type="button"
-                      onClick={() => void ignoreLastSound()}
-                      className="text-holo-muted underline decoration-dotted underline-offset-2 hover:text-holo-text"
-                    >
-                      That wasn't a tap
-                    </button>
-                  </>
-                )}
-                {showTapDetail && (
-                  <div className="mt-1 font-mono text-[11px] text-holo-muted">
-                    {/* The numbers the gates are compared against, so a
-                        misfire is reportable instead of just felt. */}
-                    peak {lastTap.peakDb.toFixed(1)} dB
-                    {calibration && (
-                      <> (taps: {calibration.levelRange.minDb.toFixed(1)} to {calibration.levelRange.maxDb.toFixed(1)})</>
-                    )}
-                    {lastTap.impact && (
-                      <>
-                        {' · '}still ringing {lastTap.impact.sustainDb.toFixed(1)} dB
-                        {' · '}still going {lastTap.impact.drivenDb.toFixed(1)} dB
-                      </>
-                    )}
-                    {lastTap.zone && <> · margin {Math.round(lastTap.confidence * 100)}%</>}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {calibration && !isCalibrating && (
-          <div
-            className={`mb-4 rounded-lg border px-4 py-3 text-xs ${
-              calibration.accuracy < 0.75 ? 'border-amber-400/30 text-amber-200' : 'border-holo-border text-holo-muted'
-            }`}
-          >
-            Calibration accuracy: {Math.round(calibration.accuracy * 100)}% (each tap scored as if Holo had never heard
-            it).{' '}
-            {learnedTapCount > 0
-              ? `Since then Holo has learned from ${learnedTapCount} taps it was sure about, so it keeps getting better with use.`
-              : 'Holo keeps learning from taps it is sure about, so it gets better with use.'}
-            {calibration.accuracy < 0.75 &&
-              ' Some zones sound too alike on this setup. Recalibrate with more distinct taps, spaced further apart, and vary how hard you tap.'}
-          </div>
-        )}
-        {layoutMismatch && (
-          <div className="mb-4 rounded-lg border border-amber-400/30 px-4 py-3 text-xs text-amber-200">
-            Your microphone setup changed since you calibrated. Recalibrate so Holo can recognize taps.
-          </div>
-        )}
-
-        {calibration && !isCalibrating && !isFullyCalibrated && (
-          <div className="mb-4 rounded-lg border border-amber-400/30 px-4 py-3 text-xs text-amber-200">
-            Your zone count changed since you calibrated. Recalibrate to continue.
-          </div>
-        )}
-
-        <div className="mb-4 space-y-2 text-xs text-holo-muted">
-          <div>
-            {laptop?.model ? (
-              <>
-                Detected <span className="text-holo-text">{`${laptop.manufacturer} ${laptop.model}`.trim()}</span>.{' '}
-              </>
-            ) : (
-              'Could not identify this computer. '
-            )}
-            Using <span className="text-holo-text">{zoneCount} zones</span>: {zoneReason}.
-            {zoneCount === 2 && (
-              <> Zones sit in the empty space beside your trackpad — one on the left, one on the right.</>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <span>Zones</span>
-            {(['auto', 2, 4] as const).map((option) => (
-              <button
-                key={option}
-                type="button"
-                disabled={isCalibrating}
-                onClick={() => setZoneOverride(option)}
-                className={`rounded-full border px-2.5 py-0.5 text-[11px] disabled:opacity-40 ${
-                  zoneOverride === option
-                    ? 'border-accent/50 bg-accent/10 text-accent'
-                    : 'border-holo-border hover:border-holo-text/30 hover:text-holo-text'
-                }`}
-              >
-                {option === 'auto' ? 'Auto' : option}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-holo-muted">
-          <span>Tap strength</span>
-          <div className="flex gap-1.5">
-            {SENSITIVITY_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setSensitivity(option.value)}
-                className={`rounded-full border px-2.5 py-0.5 text-[11px] ${
-                  sensitivity === option.value
-                    ? 'border-accent/50 bg-accent/10 text-accent'
-                    : 'border-holo-border hover:border-holo-text/30 hover:text-holo-text'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {calibration && (
-          <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-holo-muted">
-            <span>Ignore sounds</span>
-            <button
-              type="button"
-              disabled={isLearningIgnored}
-              onClick={() =>
-                void learnIgnoredSounds(IGNORE_SAMPLES, (index, total) => setIgnoreProgress({ index, total }))
-              }
-              className="rounded-full border border-holo-border px-2.5 py-0.5 text-[11px] hover:border-holo-text/30 hover:text-holo-text disabled:opacity-40"
-            >
-              {isLearningIgnored ? 'Listening…' : 'Teach Noma a sound to ignore'}
-            </button>
-            {ignoredCount > 0 && (
-              <>
-                <span className="text-[11px]">
-                  {ignoredCount} sound{ignoredCount === 1 ? '' : 's'} learned
-                </span>
-                <button
-                  type="button"
-                  onClick={() => void clearIgnoredSounds()}
-                  className="text-[11px] underline decoration-dotted underline-offset-2 hover:text-holo-text"
-                >
-                  Clear
-                </button>
-              </>
-            )}
-            {isLearningIgnored && ignoreProgress && (
-              <span className="text-[11px] text-holo-text">
-                Make the sound now — putting your mouse down, for instance ({ignoreProgress.index + 1} of{' '}
-                {ignoreProgress.total})
-              </span>
-            )}
-          </div>
-        )}
-
-        <HoloDiagnosticCard />
-
-        <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-holo-muted">
-          <span>Pace</span>
-          <div className="flex gap-1.5">
-            {PACE_OPTIONS.map((option) => (
-              <button
-                key={option.value}
-                type="button"
-                onClick={() => setPace(option.value)}
-                className={`rounded-full border px-2.5 py-0.5 text-[11px] ${
-                  pace === option.value
-                    ? 'border-accent/50 bg-accent/10 text-accent'
-                    : 'border-holo-border hover:border-holo-text/30 hover:text-holo-text'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-          <span className="text-[11px]">
-            After a control fires, Holo waits {(HOLO_COOLDOWN_MS[pace] / 1000).toFixed(1)}s before listening for
-            the next tap, so one tap can't fire a macro twice.
+        {context.application ? (
+          <span>
+            Controls for <span className="text-neutral-100">{context.application.name}</span>
           </span>
-        </div>
-
-        <div className="mb-4 text-xs text-holo-muted">
-          <div>
-            Holo only uses your laptop's built-in microphone, never a headset, USB or webcam mic, because
-            taps are located relative to it.
-            {availableMics.some((mic) => mic.kind === 'external') && ' Ignoring: '}
-            {availableMics
-              .filter((mic) => mic.kind === 'external')
-              .map((mic) => mic.label)
-              .join(', ')}
-          </div>
-          <label className="mt-1.5 flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={allowExternalMic}
-              onChange={(event) => void setAllowExternalMic(event.target.checked)}
-              disabled={isCalibrating}
-            />
-            <span>Allow an external microphone (only if this computer has no built-in mic)</span>
-          </label>
-        </div>
-
-        <p className="text-xs text-holo-muted">
-          Holo processes audio in memory only to recognize a tap's zone,
-          nothing is recorded or saved; calibration stores a small set of numbers, never audio. While
-          listening it also notices <em>when</em> you press a key, click, move the pointer or touch the trackpad (never which key or
-          where) so none of those are mistaken for taps: the mic is switched off entirely while you do, and back on a moment after you stop. See docs/privacy-and-legal.md.
-        </p>
+        ) : (
+          'No application detected'
+        )}
       </div>
-      )}
+
+      {/* Holo's own self-contained dark surface — "a piece of Noma hardware
+          translated into software," deliberately not the app's light canvas. */}
+      <HoloTrackpadPanel controls={context.profile?.controls ?? []} />
     </div>
   )
-}
-
-/**
- * Says how well this particular computer's trackpad/touchscreen is kept out
- * of Holo. It differs by machine (see HoloTrackpadCoverage), so the page
- * says which case applies instead of promising the same thing everywhere.
- */
-function TouchCoverageNote({ coverage }: { coverage: HoloInputGateStatus }) {
-  const screen = coverage.touchscreen ? ' Touchscreen and pen touches are ignored too.' : ''
-  if (coverage.trackpad === 'direct') {
-    return <div>Trackpad: every touch is detected and ignored, even one that doesn't move the pointer.{screen}</div>
-  }
-  if (coverage.trackpad === 'movement-only') {
-    return (
-      <div className="text-amber-200">
-        Trackpad: this laptop's trackpad driver only reports movement and clicks, so a touch that doesn't move the
-        pointer may still be heard. Tap the desk away from the trackpad, or install the maker's Precision Touchpad
-        driver if one is offered.{screen}
-      </div>
-    )
-  }
-  return screen ? <div>{screen.trim()}</div> : null
 }

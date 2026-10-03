@@ -25,7 +25,7 @@ import {
   RIDI_PREPARSEDDATA,
   RIM_TYPEHID
 } from '../actions/win32'
-import { readDeviceInfo } from './touchActivity'
+import { readDeviceInfo } from './rawDevices'
 import type { TouchContact, TouchFrame } from './trackpadGesture'
 
 /**

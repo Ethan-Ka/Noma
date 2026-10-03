@@ -360,120 +360,64 @@ a real click on X, and never a forceful termination.
 
 ## Holo — the free, no-hardware input option
 
-Not everyone wants to buy the physical keyboard, or owns a laptop with no
-room/need for one. Holo (`src/renderer/src/lib/holo`, `pages/Holo.tsx`,
-`InputSourcePanel.tsx`) is a second way to fire the exact same 4 `Control`
-slots, by tapping the desk around a laptop instead — a simplified,
-from-scratch reimplementation of the *concept* behind the open-source
-`github.com/JustinGamer191/Holo` project (macOS/Swift, MIT-licensed; its
-code never runs in this Windows/Electron app — see classifier.ts's doc
-comment for exactly what's simplified and why). See
-docs/privacy-and-legal.md's "Holo — microphone input" section for the
-privacy reasoning specifically; this section is the architecture.
+Not everyone wants to buy the physical keyboard. Holo is a second way to
+fire the exact same 4 `Control` slots from a laptop alone: **slide a finger
+from the empty space beside the precision touchpad onto it** (a "swipe-in").
+Left or right side, and with four zones the upper or lower half, picks
+slots 1-4. Files: `main/holo/trackpadGesture.ts` (the gesture, pure and
+tested), `touchpadReports.ts` (raw HID reports to finger contacts via
+hid.dll), `trackpadGestureService.ts` (glue, pointer restore, touch check),
+`rawDigitizerInput.ts` (the single raw-input registration), renderer
+`stores/holoStore.ts`, `pages/Holo.tsx`, `components/HoloTrackpadPanel.tsx`.
+Privacy reasoning: docs/privacy-and-legal.md's "Holo" section.
 
 **Deliberately layered on top of the existing control system, not a
-parallel one.** Holo has no `HardwareDevice` implementation, no
-`DeviceStatus`, no `DeviceEvent` of its own — a classified tap just calls
-`window.flow.pressControl(controlId)`, the identical call
-`VirtualControlButton`'s click handler makes. This means every downstream
-concern (which action a control runs, execution safety, workflow-event
-logging, suggestion generation) already works for Holo for free, with zero
-special-casing anywhere in `main/`. `InputSource` (`'keyboard' | 'holo'`)
-only ever decides *which UI/engine is allowed to originate that call* —
-nothing about the control model itself changes based on it.
+parallel one.** Holo has no `HardwareDevice` implementation of its own. A
+recognised swipe-in calls `window.flow.pressControl(controlId)` for the
+focused app's slot, the identical call `VirtualControlButton`'s click makes,
+so execution, workflow-event logging and suggestions work for Holo with no
+special-casing. `InputSource` (`'keyboard' | 'holo'`) only decides which
+source may originate that call.
 
-**Split the same way keyboard capture is split.** `classifier.ts` is pure,
-DOM-free math — FFT feature extraction (log-spaced band levels, centroid,
-decay; relative level + arrival delay across mic channels), standardized
-nearest-centroid classification with an absolute "resembles a calibrated
-tap" gate, leave-one-out calibration accuracy, block-energy onset
-detection — unit tested with synthetic taps. `holoCapture.ts` owns the Web
-Audio plumbing and is *not* unit tested (jsdom has no Web Audio). It is
-hardware-agnostic in the sense of running on any laptop, but it listens on
-**the built-in mic only** (`micKind.ts` classifies device labels; the
-system default input is only a permission probe and is replaced if it's a
-headset/USB/webcam mic) with echo cancellation / noise suppression /
-auto-gain **off**. External mics would break calibration because taps are
-located relative to the laptop's own mic; they're used only if the user
-opts in and no built-in mic exists. Calibration records its
-mic `layout` (label + channel count); a different mic means "recalibrate." A tap coinciding with
-a real key/mouse event (timestamps from `main/holo/inputActivityService.ts`
-over the shared `sharedHook.ts`) is discarded as typing/clicking. The
-main window sets `backgroundThrottling: false` so taps aren't delayed when
-it's hidden. Live outcomes (pressed / ignored / unrecognized / no control)
-are shown on the Holo page. The classifier's thresholds
-(`MAX_TRUSTED_DISTANCE`, `SENSITIVITY_MULTIPLIER`) are first-pass values
-validated against synthetic audio only — tune with real recordings.
+**Why a swipe-in (history, 2026-09 to 2026-10).** Holo started as desk taps
+heard by the laptop's microphone, a from-scratch take on the concept behind
+`github.com/JustinGamer191/Holo`. A month of work (spectral features, a
+discriminant classifier, impact/soft-contact gates, double taps judged as a
+pair, learning in use, a real-audio test-session recorder) got it to about
+nine in ten double taps on the right side with no stray fires on the one
+real recording, but it never stopped drifting between sessions: on the
+user's Realtek mic array, with Windows audio processing that Chromium can't
+bypass, the same spot sounded different from one day to the next, and one
+mic can't separate spots centimetres apart. It was **removed** at the
+user's request in favour of the trackpad, where which side is a measured
+coordinate rather than a guess. The full desk-tap implementation is in git
+history (commit 7370b96 and earlier) if it's ever wanted back.
 
-**Zones fire on a double tap (`lib/holo/doubleTap.ts`).** A zone mapped to
-something like "close tab" must never fire by accident, and per-sound checks
-alone can't get there: a fingertip coming to rest on a zone *is* a small
-soft tap. Two defences, measured on the simulated palm rest
-(`lib/holo/testing/`, regression-tested in `holo.falseTriggers.test.ts`):
-- **Attack gate** (`measureAttack`, classifier.ts): a knuckle or fingertip
-  strike reaches full force in well under a millisecond with a bright click;
-  a finger pad or palm settling takes several and is dull. Rise time and
-  first-2-ms brightness are gated against the user's own calibration taps
-  (`HoloGates.maxRiseMs` / `minAttackBrightnessDb`, reason `soft-touch`).
-  Fingertip-rest false fires went 87% → ~10%, palm landings 6% → 0%.
-- **Double tap**: two taps on the same zone 250–800 ms apart, within 15 dB of
-  each other. The lower bound exists because the impact gate reads 180 ms
-  past each tap (a second tap inside that would spoil the first) and it
-  also means a tap's own ringing can never pair with itself. The second tap
-  only needs to pass every "is it a tap" gate and have the armed zone as
-  its best match (`ClassificationResult.candidate` on an `ambiguous`
-  result), not be confident on its own. Accidental fires in a stream of
-  3,200 everyday sounds: 56 with single taps, 2 with double taps.
-  (Superseded in part, see below: the window is now 120–500 ms.)
-- **The pair is one piece of evidence (2026-10-03, from the first real
-  recording).** On the user's real laptop the soft checks (attack, contact
-  count) reject about one real knock in five, and needing both knocks to
-  pass squared that into a miss on every other double tap. Now
-  `classifyZone` still places a soft-rejected sound on a side
-  (`candidate`), `doubleTapKnock` turns any result into a sure or unsure
-  knock, and a pair fires with one unsure knock if the other is sure and
-  both name the same side. Two unsure knocks never fire. Paid back at pair
-  level: the two knocks' mean distance must stay under `pairDistanceBound`
-  (calibration double taps, held-out distances, p90 × 1.2), and the dip
-  between them must be as deep as the user's own (`fitDoubleTapDip`,
-  measured during calibration, stored as `doubleTapWindow.maxDipDb`). On
-  the real recording against a later calibration: left 5 → 9 of 12
-  attempts, right 9 → 10, everyday fires 1 → 0, wrong side 0. Simulator:
-  86% → 91% first-try, 0 accidental fires in 1,600 sounds. Calibration now
-  also skips a knock's bounce standing in for the second half (the
-  refractory used to be off during calibration), spillover right after a
-  double tap, and sounds 18 dB quieter than the zone's taps so far. The
-  Holo page only lights a tile for a completed double tap: a single knock's
-  side is wrong about one time in ten, and flashing it looked like a
-  side-detection bug even when the pair came out right.
+Along the way two trackpad gestures were tried: a tap (rejected: on Windows
+a quick tap is already a click, and an app can watch the touchpad but can't
+stop Windows acting on it) and resting a finger still in a corner for half
+a second (built, then replaced: waiting got annoying). A swipe-in never
+clicks, needs no hold, and has a signature ordinary use rarely produces: the
+finger is first seen at the very edge, already moving inward. The pointer
+it moves is put back (GetCursorPos when the finger arrives, SetCursorPos on
+firing and again on lift).
 
-**2-zone layout is trackpad-relative, not mic-relative (changed later).**
-`getHoloZones`/`getHoloZoneLabel` (shared/constants) originally put both
-2-zone positions on whichever side the built-in mic was on (front+rear),
-measured via a "tap far left / far right" calibration step
-(`detectMicSide`, classifier.ts) or a small hardcoded model lookup
-(`lookupHoloMicSide`). Both were removed by explicit request: the 2-zone
-pair is now always `frontLeft`/`frontRight` — reinterpreted, for 2-zone
-mode only, as the empty palm-rest space to the left/right of the trackpad
-rather than desk corners — regardless of mic side. This simplified
-calibration (one fewer wizard phase) and removed ~40 lines of mic-side
-plumbing (`HoloMicSide`, `SideOverride`, the measured/override/lookup
-chain in `holoStore.ts`) without touching the classifier itself:
-calibration already learns whatever acoustic signature a zone actually
-produces from real taps, so a laptop's off-center mic just becomes part of
-what makes left vs. right distinguishable, the same way it already made
-frontLeft vs. rearLeft distinguishable. 4-zone mode (MacBooks) is
-unchanged — still real desk corners.
+**Thresholds come from the touch check, not guesses.** `EDGE_START`,
+`MIN_TRAVEL`, `MAX_SWIPE_MS` and `MAX_SLOPE` started as estimates. The Holo
+page's touch check records under a minute of real swipe-ins and ordinary
+use (timed steps, so no clicking is needed), replays it through the same
+detector (`touchTrace.ts`) and saves it to %APPDATA%/noma/holo-recordings,
+so the rules are tuned on the user's own touchpad and a change can be
+re-scored on the same touches.
 
-**No paywall exists — all 4 zones are free, by explicit request.** A
-`SubscriptionTier`/`getMaxHoloZones` zone-count gate (free: 2 zones, pro:
-4) existed briefly and was **removed** after the user asked twice to not
-have it get in the way of testing — see git history if a real one is ever
-wanted. The right seam for a future paywall, if one comes back, is
-`holoRepository.saveHoloCalibration` (the actual persistence/enforcement
-point, not the renderer's UI) filtering the zone list by whatever
-entitlement check replaces this note — not a client-side lock on the zone
-grid, which a user could just ignore.
+**Windows precision touchpads only.** Older mouse-mode trackpad drivers
+(pre-precision Synaptics/ELAN/Alps) send no contact reports, and macOS has
+no equivalent path wired in yet, so Holo shows "needs a precision touchpad"
+there rather than half-working.
+
+**No paywall exists, by explicit request.** If one is ever wanted, enforce
+it in main (`trackpadGestureService`'s zone count), not with a client-side
+lock a user could ignore.
 
 **Manual choice today; hardware-presence auto-detection is a documented
 gap, not implemented.** The long-term intent (explicit user request) is

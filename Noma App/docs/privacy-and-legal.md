@@ -145,100 +145,16 @@ Principle") is the constraint this document exists to satisfy.
   *that* you repeated screenshot → switch app → paste, and how many times,
   never *what* was in any of those steps.
 
-## Holo — microphone input (the free, no-hardware option)
+## Holo — trackpad swipe-in (the free, no-hardware option)
 
-Holo (`src/renderer/src/lib/holo`, `pages/Holo.tsx`) lets someone use Noma
-without buying the physical keyboard, by tapping instead — the desk around
-their laptop in 4-zone mode, or (2-zone, most single-mic Windows laptops)
-the empty palm-rest space to the left/right of the trackpad, on the laptop
-itself. Either way it's a simplified, from-scratch reimplementation of the
-*concept* behind the open-source `github.com/JustinGamer191/Holo` project
-(MIT-licensed; its actual Swift/macOS code never runs here). This is a
-**materially different privacy shape than the keystroke policy above**,
-worth stating plainly rather than implying it's covered by the same
-reasoning:
+Holo lets someone use Noma without buying the physical keyboard: slide a
+finger from the empty space beside the trackpad onto it, and that side's
+control runs (`main/holo/trackpadGesture.ts`). It uses no microphone. (An
+earlier version listened for desk taps through the microphone; it was
+removed, along with its audio processing, calibration and test-session
+recordings. See docs/architecture.md's Holo section.)
 
-- **The keystroke design has a hard content/metadata boundary** —
-  `shouldCaptureKeyCombo` structurally cannot see typed characters at all,
-  by construction, before anything is even considered for storage.
-  **A live microphone has no equivalent boundary.** Classifying "which desk
-  zone was tapped" requires analyzing the actual waveform — there is no way
-  to compute that without the raw audio passing through memory first,
-  including whatever ambient sound (including speech, if someone is talking
-  near the laptop) happens to be present at that instant. The privacy
-  guarantee here is necessarily about *what happens to that audio after*,
-  not about never processing it in the first place.
-- **What's actually kept, and for how long:** a rolling in-memory buffer
-  (Web Audio API's `AnalyserNode`) that the app reads every ~20ms to check
-  loudness, and — only in the brief instant an onset is detected — one
-  short window (~20 ms) of every microphone channel, immediately collapsed
-  to a small numeric feature vector (band levels, spectral centroid,
-  decay, and — with several mics — relative level and arrival delay;
-  `extractTapFeatures` in `classifier.ts`) that discards content
-  entirely. That derived vector, never the audio itself, is the only thing
-  that can be persisted (as part of a calibration profile), and only when
-  the user explicitly runs the calibration wizard. **Raw audio is never
-  sent anywhere, and never written to disk except in one explicit case:**
-  the Holo page's "Record a test session", a guided few-minute diagnostic
-  the user starts themselves (tap each zone, then use the laptop normally),
-  which saves a WAV file and a JSON log of Holo's decisions to
-  `%APPDATA%/noma/holo-recordings/` on this computer only
-  (`main/holo/recordingStore.ts`). It exists to tune Holo on real taps from
-  real laptops. Nothing uploads it; "Open recordings folder" shows it and
-  it can be deleted like any file. A session can be cancelled mid-way, which
-  discards it without writing anything. Holo presses nothing while one runs.
-  Note the recording contains whatever the mic hears during those minutes,
-  including speech, so the Holo page says so before it starts. Browser audio
-  processing (echo cancellation, noise suppression, auto gain) is turned
-  off so taps aren't filtered away; this changes the audio's quality, not
-  where it goes.
-- **Keyboard/mouse timing gate.** While Holo is listening or calibrating,
-  main installs the OS input hook (shared, reference-counted, with
-  workflow capture — `sharedHook.ts`) purely to forward the *timestamp* of
-  each key/mouse-button/wheel/pointer-move event (`inputActivityService.ts`).
-  On Windows it also registers for raw digitizer input from precision
-  touchpads, touchscreens and pens (`touchActivity.ts`) so a finger touching
-  them counts too, even when it doesn't click or move the cursor. Only the
-  report header is checked (to confirm it came from a digitizer). To tell
-  the user how much protection their machine gets, it also reads the list
-  of input devices' types and names once (`touchCoverage.ts`). That list is
-  used on the spot and never stored or sent. Contact positions and
-  finger counts are never read. Never which key, never a position, never
-  persisted. It lets Holo switch the mic track off (silence, not filtering)
-  the instant you type, click or touch the trackpad or screen, and back on 300 ms
-  after you stop, so those sounds are never captured at all. Any sound
-  within 220 ms either side of such an event is discarded. The hook and
-  the touchpad registration are removed when listening stops.
-- **Off by default, explicit action required every time.** `getUserMedia`
-  is called only from two explicit user actions on the Holo page —
-  clicking "Calibrate" or "Start Listening" — never automatically on app
-  launch. Once started, listening continues in the background if Holo is
-  the chosen Input Source (so taps work while you're in other apps), and
-  stops when Input Source is switched back or listening is stopped. (Auto-starting at app launch is still a deliberate non-feature.)
-- **The OS's own mic indicator still applies.** Electron surfaces the
-  standard browser mic-permission prompt and Windows' own "microphone in
-  use" privacy indicator whenever the stream is actually open — Holo adds
-  no separate suppression of that, so the same system-level signal a user
-  would get from any other app using their mic still applies here.
-- **Inspect and delete.** The Holo page shows exactly what's calibrated
-  (per-zone sample counts, not raw numbers meant to be human-legible, but
-  nothing hidden) and a "Clear" action erases it immediately; `deleteAllData()`
-  (the existing factory-reset action) wipes it along with everything else
-  in `settings`, with no separate carve-out.
-- **Not yet true acoustic-zone security.** The classifier here is a
-  simplified nearest-centroid match on a coarse feature vector (see
-  `classifier.ts`'s doc comment), not Holo's own trained model — it's a
-  convenience/ergonomics feature, not something to rely on as an access
-  control. Don't market it as more precise or more secure than it is.
-
-## Holo — trackpad swipe-in (prototype, no microphone)
-
-A second way to use Holo, chosen on the Holo page ("How you use Holo"):
-slide a finger from the empty space beside the trackpad onto it
-(`main/holo/trackpadGesture.ts`). It uses no microphone at all.
-
-- **This mode does read finger positions,** unlike the desk-tap input gate
-  above. While it is on, `touchpadReports.ts` parses each precision-touchpad
+- **It reads finger positions on the trackpad.** While it is on, `touchpadReports.ts` parses each precision-touchpad
   report into contacts (position on the pad, touching or not, the pad's own
   palm flag, contact ID) so the gesture can be recognised. They are used in
   memory and dropped on the next report. Only "a swipe-in happened" (which
@@ -248,13 +164,13 @@ slide a finger from the empty space beside the trackpad onto it
   arrived and puts it back once the swipe is recognised. It reads the
   pointer position for nothing else.
 - **Key timestamps only.** It also hears *that* a key was pressed (never
-  which), via the same shared hook, so a thumb brushing the pad while
-  typing is ignored.
+  which), via the shared keyboard hook, so a hand brushing the pad's edge
+  as it comes off the keyboard is ignored.
 - **Off until turned on.** The raw-input registration and the key hook exist
   only between the Holo page's "Turn on" and turning it off (or switching
-  method), and are removed then. If it was on when Noma last closed and Holo
-  is the chosen Input Source, it comes back on at launch (unlike desk taps,
-  which open the microphone and so never start by themselves).
+  Input Source back to Keyboard), and are removed then. If it was on when
+  Noma last closed and Holo is the chosen Input Source, it comes back on at
+  launch.
 - **The touch check is the one exception to "nothing is stored".** The
   Holo page's touch check, which the user starts, records under a minute of
   finger positions and key-press times (never which key) while they swipe
@@ -318,10 +234,4 @@ shipping Flow to any user other than its developer — and especially before
 any deployment on shared or employer-owned machines, or any feature that
 adds screen content, clipboard, or cloud sync — have this reviewed by an
 actual attorney familiar with wiretap, computer-monitoring, and state
-spyware statutes in the relevant jurisdictions. **Holo's microphone input
-raises this document's stakes specifically** — recording or transmitting
-audio (which this feature deliberately never does) would implicate wiretap/
-eavesdropping statutes far more directly than keystroke metadata does, and
-a shared/multi-person room is a meaningfully different situation than a
-solo desk (see point 5 above, which applies here too) — get real legal
-review before this leaves single-user, single-developer use.
+spyware statutes in the relevant jurisdictions.

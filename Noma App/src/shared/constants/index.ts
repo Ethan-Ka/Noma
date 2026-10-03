@@ -1,4 +1,4 @@
-import type { HoloZone, PatternKind } from '../types'
+import type { PatternKind } from '../types'
 
 export const IPC_CHANNELS = {
   GET_FLOW_STATUS: 'flow:get-flow-status',
@@ -61,14 +61,7 @@ export const IPC_CHANNELS = {
   SAVE_ONBOARDING_STATE: 'flow:save-onboarding-state',
   GET_INPUT_SOURCE: 'flow:get-input-source',
   SET_INPUT_SOURCE: 'flow:set-input-source',
-  GET_HOLO_CALIBRATION: 'flow:get-holo-calibration',
-  SAVE_HOLO_CALIBRATION: 'flow:save-holo-calibration',
-  CLEAR_HOLO_CALIBRATION: 'flow:clear-holo-calibration',
-  GET_LAPTOP_INFO: 'flow:get-laptop-info',
-  HOLO_SAVE_RECORDING: 'flow:holo-save-recording',
   HOLO_OPEN_RECORDINGS: 'flow:holo-open-recordings',
-  HOLO_SET_INPUT_GATE: 'flow:holo-set-input-gate',
-  HOLO_INPUT_ACTIVITY: 'flow:holo-input-activity',
   HOLO_SET_TRACKPAD: 'flow:holo-set-trackpad',
   HOLO_TRACKPAD_EVENT: 'flow:holo-trackpad-event',
   HOLO_TOUCH_CHECK_START: 'flow:holo-touch-check-start',
@@ -137,83 +130,9 @@ export const SYSTEM_COMMAND_CATALOG: string[] = ['volumeMute', 'volumeUp', 'volu
 /** The exact allowlist `actionExecutor.ts`'s `isKnownFlowAction` accepts. */
 export const FLOW_ACTION_CATALOG: string[] = ['closeWindow']
 
-/**
- * Holo (the free, no-hardware input option — see the `HoloZone` doc
- * comment in shared/types). Canonical order, shared by the calibration
- * wizard, the zone grid, and pattern-detection-style classification code:
- * index N maps 1:1 to control slot N+1 (frontLeft -> slot 1, frontRight ->
- * slot 2, rearLeft -> slot 3, rearRight -> slot 4) — one source of truth so
- * "which slot does this zone control" can never drift between files.
- */
-export const HOLO_ZONE_ORDER: HoloZone[] = ['frontLeft', 'frontRight', 'rearLeft', 'rearRight']
-
-/** Zone counts Holo supports. Fewer zones on hardware that can't tell more apart. */
-export type HoloZoneCount = 2 | 4
-
-/**
- * The zones used at a given count. With 4 it's all of them — the desk
- * around the laptop. With 2 (a one-mic laptop), zones move onto the
- * laptop itself: the empty palm-rest space to the left and right of the
- * trackpad (`frontLeft`/`frontRight` reused — no new zone identifiers
- * needed). Deliberately no longer depends on which side the built-in mic
- * is on: the old layout put both zones on the mic's side (front+rear)
- * because that was the one place a single, possibly off-center mic heard
- * taps clearly, but it wasted the other side of the desk and asked the
- * user to tell apart two spots awkwardly close together. Left/right of
- * the trackpad are further apart and a more natural resting spot for a
- * hand; calibration learns whatever acoustic signature each side actually
- * produces (including any loudness asymmetry from an off-center mic) the
- * same way it already learns frontLeft vs. rearLeft — nothing about the
- * classifier needed to change for this. The list order is slot order
- * (index 0 = slot 1).
- */
-export function getHoloZones(count: HoloZoneCount): HoloZone[] {
-  if (count === 4) return HOLO_ZONE_ORDER
-  return ['frontLeft', 'frontRight']
-}
-
-/** Tile/wizard label. In 2-zone mode it's just which side of the trackpad. */
-export function getHoloZoneLabel(zone: HoloZone, count: HoloZoneCount): string {
-  if (count === 4) return HOLO_ZONE_LABELS[zone]
-  return zone === 'frontLeft' ? 'Left' : 'Right'
-}
-
-export interface HoloZoneRecommendation {
-  count: HoloZoneCount
-  reason: string
-}
-
-/**
- * How many zones this computer can realistically tell apart, decided from
- * the detected laptop. Zones are told apart by *where the mic is*: a
- * MacBook's multi-mic array can triangulate four; a typical Windows laptop
- * (e.g. ROG Zephyrus G14) has one mic on one side, which can only support
- * two. Holo always listens on the built-in mic only (see micKind.ts), so
- * unknown hardware gets the conservative 2 — a reliable 2 beats a flaky 4.
- */
-export function recommendHoloZoneCount(
-  laptop: { platform: string; manufacturer: string; model: string } | null
-): HoloZoneRecommendation {
-  const name = laptop ? `${laptop.manufacturer} ${laptop.model}`.trim() : ''
-  if (laptop && (laptop.platform === 'darwin' || /apple|macbook/i.test(name))) {
-    return { count: 4, reason: `${name || 'MacBook'} has a multi-microphone array` }
-  }
-  return { count: 2, reason: `${name || 'This computer'} has one built-in microphone, enough for two zones` }
-}
-
-export const HOLO_ZONE_LABELS: Record<HoloZone, string> = {
-  frontLeft: 'Front Left',
-  frontRight: 'Front Right',
-  rearLeft: 'Rear Left',
-  rearRight: 'Rear Right'
-}
-
-// No paywall/tier gate on Holo — all 4 zones are available to everyone
-// today, by explicit request. A `getMaxHoloZones(tier)`-shaped function
-// (free: 2, pro: 4) existed briefly and was removed; if a real paywall
-// is ever wanted, that's the shape to reintroduce, hooked into
-// holoRepository.saveHoloCalibration's zone list (the actual enforcement
-// point, not the renderer's UI) — see docs/architecture.md's Holo section.
+// No paywall/tier gate on Holo: all 4 swipe-in zones are available to
+// everyone, by explicit request. If a real paywall is ever wanted, enforce
+// it in main (trackpadGestureService's zone count), not in the renderer's UI.
 
 /**
  * Noma Notice's tuning, in one place because both processes need it: main

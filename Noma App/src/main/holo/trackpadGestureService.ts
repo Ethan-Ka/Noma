@@ -7,7 +7,7 @@ import { GetCursorPos, HID_USAGE_DIGITIZER_TOUCH_PAD, HID_USAGE_PAGE_DIGITIZER, 
 import { acquireHook, releaseHook } from '../workflow/sharedHook'
 import { subscribeDigitizerInput } from './rawDigitizerInput'
 import { recordingsFolder } from './recordingStore'
-import { listRawDevices } from './touchActivity'
+import { listRawDevices } from './rawDevices'
 import { clearTouchpadLayouts, readTouchpadFrames } from './touchpadReports'
 import { TrackpadGestureDetector, edgeAt, type TouchFrame } from './trackpadGesture'
 import { summarizeTouchCheck, type CheckPhase, type TouchTrace } from './touchTrace'
@@ -20,8 +20,9 @@ const RESTORE_WINDOW_MS = 800
  * Runs Holo's trackpad swipe-ins (see trackpadGesture.ts for the gesture and
  * why): reads finger positions from the precision touchpad, watches the
  * keyboard for "the user is typing" (timestamps only), reports swipe-ins to
- * the renderer (which presses the zone's control exactly as a desk tap
- * would), and puts the pointer back where it was before the swipe moved it.
+ * the renderer (which presses the zone's control exactly as a key on the
+ * physical keyboard would), and puts the pointer back where it was before
+ * the swipe moved it.
  *
  * Also records the trackpad touch check (`startTrace` / `stopTrace`), during
  * which nothing fires.

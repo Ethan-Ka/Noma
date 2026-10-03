@@ -388,86 +388,15 @@ export interface DeviceStatus {
 
 /**
  * Which physical/virtual input Flow should treat as the user's "keyboard"
- * right now — not everyone owns (or wants to buy) the real module, so
- * 'holo' is a second, free, no-hardware option (tapping the desk around a
- * laptop, see src/renderer/src/lib/holo). Both ultimately drive the exact
- * same 4 `Control` slots via `pressControl` — this only decides which
- * *source* is allowed to fire that call, not anything about the controls
- * themselves. Manually chosen today (Settings); real hardware-presence
- * auto-detection is a documented future step, not implemented yet — see
- * docs/architecture.md.
+ * right now. Not everyone owns (or wants to buy) the real module, so 'holo'
+ * is a second, free, no-hardware option: swiping a finger onto the
+ * trackpad from beside it (main/holo/trackpadGesture.ts). Both drive the
+ * exact same 4 `Control` slots via `pressControl`; this only decides which
+ * *source* is allowed to fire that call. Manually chosen today (Settings);
+ * real hardware-presence auto-detection is a documented future step, not
+ * implemented yet (see docs/architecture.md).
  */
 export type InputSource = 'keyboard' | 'holo'
-
-/**
- * One of Holo's four fixed tap zones — see HOLO_ZONE_ORDER (shared/
- * constants) for the canonical order, which maps 1:1 to control slots 1-4
- * (frontLeft -> slot 1, ... rearRight -> slot 4). In 4-zone mode these are
- * desk corners around the laptop; in 2-zone mode (see getHoloZones)
- * `frontLeft`/`frontRight` are reused for a different physical spot — the
- * empty palm-rest space to the left/right of the trackpad, on the laptop
- * itself, not the desk. Named after Holo's own zone layout
- * (github.com/JustinGamer191/Holo), the open-source macOS project this
- * feature's *concept* — not its Swift code, which never runs here — is
- * adapted from. See docs/architecture.md.
- */
-export type HoloZone = 'frontLeft' | 'frontRight' | 'rearLeft' | 'rearRight'
-
-/**
- * One zone's calibration reference — the averaged acoustic feature vector
- * from the taps the user provided for this zone during calibration (see
- * src/renderer/src/lib/holo/classifier.ts for exactly what a "feature" is).
- * Never audio, never a recording — a small array of normalized numbers.
- */
-export interface HoloZoneProfile {
-  zone: HoloZone
-  features: number[]
-  /** The individual taps behind `features`, kept rather than discarded so
-   *  the classifier can see the *spread* of taps on this spot and not just
-   *  their average — a tap at the edge of its own zone's spread is exactly
-   *  the one that otherwise lands on a neighbour. Still derived numbers,
-   *  never audio (see classifier.ts). */
-  taps: number[][]
-  /**
-   * Taps Holo was near-certain about in everyday use, added on top of the
-   * calibration taps so the zone keeps learning after the wizard (see
-   * classifier.ts's `learnFromTap`). Capped, oldest dropped first, and
-   * always kept apart from `taps`: the calibration itself is never
-   * overwritten, and recalibrating starts this over. Optional so a
-   * calibration that has never learned anything stays as it was.
-   */
-  learnedTaps?: number[][]
-  /** How many taps were averaged into `features` — shown in the UI so a
-   *  thin (e.g. interrupted) calibration is visibly distinguishable from a
-   *  full one, even though both produce a usable profile. */
-  sampleCount: number
-}
-
-/**
- * How well this computer's touch surfaces can be kept out of Holo, found by
- * main/holo/touchActivity.ts when the input gate turns on. Varies per
- * machine, so the Holo page says which case applies instead of promising
- * the same protection everywhere.
- *
- * - `direct`: a precision touchpad reports every touch, so even a touch
- *   that never moves the pointer is ignored.
- * - `movement-only`: a trackpad was found, but its driver only reports
- *   pointer movement and clicks (older Synaptics/ELAN/Alps drivers). A
- *   resting or motionless touch can't be seen.
- * - `none`: no trackpad found (a desktop, or one Windows doesn't identify).
- */
-export type HoloTrackpadCoverage = 'direct' | 'movement-only' | 'none'
-
-export interface HoloInputGateStatus {
-  trackpad: HoloTrackpadCoverage
-  /** A touchscreen or pen digitizer is present, and its touches are ignored too. */
-  touchscreen: boolean
-}
-
-/** How Holo is used: knocking beside the laptop (heard by the mic), or
- *  swiping a finger in from the side of the trackpad (see
- *  main/holo/trackpadGesture.ts). */
-export type HoloMethod = 'desk' | 'trackpad'
 
 /** Where a trackpad swipe-in came from: the left or right side, upper or
  *  lower half. Mapped to control slots 1-4 (the renderer's
@@ -518,118 +447,6 @@ export interface HoloTouchCheckSummary {
     firesOnSide: number
     misses: Record<string, number>
   }>
-}
-
-/** What the OS reports about this computer (see main/holo/laptopInfo.ts). */
-export interface LaptopInfo {
-  platform: string
-  manufacturer: string
-  model: string
-}
-
-/**
- * Every "is this a real tap of yours" bound, all of them measured from the
- * user's own calibration rather than picked in advance.
- *
- * The constants these replaced were tuned on synthetic audio, and each one
- * was wrong in a way the user felt: too tight and a genuine tap needs two or
- * three tries, too loose and a cough or a hand resting on the desk fires a
- * macro. There is no single number that is right for a hollow desk and a
- * solid one, a quiet room and a loud one — but there is a right number for
- * *this* desk, and calibration already collects exactly the taps needed to
- * measure it.
- */
-export interface HoloGates {
-  /** Furthest a tap may sit from its zone. */
-  maxDistance: number
-  /** ...and no single feature may be wildly off, which RMS alone can hide. */
-  maxSingleFeatureZ: number
-  /** How far the winner must beat the runner-up, as a fraction. */
-  minMargin: number
-  minPeakDb: number
-  maxPeakDb: number
-  /** Loudest a sound may still be at 45-105 ms, and at 110-180 ms, before it
-   *  stops looking like something that was struck. See `isImpactLike`. */
-  maxSustainDb: number
-  maxDrivenDb: number
-  /** How many separate impacts a single tap of this user's contains —
-   *  almost always 1, which is what makes an object being set down (which
-   *  lands, then settles) distinguishable from a knuckle. Optional so a
-   *  calibration saved before it was measured still loads. */
-  maxContacts?: number
-  /** Least posterior probability the winning zone needs (see
-   *  classifier.ts's `Discriminant`). Optional so older gates load. */
-  minPosterior?: number
-  /** Slowest a tap may reach full force, and dullest its first 2 ms may be
-   *  (see classifier.ts's `measureAttack`): what separates a knuckle or
-   *  fingertip strike from a finger pad or palm coming to rest. Measured
-   *  from the user's own taps; optional so older gates load (and don't
-   *  apply). */
-  maxRiseMs?: number
-  minAttackBrightnessDb?: number
-}
-
-/**
- * Bumped whenever the feature vector's meaning changes, so a calibration
- * saved by an older pipeline is recognized as unusable (its numbers
- * describe a different thing) instead of silently misclassifying. Also
- * bumped for a 2-zone layout change (v4 -> v5): the 2-zone pair moved from
- * "front+rear on the mic's side" to "left/right of the trackpad" — an old
- * 2-zone calibration's `rearLeft`/`rearRight` entry would otherwise linger
- * unused (not in the new `activeZones`) while `frontRight`/`frontLeft`
- * stayed uncalibrated, which `Holo.tsx`'s `isFullyCalibrated` check would
- * still (correctly) flag as incomplete — but a genuinely stray tap could
- * still match the stale entry and silently classify into a now-unreachable
- * zone instead of cleanly prompting recalibration. The version bump forces
- * the clean prompt instead. v6: the feature vector gained attack, early-echo
- * and loudness features (and the body spectrum's window changed), and zones
- * are now decided by a discriminant built from the stored taps. v7: gates
- * gained the soft-contact limits (`maxRiseMs`, `minAttackBrightnessDb`),
- * which only calibration can measure; without the bump an older calibration
- * would silently skip that check.
- */
-export const HOLO_CALIBRATION_VERSION = 7
-
-/** A completed calibration — one profile per zone (all 4; there's no
- *  paywall/tier gate on Holo). */
-export interface HoloCalibration {
-  version: number
-  zones: HoloZoneProfile[]
-  /** Per-dimension spread the classifier divides distances by. */
-  scale: number[]
-  /** Per-dimension emphasis: how much each dimension actually separates the
-   *  zones, so dimensions that carry no location information stop dragging
-   *  taps onto the wrong zone (classifier.ts's `buildModel`). */
-  weights: number[]
-  /** The microphone layout this was calibrated on (see holoCapture.ts's
-   *  `layout`). A different layout means different feature dimensions. */
-  layout: string
-  /** Peak loudness range (dB) of the calibration taps, used to reject sounds
-   *  far louder or softer than the user's real taps (e.g. a dropped object). */
-  levelRange: { minDb: number; maxDb: number }
-  /** Every accept/reject bound, measured from these calibration taps rather
-   *  than fixed in advance — see classifier.ts's `HoloGates`/`deriveGates`.
-   *  Optional so a calibration written before they were measured still
-   *  loads; the classifier falls back to DEFAULT_GATES. */
-  gates?: HoloGates
-  /** Sounds the user has explicitly told Noma to ignore, as feature vectors
-   *  — never audio. Kept as individual examples rather than averaged into
-   *  one (see classifier.ts's IGNORE_MATCH_MARGIN for why that distinction
-   *  is the whole safety of the mechanism). Optional and additive: it starts
-   *  empty, and an existing calibration keeps working without it. */
-  ignoredSounds?: number[][]
-  /**
-   * The user's own double-tap rhythm, measured from the double taps made
-   * during calibration: how far apart a pair may be and still count as one
-   * double tap (see renderer lib/holo/doubleTap.ts), and how deep the quiet
-   * moment between the two must be (`maxDipDb`, absent on calibrations made
-   * before it was measured). Optional: without it the fixed defaults apply.
-   */
-  doubleTapWindow?: { minGapMs: number; maxGapMs: number; maxDipDb?: number }
-  /** Leave-one-out accuracy (0..1) over the calibration taps — how
-   *  separable the zones were on this setup. */
-  accuracy: number
-  calibratedAt: number
 }
 
 /**
@@ -1046,35 +863,12 @@ export interface FlowApi {
    */
   getInputSource(): Promise<InputSource>
   setInputSource(source: InputSource): Promise<InputSource>
-  /** null until the user has calibrated at least one zone. */
-  getHoloCalibration(): Promise<HoloCalibration | null>
-  /** Persists a calibration exactly as sent — all 4 zones are available to
-   *  everyone today; there is no paywall/tier gate on Holo. See
-   *  docs/architecture.md's Holo section for where a future one would hook
-   *  in if that ever changes. */
-  saveHoloCalibration(calibration: HoloCalibration): Promise<HoloCalibration>
-  /** Erases calibration entirely — the "recalibrate from scratch" action. */
-  clearHoloCalibration(): Promise<void>
-  /** Maker/model of this computer, read once; empty strings if unknown. */
-  getLaptopInfo(): Promise<LaptopInfo>
-  /** Holo diagnostic recording (the Holo page's "Record a test session"
-   *  only): saves 16-bit PCM + a JSON log to Noma's folder on this computer
-   *  and resolves with the folder's path. */
-  saveHoloRecording(pcm: Int16Array, sampleRate: number, channels: number, meta: unknown): Promise<string>
+  /** Opens the folder touch checks are saved in (Noma's own, on this
+   *  computer). */
   openHoloRecordings(): Promise<void>
   /**
-   * Holo: while enabled, main forwards the *timestamp only* of every
-   * physical key/mouse event and trackpad/touchscreen touch (never which
-   * key or where) so Holo can ignore the sound of the user typing, clicking
-   * or touching the trackpad. The OS hooks exist only while enabled.
-   * Resolves with what this machine's touch hardware allows (null when
-   * disabling).
-   */
-  setHoloInputGate(enabled: boolean): Promise<HoloInputGateStatus | null>
-  onHoloInputActivity(callback: (timestamp: number) => void): () => void
-  /**
-   * Holo's trackpad corners: while enabled, main reads the precision
-   * touchpad's finger positions (in memory only) and reports corner holds.
+   * Holo's trackpad swipe-ins: while enabled, main reads the precision
+   * touchpad's finger positions (in memory only) and reports swipe-ins.
    * Resolves with how many precision touchpads were found, or null when
    * disabling or when raw touchpad input isn't available (not Windows).
    */

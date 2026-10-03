@@ -38,9 +38,8 @@ function App() {
   // suggestion, so the reviewed one is guaranteed to actually be there.
   useEffect(() => window.flow.onOpenSuggestionInApp(() => setActivePage('workflows')), [setActivePage])
 
-  // Holo's trackpad corners carry on from the last run, without the Holo
-  // page having to be opened first. Desk taps never auto-start: they open
-  // the microphone, which only ever happens on an explicit click.
+  // Holo's swipe-ins carry on from the last run, without the Holo page
+  // having to be opened first.
   useEffect(() => {
     void useHoloStore.getState().resumeTrackpad()
   }, [])

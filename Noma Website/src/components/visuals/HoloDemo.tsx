@@ -4,17 +4,17 @@ import AppIcon from './AppIcon'
 import { appProfiles } from '../../data/appProfiles'
 
 /**
- * Holo, demonstrated rather than described: a double tap lands on the palm
- * rest beside the trackpad, and a control in the software fires.
+ * Holo, demonstrated rather than described: a finger starts on the palm rest
+ * beside the trackpad, slides onto it, and a control in the software fires.
  *
- * The causal gap is the whole point, so it is built in deliberately — both
- * taps ripple, and the button answers ~180ms after the second, the way it
- * does in the real thing, where the pair has to be heard, classified and
- * matched before anything runs. Firing on the first tap would misrepresent
- * the product: a single tap is ignored on purpose, so a resting hand never
- * sets anything off.
+ * The order is the point, so it is built in deliberately: the finger has to
+ * travel in from the edge before anything happens, and the button answers
+ * the moment the swipe lands, the way it does in the real thing, where the
+ * swipe is recognised once the finger has come far enough in. A finger
+ * simply put down on the trackpad does nothing, which is why ordinary
+ * trackpad use never sets it off.
  *
- * It runs on its own until the visitor taps a zone themselves, then hands
+ * It runs on its own until the visitor picks a side themselves, then hands
  * over for good — the same rule the Context section follows.
  */
 
@@ -23,37 +23,41 @@ import { appProfiles } from '../../data/appProfiles'
  *  you would genuinely want without looking down. */
 const APP_ID = 'claude'
 
-/** The two palm-rest zones, either side of the trackpad, matching the app's
- *  two-zone palm layout. `control` indexes the app's control list; each zone
- *  is labelled with what it fires rather than where it is — where it is, you
+/** The two sides, either side of the trackpad, matching the app's left /
+ *  right swipe-in zones. `from` and `to` are where the finger starts (on the
+ *  palm rest) and ends (just inside the trackpad), as a share of the
+ *  laptop's width. `control` indexes the app's control list; each side is
+ *  labelled with what it fires rather than where it is — where it is, you
  *  can see. */
 const ZONES = [
-  { where: 'Left of the trackpad', position: 'left-[6%]', control: 1 },
-  { where: 'Right of the trackpad', position: 'right-[6%]', control: 3 },
+  { where: 'left', position: 'left-[6%]', from: 18, to: 40, arrow: '→', control: 1 },
+  { where: 'right', position: 'right-[6%]', from: 82, to: 60, arrow: '←', control: 3 },
 ]
 
 /** Keyboard rows, as key counts — enough to read as a laptop at a glance. */
 const KEY_ROWS = [13, 13, 12, 11]
 
 const CYCLE_MS = 2600
-/** Gap between the two taps of a double tap. */
-const SECOND_TAP_DELAY = 0.16
-/** How long after the second tap the control answers. */
-const TRIGGER_DELAY = SECOND_TAP_DELAY + 0.18
-/** The lit control holds well past the ripple: the tap is the gesture, but
+/** How long the finger takes to slide in. A real swipe-in is a quick flick. */
+const SWIPE_S = 0.32
+/** The control answers as the swipe lands. */
+const TRIGGER_DELAY = SWIPE_S + 0.04
+/** The lit control holds well past the swipe: the swipe is the gesture, but
  *  the button firing is the thing the visitor is meant to leave with. */
 const FIRED_MS = 1400
-const TAPPED_MS = 900
+const SWIPING_MS = 900
 /** A beat before the demo starts itself. */
-const FIRST_TAP_MS = 500
+const FIRST_SWIPE_MS = 500
 
 export default function HoloDemo({ className = '' }: { className?: string }) {
   const reduceMotion = useReducedMotion()
   const app = appProfiles[APP_ID]
 
-  const [tapped, setTapped] = useState<number | null>(null)
+  const [swiping, setSwiping] = useState<number | null>(null)
   const [fired, setFired] = useState<number | null>(null)
   const [taken, setTaken] = useState(false)
+  /** Bumped per swipe so the same side swiped twice replays the animation. */
+  const [swipeKey, setSwipeKey] = useState(0)
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
 
   const clearTimers = () => {
@@ -61,12 +65,13 @@ export default function HoloDemo({ className = '' }: { className?: string }) {
     timers.current = []
   }
 
-  const tap = useCallback((index: number) => {
+  const swipe = useCallback((index: number) => {
     clearTimers()
-    setTapped(index)
+    setSwiping(index)
+    setSwipeKey((key) => key + 1)
     setFired(null)
     timers.current.push(setTimeout(() => setFired(index), TRIGGER_DELAY * 1000))
-    timers.current.push(setTimeout(() => setTapped(null), TAPPED_MS))
+    timers.current.push(setTimeout(() => setSwiping(null), SWIPING_MS))
     timers.current.push(setTimeout(() => setFired(null), FIRED_MS))
   }, [])
 
@@ -75,24 +80,26 @@ export default function HoloDemo({ className = '' }: { className?: string }) {
   useEffect(() => {
     if (taken || reduceMotion) return
     let index = 0
-    // The first tap waits a beat rather than firing on the same tick this
+    // The first swipe waits a beat rather than firing on the same tick this
     // effect runs: it keeps the demo out of the very first paint (where it
     // would be missed anyway, mid-scroll) and avoids a cascading render.
-    const first = setTimeout(() => tap(index), FIRST_TAP_MS)
+    const first = setTimeout(() => swipe(index), FIRST_SWIPE_MS)
     const loop = setInterval(() => {
       index = (index + 1) % ZONES.length
-      tap(index)
+      swipe(index)
     }, CYCLE_MS)
     return () => {
       clearTimeout(first)
       clearInterval(loop)
     }
-  }, [taken, reduceMotion, tap])
+  }, [taken, reduceMotion, swipe])
 
-  const handleTap = (index: number) => {
+  const handleSwipe = (index: number) => {
     setTaken(true)
-    tap(index)
+    swipe(index)
   }
+
+  const active = swiping === null ? null : ZONES[swiping]
 
   return (
     <div className={`grid gap-6 sm:gap-8 ${className}`}>
@@ -100,9 +107,8 @@ export default function HoloDemo({ className = '' }: { className?: string }) {
       <div className="relative mx-auto aspect-[16/11] w-full max-w-md">
         <div className="absolute inset-0 rounded-3xl border border-base-700 bg-base-850" />
 
-        {/* The hinge, and the microphone in the lid that is doing the listening. */}
+        {/* The hinge. */}
         <div className="absolute inset-x-[6%] top-0 h-[3%] rounded-b-md bg-base-800" />
-        <span className="absolute left-1/2 top-[1%] h-1 w-1 -translate-x-1/2 rounded-full bg-accent" />
 
         {/* Keyboard. */}
         <div className="absolute inset-x-[8%] top-[9%] flex h-[42%] flex-col gap-[5%]">
@@ -119,41 +125,35 @@ export default function HoloDemo({ className = '' }: { className?: string }) {
         </div>
 
         {/* Trackpad. */}
-        <div className="absolute bottom-[7%] left-1/2 top-[58%] w-[38%] -translate-x-1/2 rounded-xl border border-base-700 bg-base-800/70" />
+        <div
+          className={`absolute bottom-[7%] left-1/2 top-[58%] w-[38%] -translate-x-1/2 rounded-xl border transition-colors duration-200 ${
+            fired !== null ? 'border-accent/50 bg-accent/[0.05]' : 'border-base-700 bg-base-800/70'
+          }`}
+        />
 
+        {/* The palm rest either side: where a swipe starts. */}
         {ZONES.map((zone, index) => {
-          const isTapped = tapped === index
+          const isSwiping = swiping === index
           const control = app.controls[zone.control]
           return (
             <button
               key={zone.where}
               type="button"
-              onClick={() => handleTap(index)}
-              aria-label={`Double-tap ${zone.where.toLowerCase()} to run ${control}`}
+              onClick={() => handleSwipe(index)}
+              aria-label={`Swipe in from the ${zone.where} of the trackpad to run ${control}`}
               className={`absolute bottom-[7%] top-[58%] flex w-[22%] flex-col items-center justify-center rounded-2xl border border-dashed transition-colors duration-200 ${zone.position} ${
-                isTapped ? 'border-accent/60 bg-accent/[0.07]' : 'border-white/12 bg-white/[0.02] hover:border-white/25'
+                isSwiping ? 'border-accent/60 bg-accent/[0.07]' : 'border-white/12 bg-white/[0.02] hover:border-white/25'
               }`}
             >
-              <span className="relative flex h-1.5 w-1.5 items-center justify-center">
-                <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                <AnimatePresence>
-                  {isTapped &&
-                    !reduceMotion &&
-                    [0, SECOND_TAP_DELAY].map((delay) => (
-                      <motion.span
-                        key={delay}
-                        className="absolute h-1.5 w-1.5 rounded-full border border-accent"
-                        initial={{ scale: 1, opacity: 0 }}
-                        animate={{ scale: 9, opacity: [0.9, 0] }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.6, ease: 'easeOut', delay }}
-                      />
-                    ))}
-                </AnimatePresence>
+              <span
+                aria-hidden
+                className={`text-sm transition-colors duration-200 ${isSwiping ? 'text-accent-bright' : 'text-base-500'}`}
+              >
+                {zone.arrow}
               </span>
               <span
-                className={`mt-2 px-1 text-center text-[10px] font-medium tracking-tight transition-colors duration-200 ${
-                  isTapped ? 'text-accent-bright' : 'text-base-400'
+                className={`mt-1.5 px-1 text-center text-[10px] font-medium tracking-tight transition-colors duration-200 ${
+                  isSwiping ? 'text-accent-bright' : 'text-base-400'
                 }`}
               >
                 {control}
@@ -162,8 +162,23 @@ export default function HoloDemo({ className = '' }: { className?: string }) {
           )
         })}
 
+        {/* The finger: lands on the palm rest, slides onto the trackpad. */}
+        <AnimatePresence>
+          {active && !reduceMotion && (
+            <motion.span
+              key={swipeKey}
+              aria-hidden
+              className="pointer-events-none absolute top-[75%] h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-accent bg-accent/30"
+              initial={{ left: `${active.from}%`, opacity: 0, scale: 0.8 }}
+              animate={{ left: [`${active.from}%`, `${active.from}%`, `${active.to}%`], opacity: [0, 1, 1], scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: SWIPE_S + 0.12, times: [0, 0.27, 1], ease: 'easeOut' }}
+            />
+          )}
+        </AnimatePresence>
+
         <p className="absolute inset-x-0 -bottom-7 text-center font-mono text-[10px] uppercase tracking-[0.16em] text-base-500">
-          {taken ? 'Double-tap a side' : 'Double-tap a side to try it'}
+          {taken ? 'Swipe in from a side' : 'Tap a side to swipe in'}
         </p>
       </div>
 
@@ -176,7 +191,7 @@ export default function HoloDemo({ className = '' }: { className?: string }) {
           <div className="min-w-0">
             <p className="truncate text-sm font-medium tracking-tight text-base-50">{app.shortName}</p>
             <p className="truncate font-mono text-[10px] uppercase tracking-[0.16em] text-base-500">
-              Noma is listening
+              Noma is ready
             </p>
           </div>
         </div>

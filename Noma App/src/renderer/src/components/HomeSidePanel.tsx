@@ -1,11 +1,13 @@
 import { useEffect } from 'react'
 import type { Application, ApplicationProfile } from '@shared/types'
-import { HOLO_ZONE_ORDER } from '@shared/constants'
 import { useHardwareStore } from '../stores/hardwareStore'
 import { useUiStore } from '../stores/uiStore'
 import { HardwareStatusPill } from './HardwareStatusPill'
 import { AppIcon } from './AppIcon'
 import { CARD, DEVICE_GLASS_CARD } from '../lib/surfaces'
+
+/** Holo's four swipe-in zones press control slots 1-4. */
+const HOLO_SLOTS = [1, 2, 3, 4]
 
 /**
  * Home's right-hand column — product/device context, not more workspace.
@@ -120,18 +122,17 @@ export function HomeSidePanel({
             </span>
           </div>
           <div className="mt-3 space-y-1.5">
-            {HOLO_ZONE_ORDER.map((zone, index) => {
-              const slot = index + 1
+            {HOLO_SLOTS.map((slot) => {
               const control = profile?.controls.find((item) => item.slot === slot)
               return (
-                <div key={zone} className="truncate text-sm text-holo-text">
+                <div key={slot} className="truncate text-sm text-holo-text">
                   {control?.label ?? <span className="text-holo-muted">Slot {slot}</span>}
                 </div>
               )
             })}
           </div>
           <p className="mt-3 text-[11px] leading-relaxed text-holo-muted">
-            No hardware needed. Tap your desk to press a control.
+            No hardware needed. Swipe onto your trackpad to press a control.
           </p>
         </div>
       </button>

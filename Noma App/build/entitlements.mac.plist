@@ -10,8 +10,5 @@
     <!-- koffi, better-sqlite3 and uiohook-napi load native modules. -->
     <key>com.apple.security.cs.disable-library-validation</key>
     <true/>
-    <!-- Holo: microphone access for palm-rest double-taps. -->
-    <key>com.apple.security.device.audio-input</key>
-    <true/>
   </dict>
 </plist>

@@ -1,8 +1,6 @@
 import type { BrowserWindow } from 'electron'
 import {
-  HID_USAGE_DIGITIZER_PEN,
   HID_USAGE_DIGITIZER_TOUCH_PAD,
-  HID_USAGE_DIGITIZER_TOUCH_SCREEN,
   HID_USAGE_PAGE_DIGITIZER,
   RAWINPUTDEVICE_SIZE,
   RegisterRawInputDevices,
@@ -12,19 +10,18 @@ import {
 } from '../actions/win32'
 
 /**
- * One registration for raw touchpad / touchscreen / pen reports, shared by
- * everything in Holo that needs them: the input gate (touchActivity.ts, "a
- * finger is on the pad, ignore that sound") and the trackpad corners
- * (trackpadGestureService.ts). Windows keeps one raw-input target per device
- * type per process, and Electron one WM_INPUT hook per window, so two
- * separate registrations would silently steal reports from each other.
- * Registered by the first subscriber, released by the last, like
+ * The one registration for raw precision-touchpad reports (Holo's
+ * swipe-ins, trackpadGestureService.ts). Windows keeps one raw-input target
+ * per device type per process, and Electron one WM_INPUT hook per window,
+ * so anything else that ever needs these reports must subscribe here rather
+ * than register again, or the two would silently steal reports from each
+ * other. Registered by the first subscriber, released by the last, like
  * workflow/sharedHook.ts does for the keyboard hook.
  */
 
 type Listener = (hRawInput: number) => void
 
-const DIGITIZER_USAGES = [HID_USAGE_DIGITIZER_TOUCH_PAD, HID_USAGE_DIGITIZER_TOUCH_SCREEN, HID_USAGE_DIGITIZER_PEN]
+const DIGITIZER_USAGES = [HID_USAGE_DIGITIZER_TOUCH_PAD]
 const listeners = new Set<Listener>()
 let target: BrowserWindow | null = null
 

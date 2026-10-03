@@ -4,7 +4,6 @@ import type {
   Application,
   ControlAction,
   FlowStatus,
-  HoloCalibration,
   InputSource,
   MacroStep,
   ModuleFunctionConfig,
@@ -24,11 +23,6 @@ import {
   setInputSource,
   setWorkflowMonitoringEnabled
 } from '../database/repositories/settingsRepository'
-import {
-  clearHoloCalibration,
-  getHoloCalibration,
-  saveHoloCalibration
-} from '../database/repositories/holoRepository'
 import {
   getControlUsageStats,
   getDailyActivityCounts,
@@ -371,12 +365,4 @@ export function registerIpcHandlers(
     setInputSource(source)
     return getInputSource()
   })
-
-  ipcMain.handle(IPC_CHANNELS.GET_HOLO_CALIBRATION, () => getHoloCalibration())
-
-  ipcMain.handle(IPC_CHANNELS.SAVE_HOLO_CALIBRATION, (_event, calibration: HoloCalibration) =>
-    saveHoloCalibration(calibration)
-  )
-
-  ipcMain.handle(IPC_CHANNELS.CLEAR_HOLO_CALIBRATION, () => clearHoloCalibration())
 }

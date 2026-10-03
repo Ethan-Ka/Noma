@@ -52,7 +52,6 @@ The latest release page: https://github.com/awnsh/Noma/releases/latest
    asked), then quit and reopen Noma. Detecting the app you're in works
    without it; seeing and sending shortcuts, clicks and focusing windows
    don't.
-4. Holo asks for the **Microphone** the first time it's turned on.
 
 With an unsigned build, macOS forgets the Accessibility permission each time
 a new version is installed, so step 3 repeats after every update. Signing
@@ -109,4 +108,4 @@ silicon one and an Intel one):
 - [ ] Workflow monitoring on: ⌘-shortcuts show up in Activity.
 - [ ] Click capture on: clicking a named button in an app records its name.
       A learned workflow with that click replays it.
-- [ ] Holo: turning it on asks for the microphone, and double-taps register.
+- [ ] Holo: says it needs a Windows precision touchpad (swipe-ins are Windows-only for now).

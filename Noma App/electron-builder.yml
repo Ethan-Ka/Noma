@@ -48,8 +48,6 @@ mac:
   gatekeeperAssess: false
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
-  extendInfo:
-    NSMicrophoneUsageDescription: Holo listens for double-taps on your palm rests. The sound is analysed on this Mac and is never recorded or sent anywhere.
 dmg:
   artifactName: Noma-${version}-${arch}.${ext}
 

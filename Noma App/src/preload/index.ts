@@ -153,22 +153,7 @@ const flowApi: FlowApi = {
 
   getInputSource: () => ipcRenderer.invoke(IPC_CHANNELS.GET_INPUT_SOURCE),
   setInputSource: (source) => ipcRenderer.invoke(IPC_CHANNELS.SET_INPUT_SOURCE, source),
-  getHoloCalibration: () => ipcRenderer.invoke(IPC_CHANNELS.GET_HOLO_CALIBRATION),
-  saveHoloCalibration: (calibration) =>
-    ipcRenderer.invoke(IPC_CHANNELS.SAVE_HOLO_CALIBRATION, calibration),
-  clearHoloCalibration: () => ipcRenderer.invoke(IPC_CHANNELS.CLEAR_HOLO_CALIBRATION),
-  getLaptopInfo: () => ipcRenderer.invoke(IPC_CHANNELS.GET_LAPTOP_INFO),
-  saveHoloRecording: (pcm, sampleRate, channels, meta) =>
-    ipcRenderer.invoke(IPC_CHANNELS.HOLO_SAVE_RECORDING, pcm, sampleRate, channels, meta),
   openHoloRecordings: () => ipcRenderer.invoke(IPC_CHANNELS.HOLO_OPEN_RECORDINGS),
-  setHoloInputGate: (enabled) => ipcRenderer.invoke(IPC_CHANNELS.HOLO_SET_INPUT_GATE, enabled),
-  onHoloInputActivity: (callback) => {
-    const listener = (_event: IpcRendererEvent, timestamp: number): void => callback(timestamp)
-    ipcRenderer.on(IPC_CHANNELS.HOLO_INPUT_ACTIVITY, listener)
-    return () => {
-      ipcRenderer.removeListener(IPC_CHANNELS.HOLO_INPUT_ACTIVITY, listener)
-    }
-  },
   setHoloTrackpad: (enabled, zones) => ipcRenderer.invoke(IPC_CHANNELS.HOLO_SET_TRACKPAD, enabled, zones),
   startHoloTouchCheck: () => ipcRenderer.invoke(IPC_CHANNELS.HOLO_TOUCH_CHECK_START),
   stopHoloTouchCheck: (phases) => ipcRenderer.invoke(IPC_CHANNELS.HOLO_TOUCH_CHECK_STOP, phases),
