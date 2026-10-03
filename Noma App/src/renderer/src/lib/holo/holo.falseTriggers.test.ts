@@ -12,7 +12,7 @@ import {
   type ClassificationResult,
   type ImpactCheck
 } from './classifier'
-import { DoubleTapDetector } from './doubleTap'
+import { DoubleTapDetector, doubleTapKnock, pairDistanceBound } from './doubleTap'
 import { NON_TAP_KINDS, PALM_SPOTS, SIM_SAMPLE_RATE, makeRng, simulateNonTap, simulateTap } from './testing/tapSimulator'
 
 
@@ -45,6 +45,22 @@ describe('Holo false triggers (simulated)', () => {
       const ev = evaluateDiscriminant(tapsByZone, model.scale)
       const gates = deriveGates(ev.distances, peaks, impacts)
       const disc = buildDiscriminant(tapsByZone, model.scale)
+      const maxMeanDistance = pairDistanceBound({
+        version: 0,
+        zones: model.zones,
+        scale: model.scale,
+        weights: model.weights,
+        layout: 'sim',
+        levelRange: { minDb: Math.min(...peaks), maxDb: Math.max(...peaks) },
+        gates,
+        accuracy: ev.accuracy,
+        calibratedAt: 0
+      })
+      const newDetector = (): DoubleTapDetector => {
+        const detector = new DoubleTapDetector()
+        detector.setPairGates({ maxMeanDistance })
+        return detector
+      }
       const classify = (a: Float32Array): (ClassificationResult & { peakDb: number }) | null => {
         const f = extractTapFeatures([a], [0], SIM_SAMPLE_RATE)
         if (!f) return null
@@ -62,17 +78,17 @@ describe('Holo false triggers (simulated)', () => {
       }
       // Same logic as holoStore's onTap.
       const feed = (detector: DoubleTapDetector, r: ReturnType<typeof classify>, at: number): HoloZone | null => {
-        if (!r) return null
-        const zone = r.zone ?? (r.reason === 'ambiguous' && r.candidate && detector.armedZone(at) === r.candidate ? r.candidate : null)
-        if (!zone) return null
-        return detector.tap(zone, at, r.peakDb) === 'fire' ? zone : null
+        const knock = r ? doubleTapKnock(r) : null
+        if (!r || !knock) return null
+        const detail = { sure: knock.sure, distance: r.distance }
+        return detector.tap(knock.zone, at, r.peakDb, detail) === 'fire' ? knock.zone : null
       }
       const rng = makeRng(seed * 99991)
 
       // Deliberate double taps, one attempt each, no retries.
       for (let i = 0; i < 80; i++) {
         const [zone, spot] = zones[rng() < 0.5 ? 0 : 1]
-        const detector = new DoubleTapDetector()
+        const detector = newDetector()
         const t0 = 100000 * i
         // Real double taps: 150-220 ms apart in a recording of a real laptop.
       const gap = 150 + rng() * 100
@@ -88,7 +104,7 @@ describe('Holo false triggers (simulated)', () => {
       }
 
       // Everyday non-tap activity: random kinds, often in quick bursts.
-      const detector = new DoubleTapDetector()
+      const detector = newDetector()
       let t = 0
       for (let i = 0; i < 400; i++) {
         t += rng() < 0.4 ? 250 + rng() * 500 : 800 + rng() * 4000

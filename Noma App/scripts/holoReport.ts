@@ -13,7 +13,7 @@ import { join } from 'path'
 import Database from 'better-sqlite3'
 import type { HoloCalibration } from '@shared/types'
 import { classifySounds, detectSounds, parseWav, type RecordingMeta } from '../src/renderer/src/lib/holo/testing/replay'
-import { DoubleTapDetector, pairMatcher } from '../src/renderer/src/lib/holo/doubleTap'
+import { DoubleTapDetector, doubleTapKnock, pairDistanceBound, pairMatcher } from '../src/renderer/src/lib/holo/doubleTap'
 import { anchorDiscriminant, withoutMislabelledTaps } from '../src/renderer/src/lib/holo/classifier'
 
 const root = join(process.env.APPDATA ?? '', 'noma')
@@ -38,11 +38,13 @@ console.log(`${(pcm.length / meta.channels / meta.sampleRate).toFixed(1)} s, ${m
 console.log('gates', JSON.stringify(calibration.gates))
 
 const sounds = classifySounds(detectSounds(pcm, meta, sensitivity), calibration, sensitivity)
-// Same double-tap rules as holoStore's onTap (window, dip, sound-alike,
-// and an 'ambiguous' second half completing an armed zone).
+// Same double-tap rules as holoStore's onTap (see doubleTap.ts).
 const detector = new DoubleTapDetector()
 detector.setWindow(calibration.doubleTapWindow)
 detector.setPairMatcher(pairMatcher(calibration))
+const pairGates = { maxDipDb: calibration.doubleTapWindow?.maxDipDb ?? null, maxMeanDistance: pairDistanceBound(calibration) }
+detector.setPairGates(pairGates)
+console.log('pair gates', JSON.stringify(pairGates))
 const dipsAtSecondHalf: number[] = []
 for (const phase of meta.phases) {
   const inPhase = sounds.filter((s) => s.onsetMs >= phase.startMs && s.onsetMs < phase.endMs)
@@ -53,13 +55,18 @@ for (const phase of meta.phases) {
   for (const s of inPhase) {
     const key = s.ignoredByInput ? 'typing-gate' : (s.result?.zone ?? s.result?.reason ?? 'no-features')
     outcomes[key] = (outcomes[key] ?? 0) + 1
-    const r = s.result
-    const zone =
-      r?.zone ?? (r?.reason === 'ambiguous' && r.candidate && detector.armedZone(s.onsetMs) === r.candidate ? r.candidate : null)
-    if (zone && detector.armedZone(s.onsetMs) === zone) dipsAtSecondHalf.push(s.dipDb)
-    if (zone && detector.tap(zone, s.onsetMs, s.peakDb, { features: s.features ?? undefined, dipDb: s.dipDb }) === 'fire') {
+    if (s.ignoredByInput) {
+      detector.reset()
+      continue
+    }
+    const knock = s.result ? doubleTapKnock(s.result) : null
+    if (!knock) continue
+    if (detector.armedZone(s.onsetMs) === knock.zone) dipsAtSecondHalf.push(s.dipDb)
+    const detail = { features: s.features ?? undefined, dipDb: s.dipDb, sure: knock.sure, distance: s.result?.distance }
+    if (detector.tap(knock.zone, s.onsetMs, s.peakDb, detail) === 'fire') {
       fires++
-      if (zone === s.label) right++
+      if (knock.zone === s.label) right++
+      if (process.env.HOLO_FIRES) console.log(`   fire ${knock.zone} at ${(s.onsetMs / 1000).toFixed(2)} s`)
     }
   }
   const name = phase.kind === 'zone' ? `tap ${phase.zone}` : phase.kind

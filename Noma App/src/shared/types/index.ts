@@ -464,6 +464,62 @@ export interface HoloInputGateStatus {
   touchscreen: boolean
 }
 
+/** How Holo is used: knocking beside the laptop (heard by the mic), or
+ *  swiping a finger in from the side of the trackpad (see
+ *  main/holo/trackpadGesture.ts). */
+export type HoloMethod = 'desk' | 'trackpad'
+
+/** Where a trackpad swipe-in came from: the left or right side, upper or
+ *  lower half. Mapped to control slots 1-4 (the renderer's
+ *  TRACKPAD_ZONE_SLOTS). With two zones only the `top*` ones are used and
+ *  the whole side counts. */
+export type HoloTrackpadZone = 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight'
+
+/** 2: left / right (slots 1-2). 4: each side split into halves (slots 1-4). */
+export type HoloTrackpadZoneCount = 2 | 4
+
+/** A swipe-in fired, or a finger came in from a side but didn't count. */
+export type HoloTrackpadEvent =
+  | { type: 'fire'; zone: HoloTrackpadZone; at: number }
+  | {
+      type: 'miss'
+      zone: HoloTrackpadZone
+      at: number
+      reason: 'too-slow' | 'not-sideways' | 'second-finger' | 'palm' | 'typing' | 'click'
+    }
+
+export interface HoloTrackpadStatus {
+  /** Precision touchpads found (swipe-ins need at least one). */
+  touchpads: number
+}
+
+/**
+ * The trackpad touch check's result (Holo page): what the user's own
+ * swipe-ins and ordinary trackpad use looked like, measured, and what the
+ * current swipe-in rules would have done with them.
+ */
+export interface HoloTouchCheckSummary {
+  phases: Array<{
+    kind: 'left' | 'right' | 'normal'
+    /** Separate finger touches in this phase. */
+    touches: number
+    /** Of those, how many were first seen within the swipe-in edge band. */
+    startedAtEdge: number
+    /** Where touches were first seen, as distance from the phase's side
+     *  (fraction of the pad's width): min / median / max. Null in the
+     *  ordinary-use phase or with no touches. */
+    firstEdgeDistance: [number, number, number] | null
+    /** Share of first contacts the touchpad already called a finger
+     *  (not a palm). */
+    firstConfident: number
+    /** What the current rules did: fires (and on the right side), and
+     *  misses by reason. */
+    fires: number
+    firesOnSide: number
+    misses: Record<string, number>
+  }>
+}
+
 /** What the OS reports about this computer (see main/holo/laptopInfo.ts). */
 export interface LaptopInfo {
   platform: string
@@ -565,10 +621,11 @@ export interface HoloCalibration {
   /**
    * The user's own double-tap rhythm, measured from the double taps made
    * during calibration: how far apart a pair may be and still count as one
-   * double tap (see renderer lib/holo/doubleTap.ts). Optional: without it
-   * the fixed default window applies.
+   * double tap (see renderer lib/holo/doubleTap.ts), and how deep the quiet
+   * moment between the two must be (`maxDipDb`, absent on calibrations made
+   * before it was measured). Optional: without it the fixed defaults apply.
    */
-  doubleTapWindow?: { minGapMs: number; maxGapMs: number }
+  doubleTapWindow?: { minGapMs: number; maxGapMs: number; maxDipDb?: number }
   /** Leave-one-out accuracy (0..1) over the calibration taps — how
    *  separable the zones were on this setup. */
   accuracy: number
@@ -1015,6 +1072,21 @@ export interface FlowApi {
    */
   setHoloInputGate(enabled: boolean): Promise<HoloInputGateStatus | null>
   onHoloInputActivity(callback: (timestamp: number) => void): () => void
+  /**
+   * Holo's trackpad corners: while enabled, main reads the precision
+   * touchpad's finger positions (in memory only) and reports corner holds.
+   * Resolves with how many precision touchpads were found, or null when
+   * disabling or when raw touchpad input isn't available (not Windows).
+   */
+  setHoloTrackpad(enabled: boolean, zones?: HoloTrackpadZoneCount): Promise<HoloTrackpadStatus | null>
+  onHoloTrackpadEvent(callback: (event: HoloTrackpadEvent) => void): () => void
+  /** The trackpad touch check: records finger positions (dry run, nothing
+   *  fires) until stopped, then saves them on this computer and returns a
+   *  summary. `phases` are the guided steps, in Date.now() time. */
+  startHoloTouchCheck(): Promise<HoloTrackpadStatus | null>
+  stopHoloTouchCheck(
+    phases: Array<{ kind: 'left' | 'right' | 'normal'; startAt: number; endAt: number }>
+  ): Promise<{ summary: HoloTouchCheckSummary; savedTo: string } | null>
 
   /**
    * Noma Notice. The first three are used only by the notice's own window;

@@ -516,6 +516,21 @@ describe('objects being set down (counting contacts)', () => {
     expect(classifyZone(features, profiles, scale, { weights, gates: measured, impact }).reason).toBe('set-down')
   })
 
+  it('keeps the side of a real tap that fails only a soft check, but never accepts it on its own', () => {
+    // Real palm-rest knocks often register several contacts; such a knock is
+    // still placed on a side, for doubleTap.ts to pair with a sure one.
+    const tap = synthTap({ ...ZONE_SOUNDS.frontLeft, seed: 94 })
+    const impact = { ...detectImpact([tap], SAMPLE_RATE)!, contacts: 3 }
+    const result = classifyZone(extractTapFeatures([tap], [0], SAMPLE_RATE)!, profiles, scale, {
+      weights,
+      gates: measured,
+      impact
+    })
+    expect(result.zone).toBeNull()
+    expect(result.reason).toBe('set-down')
+    expect(result.candidate).toBe('frontLeft')
+  })
+
   it('is permissive by default, so an old calibration is never made worse', () => {
     // Nothing measured this user's own taps, so the bar can't be assumed —
     // it takes a recalibration to tighten to 1, and DEFAULT_GATES says so.

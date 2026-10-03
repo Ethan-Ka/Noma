@@ -8,6 +8,7 @@ import type {
   DeviceLogEntry,
   DeviceStatus,
   FlowApi,
+  HoloTrackpadEvent,
   MacroStep,
   ModuleFunctionConfig,
   Suggestion,
@@ -166,6 +167,16 @@ const flowApi: FlowApi = {
     ipcRenderer.on(IPC_CHANNELS.HOLO_INPUT_ACTIVITY, listener)
     return () => {
       ipcRenderer.removeListener(IPC_CHANNELS.HOLO_INPUT_ACTIVITY, listener)
+    }
+  },
+  setHoloTrackpad: (enabled, zones) => ipcRenderer.invoke(IPC_CHANNELS.HOLO_SET_TRACKPAD, enabled, zones),
+  startHoloTouchCheck: () => ipcRenderer.invoke(IPC_CHANNELS.HOLO_TOUCH_CHECK_START),
+  stopHoloTouchCheck: (phases) => ipcRenderer.invoke(IPC_CHANNELS.HOLO_TOUCH_CHECK_STOP, phases),
+  onHoloTrackpadEvent: (callback) => {
+    const listener = (_event: IpcRendererEvent, event: HoloTrackpadEvent): void => callback(event)
+    ipcRenderer.on(IPC_CHANNELS.HOLO_TRACKPAD_EVENT, listener)
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.HOLO_TRACKPAD_EVENT, listener)
     }
   },
 

@@ -1116,9 +1116,10 @@ export interface ClassificationResult {
   /** How far the sound was from the winning zone, in the units of
    *  `HoloGates.maxDistance`. Absent when it was rejected before ranking. */
   distance?: number
-  /** For 'ambiguous' only: the zone it was closest to. It passed every "is
-   *  this a tap" check and only failed "which zone, for sure", so the
-   *  second half of a double tap may still use it (see holoStore). */
+  /** For 'ambiguous', 'soft-touch' and 'set-down': the zone it was closest
+   *  to. It passed every hard "is this a tap" check and failed only "which
+   *  zone, for sure" or one of the soft checks, so it may still make up one
+   *  half of a double tap whose other half is sure (see doubleTap.ts). */
   candidate?: HoloZone
 }
 
@@ -1283,16 +1284,20 @@ export function classifyZone(
     // heard themselves do; both are the same rejection.
     return { zone: null, confidence: 0, reason: options.impact.periodicity > VOICE_PERIODICITY ? 'voice' : 'not-a-tap' }
   }
-  if (options.impact && options.impact.contacts > (gates.maxContacts ?? DEFAULT_MAX_CONTACTS)) {
-    return { zone: null, confidence: 0, reason: 'set-down' }
-  }
-  if (
-    options.impact &&
-    ((gates.maxRiseMs !== undefined && options.impact.riseMs > gates.maxRiseMs) ||
-      (gates.minAttackBrightnessDb !== undefined && options.impact.attackBrightnessDb < gates.minAttackBrightnessDb))
-  ) {
-    return { zone: null, confidence: 0, reason: 'soft-touch' }
-  }
+  // The contact and attack checks are "soft": on a real laptop they overlap
+  // real taps a lot (a recorded palm-rest knock often rises slowly and
+  // registers 2-4 contacts), so failing one isn't treated as proof of
+  // anything. The sound is still placed on a side and reported as a
+  // candidate; the double tap (doubleTap.ts) decides whether a sure knock
+  // beside it vouches for it. Only one knock of a pair may be soft.
+  const softReason: ClassificationReason | null = !options.impact
+    ? null
+    : options.impact.contacts > (gates.maxContacts ?? DEFAULT_MAX_CONTACTS)
+      ? 'set-down'
+      : (gates.maxRiseMs !== undefined && options.impact.riseMs > gates.maxRiseMs) ||
+          (gates.minAttackBrightnessDb !== undefined && options.impact.attackBrightnessDb < gates.minAttackBrightnessDb)
+        ? 'soft-touch'
+        : null
 
   const ranked = profiles
     .map((profile) => ({
@@ -1322,7 +1327,8 @@ export function classifyZone(
   // sound whose features are wrong *together*, which is what matters.
   const singleFeatureOff = noveltyDistance === null && best.worst > gates.maxSingleFeatureZ
   if (!((noveltyDistance ?? best.distance) <= gates.maxDistance) || singleFeatureOff) {
-    return { zone: null, confidence: 0, reason: 'unrecognized' }
+    // A soft check that also failed names what the sound most likely was.
+    return { zone: null, confidence: 0, reason: softReason ?? 'unrecognized' }
   }
   // Checked after the zones, not before: a sound only has to survive this if
   // it was going to be accepted anyway, and the comparison is against the
@@ -1337,6 +1343,9 @@ export function classifyZone(
     }
   }
   const distance = noveltyDistance ?? best.distance
+  if (softReason) {
+    return { zone: null, confidence: posterior ?? 1, reason: softReason, distance, candidate: best.zone }
+  }
   if (!runnerUp) return { zone: best.zone, confidence: 1, reason: 'ok', distance }
   if (posterior !== null) {
     if (posterior < (gates.minPosterior ?? MIN_ZONE_POSTERIOR)) {

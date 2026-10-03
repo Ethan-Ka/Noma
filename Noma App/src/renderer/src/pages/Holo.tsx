@@ -9,9 +9,10 @@ import {
 import { useFlowStore } from '../stores/flowStore'
 import { HoloZoneTile } from '../components/HoloZoneTile'
 import { HoloDiagnosticCard } from '../components/HoloDiagnosticCard'
+import { HoloTrackpadPanel } from '../components/HoloTrackpadPanel'
 import { AppIcon } from '../components/AppIcon'
 import { getHoloZoneLabel } from '@shared/constants'
-import type { HoloInputGateStatus, HoloZone } from '@shared/types'
+import type { HoloInputGateStatus, HoloMethod, HoloZone } from '@shared/types'
 import type { HoloSensitivity } from '../lib/holo/classifier'
 
 /** Double taps per zone, i.e. 12 calibration taps: more is more accurate
@@ -33,7 +34,7 @@ type WizardState =
 
 const OUTCOME_MESSAGES: Record<TapOutcome, string> = {
   pressed: 'Double tap recognized. Control pressed.',
-  armed: 'Tap the same side again to fire (a relaxed knock-knock, under a second apart).',
+  armed: 'Heard one tap. Tap the same spot again right away to fire (a quick knock-knock).',
   'soft-touch': 'Ignored: that was a soft contact, like a finger or palm coming to rest, not a tap.',
   'no-control': 'Recognized, but this zone has no control assigned in the current app.',
   'ignored-input': 'Ignored: that sound came with a key press, mouse click or trackpad touch.',
@@ -53,6 +54,11 @@ const PACE_OPTIONS: Array<{ value: HoloPace; label: string }> = [
   { value: 'deliberate', label: 'Deliberate' }
 ]
 
+const METHOD_OPTIONS: Array<{ value: HoloMethod; label: string }> = [
+  { value: 'desk', label: 'Desk taps' },
+  { value: 'trackpad', label: 'Trackpad swipe-in (prototype)' }
+]
+
 const SENSITIVITY_OPTIONS: Array<{ value: HoloSensitivity; label: string }> = [
   { value: 'low', label: 'Firm taps' },
   { value: 'medium', label: 'Normal' },
@@ -62,6 +68,8 @@ const SENSITIVITY_OPTIONS: Array<{ value: HoloSensitivity; label: string }> = [
 export function Holo() {
   const {
     inputSource,
+    method,
+    setMethod,
     calibration,
     isListening,
     isCalibrating,
@@ -125,8 +133,12 @@ export function Holo() {
     [stopListening]
   )
 
+  // Only a completed double tap lights a tile. A single knock's side is a
+  // guess the pair can still overrule (about one knock in ten reads as the
+  // other side on a real laptop), and flashing it showed people the wrong
+  // side when the double tap itself came out right.
   useEffect(() => {
-    if (!lastTap?.zone) return
+    if (!lastTap?.zone || (lastTap.outcome !== 'pressed' && lastTap.outcome !== 'no-control')) return
     setFlashingZone(lastTap.zone)
     const timeout = window.setTimeout(() => setFlashingZone(null), FLASH_MS)
     return () => window.clearTimeout(timeout)
@@ -172,10 +184,39 @@ export function Holo() {
         </div>
       )}
 
+      <div className="mb-4 flex flex-wrap items-center gap-2 text-xs text-neutral-600">
+        <span className="mr-1">How you use Holo</span>
+        {METHOD_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            disabled={isCalibrating}
+            onClick={() => setMethod(option.value)}
+            className={`rounded-full border px-3 py-1 text-[11px] disabled:opacity-40 ${
+              method === option.value
+                ? 'border-accent/50 bg-accent/10 text-accent'
+                : 'border-base-700 hover:text-neutral-100'
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+
       {/* Holo's own self-contained dark surface — "a piece of Noma
           hardware translated into software," deliberately not the app's
           light canvas. Uses the dedicated `holo` color group, never
           `base`/`neutral`, so it stays dark regardless of the app theme. */}
+      {method === 'trackpad' ? (
+        <>
+          {micError && (
+            <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/[0.08] px-4 py-3 text-sm text-red-400">
+              {micError}
+            </div>
+          )}
+          <HoloTrackpadPanel controls={context.profile?.controls ?? []} />
+        </>
+      ) : (
       <div className="rounded-2xl bg-holo-bg p-6">
         <div className="mb-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -494,6 +535,7 @@ export function Holo() {
           where) so none of those are mistaken for taps: the mic is switched off entirely while you do, and back on a moment after you stop. See docs/privacy-and-legal.md.
         </p>
       </div>
+      )}
     </div>
   )
 }

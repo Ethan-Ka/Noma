@@ -71,8 +71,9 @@ const FINALIZE_DELAY_MS = 190
  *  `finalizeTap`), so they can't spoil each other's measurements.
  *
  *  Deliberately separate from the cooldown that follows a control actually
- *  firing (`beginCooldown`). Skipped entirely (along with that cooldown)
- *  while a calibration capture is pending. */
+ *  firing (`beginCooldown`), which is skipped while a calibration capture is
+ *  pending. This one isn't: without it a knock's own bounce (20-40 ms later)
+ *  could be recorded as the second tap of a calibration double tap. */
 const TAP_REFRACTORY_MS = 100
 /** A key/mouse/trackpad event within this long *before* or *after* an
  *  acoustic onset means the sound was the user's typing, clicking or
@@ -214,6 +215,9 @@ export class HoloCaptureEngine {
   /** How the most recent sound decayed. Read by the calibration wizard so the
    *  gates are derived from the user's own taps (see classifier.ts). */
   lastTapImpact: ImpactCheck | null = null
+  /** The most recent sound's dip (see HoloTapEvent.dipDb). Read by the
+   *  calibration wizard to fit how deep the user's double-tap gap is. */
+  lastTapDipDb = 0
   private lastStatusAt = 0
   private starting: Promise<void> | null = null
 
@@ -633,7 +637,7 @@ export class HoloCaptureEngine {
         this.envelopeTrough = Math.min(this.envelopeTrough, energy)
       }
       const gated =
-        this.pendingCapture === null && (now < this.cooldownUntil || now - this.lastOnsetAt < TAP_REFRACTORY_MS)
+        now - this.lastOnsetAt < TAP_REFRACTORY_MS || (this.pendingCapture === null && now < this.cooldownUntil)
       if (isOnset && !gated) {
         // This sound is the new reference for the next one's dip.
         this.envelopePeak = energy
@@ -710,6 +714,7 @@ export class HoloCaptureEngine {
   private decide(features: number[], peakDb: number, impact: ImpactCheck | null, onsetAt: number, dipDb: number): void {
     this.decidingOnsetAt = onsetAt
     this.decidingDipDb = dipDb
+    this.lastTapDipDb = dipDb
     this.lastTapPeakDb = peakDb
     this.lastTapImpact = impact
     this.lastTapOnsetAt = onsetAt

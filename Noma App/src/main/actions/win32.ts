@@ -140,6 +140,44 @@ export const HID_USAGE_DIGITIZER_TOUCH_SCREEN = 0x04
 export const HID_USAGE_DIGITIZER_TOUCH_PAD = 0x05
 
 /**
+ * Reading what a touchpad report says (Holo's trackpad corners, see
+ * holo/touchpadReports.ts). A second, buffer-based declaration of
+ * GetRawInputData for the whole RAWINPUT (header + HID reports), and
+ * hid.dll's report parser, driven by the device's own report descriptor
+ * (RIDI_PREPARSEDDATA) so no per-model byte offsets are needed.
+ */
+export const GetRawInputDataBuffer = declare(user32,
+  'uint32_t __stdcall GetRawInputData(intptr_t hRawInput, uint32_t uiCommand, void *pData, _Inout_ uint32_t *pcbSize, uint32_t cbSizeHeader)'
+)
+export const RID_INPUT = 0x10000003
+export const RIDI_PREPARSEDDATA = 0x20000005
+const hid = isWindows ? koffi.load('hid.dll') : null
+export const HidP_GetCaps = declare(hid, 'long __stdcall HidP_GetCaps(void *preparsedData, void *capabilities)')
+export const HidP_GetValueCaps = declare(hid,
+  'long __stdcall HidP_GetValueCaps(int reportType, void *valueCaps, _Inout_ uint16_t *valueCapsLength, void *preparsedData)'
+)
+export const HidP_GetUsageValue = declare(hid,
+  'long __stdcall HidP_GetUsageValue(int reportType, uint16_t usagePage, uint16_t linkCollection, uint16_t usage, _Out_ uint32_t *usageValue, void *preparsedData, void *report, uint32_t reportLength)'
+)
+export const HidP_GetUsages = declare(hid,
+  'long __stdcall HidP_GetUsages(int reportType, uint16_t usagePage, uint16_t linkCollection, void *usageList, _Inout_ uint32_t *usageLength, void *preparsedData, void *report, uint32_t reportLength)'
+)
+export const HIDP_INPUT = 0
+export const HIDP_STATUS_SUCCESS = 0x00110000
+/** sizeof(HIDP_CAPS) / sizeof(HIDP_VALUE_CAPS), same on 32 and 64 bit. */
+export const HIDP_CAPS_SIZE = 64
+export const HIDP_VALUE_CAPS_SIZE = 72
+export const HID_USAGE_PAGE_GENERIC = 0x01
+export const HID_USAGE_PAGE_BUTTON = 0x09
+export const HID_USAGE_GENERIC_X = 0x30
+export const HID_USAGE_GENERIC_Y = 0x31
+export const HID_USAGE_DIGITIZER_FINGER = 0x22
+export const HID_USAGE_DIGITIZER_TIP_SWITCH = 0x42
+export const HID_USAGE_DIGITIZER_CONFIDENCE = 0x47
+export const HID_USAGE_DIGITIZER_CONTACT_ID = 0x51
+export const HID_USAGE_DIGITIZER_CONTACT_COUNT = 0x54
+
+/**
  * Which process owns a window — used by replay to confirm the app a learned
  * step expects is really the one in front before it clicks (see
  * windowProcess.ts). PROCESS_QUERY_LIMITED_INFORMATION is the least access
@@ -163,6 +201,8 @@ export const PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
  *  (something else could be covering it). */
 koffi.struct('POINT', { x: 'long', y: 'long' }) // registered by name for the signature below
 export const WindowFromPoint = declare(user32, 'intptr_t __stdcall WindowFromPoint(POINT point)')
+/** Where the pointer is (Holo's swipe-in puts it back afterwards). */
+export const GetCursorPos = declare(user32, 'bool __stdcall GetCursorPos(_Out_ POINT *point)')
 export const GetAncestor = declare(user32, 'intptr_t __stdcall GetAncestor(intptr_t hwnd, uint32_t gaFlags)')
 export const GA_ROOT = 2
 

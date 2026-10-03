@@ -231,6 +231,38 @@ reasoning:
   convenience/ergonomics feature, not something to rely on as an access
   control. Don't market it as more precise or more secure than it is.
 
+## Holo — trackpad swipe-in (prototype, no microphone)
+
+A second way to use Holo, chosen on the Holo page ("How you use Holo"):
+slide a finger from the empty space beside the trackpad onto it
+(`main/holo/trackpadGesture.ts`). It uses no microphone at all.
+
+- **This mode does read finger positions,** unlike the desk-tap input gate
+  above. While it is on, `touchpadReports.ts` parses each precision-touchpad
+  report into contacts (position on the pad, touching or not, the pad's own
+  palm flag, contact ID) so the gesture can be recognised. They are used in
+  memory and dropped on the next report. Only "a swipe-in happened" (which
+  side, when) leaves the main process. Nothing is stored, logged or sent.
+- **It moves the pointer back.** A swipe-in moves the pointer like any
+  finger on the pad; Noma reads where the pointer was when the finger
+  arrived and puts it back once the swipe is recognised. It reads the
+  pointer position for nothing else.
+- **Key timestamps only.** It also hears *that* a key was pressed (never
+  which), via the same shared hook, so a thumb brushing the pad while
+  typing is ignored.
+- **Off until turned on.** The raw-input registration and the key hook exist
+  only between the Holo page's "Turn on" and turning it off (or switching
+  method), and are removed then. If it was on when Noma last closed and Holo
+  is the chosen Input Source, it comes back on at launch (unlike desk taps,
+  which open the microphone and so never start by themselves).
+- **The touch check is the one exception to "nothing is stored".** The
+  Holo page's touch check, which the user starts, records under a minute of
+  finger positions and key-press times (never which key) while they swipe
+  and use the trackpad as instructed, and saves them as a JSON file in
+  %APPDATA%/noma/holo-recordings so the swipe-in rules can be tuned on
+  their trackpad. Nothing fires while it runs. Only saved on this computer;
+  nothing uploads it; the user can delete it from that folder any time.
+
 ## On-screen button clicks (opt-in, off by default)
 
 Added 2026-09-19 so Flow can recognize workflows *inside* an app ("Cut, then

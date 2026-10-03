@@ -69,6 +69,10 @@ export const IPC_CHANNELS = {
   HOLO_OPEN_RECORDINGS: 'flow:holo-open-recordings',
   HOLO_SET_INPUT_GATE: 'flow:holo-set-input-gate',
   HOLO_INPUT_ACTIVITY: 'flow:holo-input-activity',
+  HOLO_SET_TRACKPAD: 'flow:holo-set-trackpad',
+  HOLO_TRACKPAD_EVENT: 'flow:holo-trackpad-event',
+  HOLO_TOUCH_CHECK_START: 'flow:holo-touch-check-start',
+  HOLO_TOUCH_CHECK_STOP: 'flow:holo-touch-check-stop',
 
   /**
    * Noma Notice — the small glass surface that appears bottom-centre of the

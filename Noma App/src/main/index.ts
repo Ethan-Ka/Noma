@@ -31,6 +31,7 @@ if (TEST_USER_DATA_DIR) {
 import icon from '../../resources/icon.png?asset'
 import iconIco from '../../resources/icon.ico?asset'
 import { IPC_CHANNELS } from '@shared/constants'
+import type { HoloTrackpadZoneCount } from '@shared/types'
 import { initDatabase } from './database/db'
 import { registerIpcHandlers } from './ipc/handlers'
 import { createOSAdapter } from './os/createOSAdapter'
@@ -43,6 +44,7 @@ import { CaptureService } from './workflow/captureService'
 import { ClickCaptureService } from './workflow/clickCaptureService'
 import { createClickInspector } from './workflow/uiaInspector'
 import { InputActivityService } from './holo/inputActivityService'
+import { TrackpadGestureService } from './holo/trackpadGestureService'
 import { openRecordingsFolder, saveHoloRecording } from './holo/recordingStore'
 import { getLaptopInfo } from './holo/laptopInfo'
 import { insertWorkflowEvent } from './database/repositories/workflowEventsRepository'
@@ -81,6 +83,15 @@ let lastRecordedApplicationId: string | null = null
 const inputActivityService = new InputActivityService(
   (timestamp) => {
     mainWindow?.webContents.send(IPC_CHANNELS.HOLO_INPUT_ACTIVITY, timestamp)
+  },
+  () => mainWindow
+)
+
+/** Holo's trackpad corners (see holo/trackpadGesture.ts). Engaged only
+ *  while the renderer turns them on. */
+const trackpadGestureService = new TrackpadGestureService(
+  (event) => {
+    mainWindow?.webContents.send(IPC_CHANNELS.HOLO_TRACKPAD_EVENT, event)
   },
   () => mainWindow
 )
@@ -376,6 +387,17 @@ app.whenReady().then(() => {
     inputActivityService.stop()
     return null
   })
+  ipcMain.handle(IPC_CHANNELS.HOLO_SET_TRACKPAD, (_event, enabled: boolean, zones?: HoloTrackpadZoneCount) => {
+    if (enabled) return trackpadGestureService.start(zones === 2 ? 2 : 4)
+    trackpadGestureService.stop()
+    return null
+  })
+  ipcMain.handle(IPC_CHANNELS.HOLO_TOUCH_CHECK_START, () => trackpadGestureService.startTrace())
+  ipcMain.handle(
+    IPC_CHANNELS.HOLO_TOUCH_CHECK_STOP,
+    (_event, phases: Array<{ kind: 'left' | 'right' | 'normal'; startAt: number; endAt: number }>) =>
+      trackpadGestureService.stopTrace(phases)
+  )
 
   // Noma Notice. Registered here rather than in registerIpcHandlers because,
   // like the two above, these belong to a window this file owns.

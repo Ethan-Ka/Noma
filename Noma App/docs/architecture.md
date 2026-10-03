@@ -424,6 +424,28 @@ soft tap. Two defences, measured on the simulated palm rest
   its best match (`ClassificationResult.candidate` on an `ambiguous`
   result), not be confident on its own. Accidental fires in a stream of
   3,200 everyday sounds: 56 with single taps, 2 with double taps.
+  (Superseded in part, see below: the window is now 120–500 ms.)
+- **The pair is one piece of evidence (2026-10-03, from the first real
+  recording).** On the user's real laptop the soft checks (attack, contact
+  count) reject about one real knock in five, and needing both knocks to
+  pass squared that into a miss on every other double tap. Now
+  `classifyZone` still places a soft-rejected sound on a side
+  (`candidate`), `doubleTapKnock` turns any result into a sure or unsure
+  knock, and a pair fires with one unsure knock if the other is sure and
+  both name the same side. Two unsure knocks never fire. Paid back at pair
+  level: the two knocks' mean distance must stay under `pairDistanceBound`
+  (calibration double taps, held-out distances, p90 × 1.2), and the dip
+  between them must be as deep as the user's own (`fitDoubleTapDip`,
+  measured during calibration, stored as `doubleTapWindow.maxDipDb`). On
+  the real recording against a later calibration: left 5 → 9 of 12
+  attempts, right 9 → 10, everyday fires 1 → 0, wrong side 0. Simulator:
+  86% → 91% first-try, 0 accidental fires in 1,600 sounds. Calibration now
+  also skips a knock's bounce standing in for the second half (the
+  refractory used to be off during calibration), spillover right after a
+  double tap, and sounds 18 dB quieter than the zone's taps so far. The
+  Holo page only lights a tile for a completed double tap: a single knock's
+  side is wrong about one time in ten, and flashing it looked like a
+  side-detection bug even when the pair came out right.
 
 **2-zone layout is trackpad-relative, not mic-relative (changed later).**
 `getHoloZones`/`getHoloZoneLabel` (shared/constants) originally put both

@@ -5,23 +5,16 @@ import {
   GetRawInputData,
   GetRawInputDeviceInfoW,
   GetRawInputDeviceList,
-  HID_USAGE_DIGITIZER_PEN,
-  HID_USAGE_DIGITIZER_TOUCH_PAD,
-  HID_USAGE_DIGITIZER_TOUCH_SCREEN,
   HID_USAGE_PAGE_DIGITIZER,
-  RAWINPUTDEVICE_SIZE,
   RAWINPUTDEVICELIST_SIZE,
   RAWINPUTHEADER_SIZE,
-  RegisterRawInputDevices,
   RID_DEVICE_INFO_SIZE,
   RID_HEADER,
-  RIDEV_INPUTSINK,
-  RIDEV_REMOVE,
   RIDI_DEVICEINFO,
   RIDI_DEVICENAME,
-  RIM_TYPEHID,
-  WM_INPUT
+  RIM_TYPEHID
 } from '../actions/win32'
+import { subscribeDigitizerInput } from './rawDigitizerInput'
 
 /**
  * Tells Holo when a finger is on the trackpad, touchscreen or pen surface.
@@ -37,11 +30,11 @@ import {
  * Windows precision touchpads and touchscreens report every contact as a
  * raw HID digitizer report, from the moment a finger lands until it lifts.
  * This works the same on any laptop and needs no per-model code. The
- * watcher registers for those reports (RIDEV_INPUTSINK, so they arrive
+ * watcher subscribes to those reports (rawDigitizerInput.ts; they arrive
  * while other apps are focused too) and forwards "something is touching",
- * nothing else. Report bodies are never read. Contact positions and finger
- * counts aren't parsed or kept; only the header is checked, to confirm the
- * report came from a digitizer.
+ * nothing else. This watcher reads only the header, to confirm the report
+ * came from a digitizer. (Holo's trackpad corners, a separate opt-in mode,
+ * do read finger positions — see trackpadGestureService.ts.)
  *
  * Older trackpad drivers (pre-precision Synaptics/ELAN/Alps) don't produce
  * digitizer reports at all. They behave as a mouse, so only their movement
@@ -49,38 +42,25 @@ import {
  * and the Holo page says so rather than promising full protection everywhere.
  */
 
-const DIGITIZER_USAGES = [HID_USAGE_DIGITIZER_TOUCH_PAD, HID_USAGE_DIGITIZER_TOUCH_SCREEN, HID_USAGE_DIGITIZER_PEN]
-
 export class TouchActivityWatcher {
-  private window: BrowserWindow | null = null
+  private unsubscribe: (() => void) | null = null
   /** hDevice -> whether it is a digitizer, filled in lazily per report. */
   private readonly digitizers = new Map<number, boolean>()
 
   constructor(private readonly onActivity: () => void) {}
 
-  /** Registers for touch reports on `window`. Returns what this machine's
-   *  hardware allows, or null when raw input isn't available at all. */
+  /** Starts watching touch reports (delivered to `window`). Returns what
+   *  this machine's hardware allows, or null when raw input isn't available
+   *  at all. */
   start(window: BrowserWindow): HoloInputGateStatus | null {
     if (process.platform !== 'win32') return null
     this.stop()
     try {
       const status = describeCoverage(listRawDevices())
-      const hwnd = readHandle(window.getNativeWindowHandle())
-      const ok = RegisterRawInputDevices(
-        DIGITIZER_USAGES.map((usage) => ({
-          usUsagePage: HID_USAGE_PAGE_DIGITIZER,
-          usUsage: usage,
-          dwFlags: RIDEV_INPUTSINK,
-          hwndTarget: hwnd
-        })),
-        DIGITIZER_USAGES.length,
-        RAWINPUTDEVICE_SIZE
-      )
-      if (!ok) return { ...status, trackpad: status.trackpad === 'direct' ? 'movement-only' : status.trackpad }
-      window.hookWindowMessage(WM_INPUT, (_wParam, lParam) => {
-        if (this.isDigitizerReport(readHandle(lParam))) this.onActivity()
+      this.unsubscribe = subscribeDigitizerInput(window, (hRawInput) => {
+        if (this.isDigitizerReport(hRawInput)) this.onActivity()
       })
-      this.window = window
+      if (!this.unsubscribe) return { ...status, trackpad: status.trackpad === 'direct' ? 'movement-only' : status.trackpad }
       return status
     } catch (error) {
       console.warn('[holo] touch gate unavailable:', error)
@@ -89,25 +69,9 @@ export class TouchActivityWatcher {
   }
 
   stop(): void {
-    const window = this.window
-    if (!window) return
-    this.window = null
+    this.unsubscribe?.()
+    this.unsubscribe = null
     this.digitizers.clear()
-    try {
-      if (!window.isDestroyed()) window.unhookWindowMessage(WM_INPUT)
-      RegisterRawInputDevices(
-        DIGITIZER_USAGES.map((usage) => ({
-          usUsagePage: HID_USAGE_PAGE_DIGITIZER,
-          usUsage: usage,
-          dwFlags: RIDEV_REMOVE,
-          hwndTarget: 0
-        })),
-        DIGITIZER_USAGES.length,
-        RAWINPUTDEVICE_SIZE
-      )
-    } catch (error) {
-      console.warn('[holo] failed to release touch gate:', error)
-    }
   }
 
   /** Header-only check. Chromium can register raw input of its own (pointer
@@ -147,7 +111,7 @@ export function listRawDevices(): RawDevice[] {
 
 /** RID_DEVICE_INFO: cbSize, dwType, then a union whose HID member has
  *  usUsagePage/usUsage at offsets 20/22. */
-function readDeviceInfo(handle: number): { type: number; usagePage: number; usage: number } | null {
+export function readDeviceInfo(handle: number): { type: number; usagePage: number; usage: number } | null {
   const info = Buffer.alloc(RID_DEVICE_INFO_SIZE)
   info.writeUInt32LE(RID_DEVICE_INFO_SIZE, 0)
   const read = GetRawInputDeviceInfoW(handle, RIDI_DEVICEINFO, info, [RID_DEVICE_INFO_SIZE])
@@ -165,9 +129,4 @@ function readDeviceName(handle: number): string {
   const name = Buffer.alloc(chars[0] * 2)
   if (GetRawInputDeviceInfoW(handle, RIDI_DEVICENAME, name, chars) === 0xffffffff) return ''
   return name.toString('utf16le').replace(/\0.*$/s, '')
-}
-
-/** An HWND / HRAWINPUT handed over by Electron as a pointer-sized buffer. */
-function readHandle(buffer: Buffer): number {
-  return Number(buffer.length >= 8 ? buffer.readBigUInt64LE(0) : buffer.readUInt32LE(0))
 }

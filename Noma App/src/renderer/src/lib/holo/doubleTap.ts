@@ -1,5 +1,5 @@
 import type { HoloCalibration, HoloZone } from '@shared/types'
-import { scaledDistance } from './classifier'
+import { evaluateDiscriminant, scaledDistance, type ClassificationResult } from './classifier'
 
 /**
  * Holo fires a zone only on a double tap: two deliberate taps on the same
@@ -38,6 +38,18 @@ import { scaledDistance } from './classifier'
  *   - the two must sound alike (`pairMatches`): two knocks of one finger on
  *     one spot are close in every feature, while a ringing tail or a lift-off
  *     sounds nothing like the knock that caused it.
+ * - The pair is judged as one piece of evidence, not two separate verdicts.
+ *   On a real laptop's mic about one knock in five fails a "soft" check
+ *   (slow rise, several contacts) or isn't sure of its side, and needing
+ *   BOTH knocks to pass everything squared that into a miss on almost every
+ *   other double tap. So one knock of the pair may be unsure (`sure: false`,
+ *   see `doubleTapKnock`) as long as the other is sure and both point at the
+ *   same zone. Two unsure knocks never fire.
+ * - What that costs is made back on the pair as a whole: on average the two
+ *   knocks must sit as close to the user's calibration taps as calibration
+ *   double taps did (`pairDistanceBound`), and the quiet moment between them
+ *   must be as deep as the user's own (`fitDoubleTapDip`). In the first real
+ *   recording, everyday handling that paired up failed both.
  */
 export const DOUBLE_TAP_MIN_GAP_MS = 120
 export const DOUBLE_TAP_MAX_GAP_MS = 500
@@ -46,6 +58,24 @@ export const DOUBLE_TAP_MAX_LEVEL_DIFF_DB = 15
 export const DOUBLE_TAP_MIN_DIP_DB = -15
 
 export type DoubleTapVerdict = 'fire' | 'armed'
+
+/**
+ * Which zone a classified sound counts towards as half of a double tap, and
+ * whether it's sure. A recognized tap is sure. A sound that passed every hard
+ * "is this a tap" check but was unsure of its side, or failed only a soft
+ * check (see classifyZone), counts for its best-matching zone but unsure.
+ * Anything else can't be half of a double tap.
+ */
+export function doubleTapKnock(result: ClassificationResult): { zone: HoloZone; sure: boolean } | null {
+  if (result.zone) return { zone: result.zone, sure: true }
+  if (
+    result.candidate &&
+    (result.reason === 'ambiguous' || result.reason === 'soft-touch' || result.reason === 'set-down')
+  ) {
+    return { zone: result.candidate, sure: false }
+  }
+  return null
+}
 
 export interface DoubleTapWindow {
   minGapMs: number
@@ -72,11 +102,67 @@ export function fitDoubleTapWindow(gapsMs: number[]): DoubleTapWindow | null {
   return { minGapMs, maxGapMs }
 }
 
+/** Margin (dB) over the shallowest typical dip the user showed. */
+const DIP_MARGIN_DB = 8
+
+/**
+ * How deep the quiet moment between two knocks must be, fitted to the dips
+ * measured before the second tap of each calibration double tap: the
+ * shallowest typical one (90th percentile) plus a margin, and never looser
+ * than DOUBLE_TAP_MIN_DIP_DB. How deep a dip can get depends on the room's
+ * noise and the laptop's mic, which is why this is measured rather than
+ * fixed. Null with too few dips to say.
+ */
+export function fitDoubleTapDip(dipsDb: number[]): number | null {
+  const usable = dipsDb.filter((dip) => Number.isFinite(dip) && dip < 0)
+  if (usable.length < 3) return null
+  const sorted = [...usable].sort((a, b) => a - b)
+  const shallow = sorted[Math.ceil(0.9 * (sorted.length - 1))]
+  return Math.min(DOUBLE_TAP_MIN_DIP_DB, Math.round(shallow + DIP_MARGIN_DB))
+}
+
+/** Headroom over the calibration pairs' spread, and the floor under it. */
+const PAIR_DISTANCE_HEADROOM = 1.2
+const MIN_PAIR_DISTANCE = 1.3
+
+/**
+ * Furthest the two knocks of a double tap may sit, on average, from the
+ * zone they're on (in classifyZone's distance units). Taken from the
+ * calibration double taps: each tap's distance with itself held out (what a
+ * fresh tap scores), averaged per double tap, 90th percentile, with
+ * headroom. Two genuine knocks rarely both land at the edge of what was
+ * calibrated, while something that only roughly resembles a tap tends to sit
+ * far out twice. Never above the single-knock bound, which still applies to
+ * each knock. Null when the calibration doesn't have the taps to say.
+ */
+export function pairDistanceBound(calibration: HoloCalibration): number | null {
+  const tapsByZone = calibration.zones.map((zone) => ({ zone: zone.zone, taps: zone.taps ?? [] }))
+  if (tapsByZone.length < 2 || tapsByZone.some((entry) => entry.taps.length < 4 || entry.taps.length % 2 !== 0)) {
+    return null
+  }
+  const { distances } = evaluateDiscriminant(tapsByZone, calibration.scale)
+  // Calibration records both halves of each double tap in order, so taps
+  // 0+1, 2+3, ... of every zone are one double tap.
+  const pairs: number[] = []
+  let offset = 0
+  for (const { taps } of tapsByZone) {
+    for (let i = 0; i + 1 < taps.length; i += 2) pairs.push((distances[offset + i] + distances[offset + i + 1]) / 2)
+    offset += taps.length
+  }
+  if (distances.length !== offset || pairs.length < 4) return null
+  pairs.sort((a, b) => a - b)
+  const bound = Math.max(MIN_PAIR_DISTANCE, pairs[Math.ceil(0.9 * (pairs.length - 1))] * PAIR_DISTANCE_HEADROOM)
+  const single = calibration.gates?.maxDistance
+  return single !== undefined ? Math.min(bound, single) : bound
+}
+
 interface FirstTap {
   zone: HoloZone
   at: number
   peakDb: number
   features?: number[]
+  sure: boolean
+  distance?: number
 }
 
 /** What the detector knows about a tap beyond where and when. */
@@ -84,6 +170,20 @@ export interface TapDetail {
   features?: number[]
   /** See HoloTapEvent.dipDb (holoCapture.ts). */
   dipDb?: number
+  /** False for a knock that's only a candidate (see `doubleTapKnock`).
+   *  Defaults to true. */
+  sure?: boolean
+  /** classifyZone's distance to the zone, for the pair bound. */
+  distance?: number
+}
+
+/** Pair-level bounds fitted to the user's calibration. Missing ones fall
+ *  back to the fixed defaults. */
+export interface PairGates {
+  /** See `fitDoubleTapDip`. */
+  maxDipDb?: number | null
+  /** See `pairDistanceBound`. */
+  maxMeanDistance?: number | null
 }
 
 /**
@@ -117,6 +217,12 @@ export class DoubleTapDetector {
   private first: FirstTap | null = null
   private window: DoubleTapWindow = { minGapMs: DOUBLE_TAP_MIN_GAP_MS, maxGapMs: DOUBLE_TAP_MAX_GAP_MS }
   private pairMatches: ((a: number[], b: number[]) => boolean) | null = null
+  private pairGates: PairGates = {}
+
+  /** See `PairGates`. */
+  setPairGates(gates: PairGates): void {
+    this.pairGates = gates
+  }
 
   /** See `pairMatcher`. Null skips the sound-alike check. */
   setPairMatcher(matches: ((a: number[], b: number[]) => boolean) | null): void {
@@ -137,22 +243,31 @@ export class DoubleTapDetector {
    *  tap, else 'armed' (it's now the first half of one). */
   tap(zone: HoloZone, at: number, peakDb: number, detail: TapDetail = {}): DoubleTapVerdict {
     const first = this.first
-    if (first && first.zone === zone) {
+    const sure = detail.sure ?? true
+    if (first && first.zone === zone && (first.sure || sure)) {
       const gap = at - first.at
       const alike =
         !this.pairMatches || !first.features || !detail.features || this.pairMatches(first.features, detail.features)
+      const maxDip = Math.min(DOUBLE_TAP_MIN_DIP_DB, this.pairGates.maxDipDb ?? DOUBLE_TAP_MIN_DIP_DB)
+      const maxMean = this.pairGates.maxMeanDistance
+      const close =
+        maxMean == null ||
+        first.distance === undefined ||
+        detail.distance === undefined ||
+        (first.distance + detail.distance) / 2 <= maxMean
       if (
         gap >= this.window.minGapMs &&
         gap <= this.window.maxGapMs &&
         Math.abs(peakDb - first.peakDb) <= DOUBLE_TAP_MAX_LEVEL_DIFF_DB &&
-        (detail.dipDb === undefined || detail.dipDb <= DOUBLE_TAP_MIN_DIP_DB) &&
-        alike
+        (detail.dipDb === undefined || detail.dipDb <= maxDip) &&
+        alike &&
+        close
       ) {
         this.first = null
         return 'fire'
       }
     }
-    this.first = { zone, at, peakDb, features: detail.features }
+    this.first = { zone, at, peakDb, features: detail.features, sure, distance: detail.distance }
     return 'armed'
   }
 

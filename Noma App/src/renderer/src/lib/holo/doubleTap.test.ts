@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { DOUBLE_TAP_MAX_GAP_MS, DOUBLE_TAP_MIN_GAP_MS, DoubleTapDetector, fitDoubleTapWindow } from './doubleTap'
+import {
+  DOUBLE_TAP_MAX_GAP_MS,
+  DOUBLE_TAP_MIN_DIP_DB,
+  DOUBLE_TAP_MIN_GAP_MS,
+  DoubleTapDetector,
+  doubleTapKnock,
+  fitDoubleTapDip,
+  fitDoubleTapWindow
+} from './doubleTap'
 
 describe('DoubleTapDetector', () => {
   it('fires on two taps on the same zone a relaxed beat apart', () => {
@@ -119,5 +127,78 @@ describe('one tap arriving twice is not a double tap', () => {
     detector.tap('frontLeft', 1000, -20, { features: [0] })
     expect(detector.tap('frontLeft', 1400, -20, { features: [5], dipDb: -30 })).toBe('armed')
     expect(detector.tap('frontLeft', 1800, -20, { features: [5.2], dipDb: -30 })).toBe('fire')
+  })
+})
+
+describe('the pair is judged as one piece of evidence', () => {
+  it('fires when one knock is sure and the other is an unsure match for the same side', () => {
+    const detector = new DoubleTapDetector()
+    detector.tap('frontLeft', 1000, -20, { sure: false })
+    expect(detector.tap('frontLeft', 1200, -20, { sure: true })).toBe('fire')
+    detector.tap('frontRight', 3000, -20, { sure: true })
+    expect(detector.tap('frontRight', 3200, -20, { sure: false })).toBe('fire')
+  })
+
+  it('never fires on two unsure knocks', () => {
+    const detector = new DoubleTapDetector()
+    detector.tap('frontLeft', 1000, -20, { sure: false })
+    expect(detector.tap('frontLeft', 1200, -20, { sure: false })).toBe('armed')
+  })
+
+  it('refuses a pair that sits too far from the calibration taps on average', () => {
+    const detector = new DoubleTapDetector()
+    detector.setPairGates({ maxMeanDistance: 1.5 })
+    detector.tap('frontLeft', 1000, -20, { distance: 1.8 })
+    // 1.8 and 1.55 (each fine on its own, as in a real recording's everyday handling).
+    expect(detector.tap('frontLeft', 1400, -20, { distance: 1.55 })).toBe('armed')
+    detector.reset()
+    detector.tap('frontLeft', 3000, -20, { distance: 1.3 })
+    expect(detector.tap('frontLeft', 3200, -20, { distance: 1.1 })).toBe('fire')
+  })
+
+  it("uses the user's own dip depth, never looser than the default", () => {
+    const detector = new DoubleTapDetector()
+    detector.setPairGates({ maxDipDb: -26 })
+    detector.tap('frontLeft', 1000, -20)
+    expect(detector.tap('frontLeft', 1400, -20, { dipDb: -23 })).toBe('armed')
+    expect(detector.tap('frontLeft', 1600, -20, { dipDb: -34 })).toBe('fire')
+    detector.setPairGates({ maxDipDb: -5 })
+    detector.tap('frontLeft', 3000, -20)
+    expect(detector.tap('frontLeft', 3200, -20, { dipDb: -10 })).toBe('armed')
+  })
+})
+
+describe('doubleTapKnock', () => {
+  it('counts a recognized tap as sure', () => {
+    expect(doubleTapKnock({ zone: 'frontLeft', confidence: 1, reason: 'ok' })).toEqual({ zone: 'frontLeft', sure: true })
+  })
+
+  it('counts an unsure side or a soft check as an unsure knock for its best zone', () => {
+    for (const reason of ['ambiguous', 'soft-touch', 'set-down'] as const) {
+      expect(doubleTapKnock({ zone: null, confidence: 0.8, reason, candidate: 'frontRight' })).toEqual({
+        zone: 'frontRight',
+        sure: false
+      })
+    }
+  })
+
+  it('never counts a sound that failed a hard check', () => {
+    for (const reason of ['unrecognized', 'not-a-tap', 'voice', 'wrong-level', 'learned-ignore'] as const) {
+      expect(doubleTapKnock({ zone: null, confidence: 0, reason, candidate: 'frontLeft' })).toBeNull()
+    }
+    expect(doubleTapKnock({ zone: null, confidence: 0, reason: 'set-down' })).toBeNull()
+  })
+})
+
+describe('fitDoubleTapDip', () => {
+  it("fits the user's own quiet moment with a margin (the real recording: -29 to -41 dB)", () => {
+    const fitted = fitDoubleTapDip([-41, -40, -40, -39, -39, -38, -36, -34, -34, -29])!
+    expect(fitted).toBeLessThan(DOUBLE_TAP_MIN_DIP_DB)
+    expect(fitted).toBeGreaterThan(-29)
+  })
+
+  it('never loosens past the default and needs a few dips', () => {
+    expect(fitDoubleTapDip([-12, -14, -16, -10])).toBe(DOUBLE_TAP_MIN_DIP_DB)
+    expect(fitDoubleTapDip([-30, -31])).toBeNull()
   })
 })

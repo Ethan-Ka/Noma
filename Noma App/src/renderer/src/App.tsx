@@ -16,6 +16,7 @@ import { Developer } from './pages/Developer'
 import { Onboarding } from './pages/Onboarding'
 import { useUiStore } from './stores/uiStore'
 import { useOnboardingStore } from './stores/onboardingStore'
+import { useHoloStore } from './stores/holoStore'
 
 function App() {
   const activePage = useUiStore((state) => state.activePage)
@@ -36,6 +37,13 @@ function App() {
   // disappear. Workflows' "Noma noticed" section lists every pending
   // suggestion, so the reviewed one is guaranteed to actually be there.
   useEffect(() => window.flow.onOpenSuggestionInApp(() => setActivePage('workflows')), [setActivePage])
+
+  // Holo's trackpad corners carry on from the last run, without the Holo
+  // page having to be opened first. Desk taps never auto-start: they open
+  // the microphone, which only ever happens on an explicit click.
+  useEffect(() => {
+    void useHoloStore.getState().resumeTrackpad()
+  }, [])
 
   // Blank instead of a spinner while the very first IPC round-trip is in
   // flight — same background as every other state below, so there's no

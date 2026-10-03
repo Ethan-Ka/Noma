@@ -4,7 +4,7 @@ import type { InputSource } from '@shared/types'
 
 const SOURCE_OPTIONS: Array<{ value: InputSource; label: string; description: string }> = [
   { value: 'keyboard', label: 'Keyboard', description: 'The physical module, or the Virtual Keyboard page.' },
-  { value: 'holo', label: 'Holo (double-tap to trigger)', description: 'No hardware. Double-tap beside your trackpad, or the desk around your laptop.' }
+  { value: 'holo', label: 'Holo (no hardware)', description: 'Swipe a finger onto the trackpad from beside it, or double-tap beside your trackpad. Choose which on the Holo page.' }
 ]
 
 function OptionButton<T extends string>({
