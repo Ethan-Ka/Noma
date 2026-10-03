@@ -60,7 +60,10 @@ export default function Context() {
         </p>
       </Reveal>
 
-      <div className="mt-14 grid gap-8 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-12">
+      {/* grid-cols-1 is minmax(0,1fr): without it the implicit mobile column
+          sizes to the scrolling app rail's full width and pushes the surface
+          off-screen. */}
+      <div className="mt-14 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-12">
         <Reveal>
           {/* A real list on desktop, a scrollable rail on phones — not the
               desktop list squeezed, which would put six tap targets under the
