@@ -1,7 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification, systemPreferences } from 'electron'
 import { join } from 'path'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { optimizer, is } from '@electron-toolkit/utils'
 
 /**
  * Isolated test profile — set NOMA_TEST_USER_DATA_DIR to point Electron's
@@ -219,15 +219,13 @@ function createMainWindow(): void {
     }
   })
 
-  // The taskbar groups windows by app ID, and can show the icon of the
-  // program behind that ID instead of the window's own. In development the
-  // app ID is electron.exe's path (electron-toolkit's setAppUserModelId), so
-  // the button showed Electron's icon. Naming the icon for this window's app
-  // ID explicitly makes the taskbar use Noma's. Same app ID as the process,
-  // so grouping and notifications are unchanged.
+  // The taskbar groups windows by app ID and can show the icon registered
+  // for that ID instead of the window's own; naming the icon here as well
+  // keeps the button on Noma's even before Windows has read the shortcut
+  // (see registerAppIdentity).
   if (process.platform === 'win32') {
     mainWindow.setAppDetails({
-      appId: is.dev ? process.execPath : 'com.noma.app',
+      appId: APP_USER_MODEL_ID,
       appIconPath: iconIco,
       appIconIndex: 0,
       relaunchDisplayName: 'Noma'
@@ -351,8 +349,46 @@ function requestMacAccessibility(): void {
   }
 }
 
+/**
+ * The ID Windows knows this app by: what its taskbar button groups under,
+ * and whose name and icon its notifications carry. The installed build gets
+ * `com.noma.app` from its installer's Start Menu shortcut. Development runs
+ * electron.exe, and electron-toolkit's default there (the exe's own path)
+ * made Windows show "Electron" and Electron's icon on the taskbar and on
+ * every notification. A separate ID keeps a dev copy from ever being
+ * mistaken for an installed one.
+ */
+const APP_USER_MODEL_ID = is.dev ? 'com.noma.app.dev' : 'com.noma.app'
+
+/**
+ * Windows takes an app's name and icon from the Start Menu shortcut that
+ * carries its ID. The installer creates that shortcut for a real install; in
+ * development nothing does, so this keeps one up to date ("Noma (dev)", the
+ * Noma icon, pointing at this checkout). Rewritten on every dev launch so it
+ * follows the checkout if it moves. Never touches anything else.
+ */
+function registerAppIdentity(): void {
+  if (process.platform === 'win32' && is.dev) {
+    const shortcut = join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Noma (dev).lnk')
+    try {
+      shell.writeShortcutLink(shortcut, existsSync(shortcut) ? 'replace' : 'create', {
+        target: process.execPath,
+        args: `"${app.getAppPath()}"`,
+        cwd: app.getAppPath(),
+        description: 'Noma (development build)',
+        icon: iconIco,
+        iconIndex: 0,
+        appUserModelId: APP_USER_MODEL_ID
+      })
+    } catch (error) {
+      console.warn('[app] could not write the dev Start Menu shortcut:', error)
+    }
+  }
+  app.setAppUserModelId(APP_USER_MODEL_ID)
+}
+
 app.whenReady().then(() => {
-  electronApp.setAppUserModelId('com.noma.app')
+  registerAppIdentity()
   // In development the Dock shows Electron's icon; a packaged build uses the
   // bundle's own.
   if (isMac && is.dev) app.dock?.setIcon(icon)

@@ -3,6 +3,8 @@ import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { IPC_CHANNELS } from '@shared/constants'
 import type { WorkflowNotice } from '@shared/types'
+import icon from '../../../resources/icon.png?asset'
+import iconIco from '../../../resources/icon.ico?asset'
 
 /**
  * Noma Notice's own window: a small, frameless, transparent surface that
@@ -93,6 +95,9 @@ function createNoticeWindow(): BrowserWindow {
     skipTaskbar: true,
     alwaysOnTop: true,
     focusable: false,
+    // Its own icon, so nothing that lists windows (Alt+Tab, Task View) falls
+    // back to Electron's.
+    icon: process.platform === 'win32' ? iconIco : icon,
     // The card draws its own shadow in CSS; an OS shadow would frame the
     // transparent window rectangle, not the card inside it.
     hasShadow: false,
