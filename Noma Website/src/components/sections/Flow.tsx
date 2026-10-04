@@ -55,7 +55,7 @@ export default function Flow() {
         <Reveal delay={0.08}>
           <p className="mt-6 text-base leading-relaxed text-base-300">
             Flow watches which shortcut you press, in which application, in what order. Never what you type.
-            That is the entire record — and it turns out to be enough to recognise how you work.
+            That is the entire record, and it turns out to be enough to recognise how you work.
           </p>
         </Reveal>
       </div>
@@ -102,7 +102,7 @@ export default function Flow() {
             <div className="border-t border-base-800 px-5 py-4">
               <p className="text-xs leading-relaxed text-base-400">
                 <span className="text-accent">Two runs marked.</span> The same four steps, twice, forty minutes
-                apart — with unrelated work in between, which is what makes it a habit rather than a burst.
+                apart, with unrelated work in between. That gap is what makes it a habit rather than a burst.
                 Two more and Noma will say something.
               </p>
             </div>

@@ -50,7 +50,7 @@ export default function NotStatic() {
         </Reveal>
         <Reveal delay={0.08}>
           <p className="mt-6 text-base leading-relaxed text-base-300">
-            You can already add more buttons to a desk. You then have to decide what every one of them does —
+            You can already add more buttons to a desk. You then have to decide what every one of them does,
             and decide again every time you move between writing code, cutting video, drawing, reading. Noma’s
             answer is that the computer already knows which of those you are doing, so it should be the one
             deciding.

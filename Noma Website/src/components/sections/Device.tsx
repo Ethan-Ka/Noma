@@ -84,7 +84,7 @@ export default function Device() {
           <Reveal delay={0.08}>
             <p className="mt-6 max-w-md text-base leading-relaxed text-base-300">
               The adaptive interface works on the screen today. It is better as a physical thing you can
-              reach for without looking — a surface whose keys are already the right ones, because the
+              reach for without looking: a surface whose keys are already the right ones, because the
               software told it what they are.
             </p>
           </Reveal>

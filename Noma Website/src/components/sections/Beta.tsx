@@ -26,7 +26,7 @@ export default function Beta() {
         </Reveal>
         <Reveal delay={0.08}>
           <p className="mx-auto mt-6 max-w-lg text-balance text-base leading-relaxed text-base-300">
-            The adaptive interface runs on the computer you already own. Try it there first — the device can
+            The adaptive interface runs on the computer you already own. Try it there first. The device can
             come later, once the thing driving it is worth putting on a desk.
           </p>
         </Reveal>

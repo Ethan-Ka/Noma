@@ -23,10 +23,11 @@ export default function Holo() {
           </Reveal>
           <Reveal delay={0.08}>
             <p className="mt-6 max-w-md text-base leading-relaxed text-base-300">
-              Holo turns the empty space either side of your trackpad into controls. Start a finger beside the
-              trackpad and flick it on, and the control for that side runs. Nothing clicks, and your pointer goes
-              back to where it was. Ordinary trackpad use rarely starts at the very edge and flicks inward, so
-              moving the pointer, scrolling and resting your hands leave it alone.
+              Holo turns the empty space either side of your trackpad into four controls. Start a finger beside
+              the trackpad, level with its upper or lower half, and flick it on: that zone&apos;s control runs.
+              Nothing clicks, and your pointer goes back to where it was. Ordinary trackpad use rarely starts at
+              the very edge and flicks inward, so moving the pointer, scrolling and resting your hands leave it
+              alone.
             </p>
           </Reveal>
           <Reveal delay={0.14}>

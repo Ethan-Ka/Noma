@@ -14,7 +14,7 @@ import { appProfiles } from '../../data/appProfiles'
  * simply put down on the trackpad does nothing, which is why ordinary
  * trackpad use never sets it off.
  *
- * It runs on its own until the visitor picks a side themselves, then hands
+ * It runs on its own until the visitor picks a zone themselves, then hands
  * over for good — the same rule the Context section follows.
  */
 
@@ -23,21 +23,25 @@ import { appProfiles } from '../../data/appProfiles'
  *  you would genuinely want without looking down. */
 const APP_ID = 'claude'
 
-/** The two sides, either side of the trackpad, matching the app's left /
- *  right swipe-in zones. `from` and `to` are where the finger starts (on the
- *  palm rest) and ends (just inside the trackpad), as a share of the
- *  laptop's width. `control` indexes the app's control list; each side is
- *  labelled with what it fires rather than where it is — where it is, you
+/** The four swipe-in zones, matching the app's: each side of the trackpad
+ *  split into an upper and a lower half, in slot order (upper left 1, upper
+ *  right 2, lower left 3, lower right 4), so `control` is simply the slot's
+ *  index in the app's control list. `from` and `to` are where the finger
+ *  starts (on the palm rest) and ends (just inside the trackpad), as a share
+ *  of the laptop's width; `y` is the height it travels at. Each zone is
+ *  labelled with what it fires rather than where it is; where it is, you
  *  can see. */
 const ZONES = [
-  { where: 'left', position: 'left-[6%]', from: 18, to: 40, arrow: '→', control: 1 },
-  { where: 'right', position: 'right-[6%]', from: 82, to: 60, arrow: '←', control: 3 },
+  { where: 'upper left', position: 'left-[6%] top-[58%] h-[16.5%]', from: 18, to: 40, y: 66, arrow: '→', control: 0 },
+  { where: 'upper right', position: 'right-[6%] top-[58%] h-[16.5%]', from: 82, to: 60, y: 66, arrow: '←', control: 1 },
+  { where: 'lower left', position: 'left-[6%] top-[76.5%] h-[16.5%]', from: 18, to: 40, y: 85, arrow: '→', control: 2 },
+  { where: 'lower right', position: 'right-[6%] top-[76.5%] h-[16.5%]', from: 82, to: 60, y: 85, arrow: '←', control: 3 },
 ]
 
 /** Keyboard rows, as key counts — enough to read as a laptop at a glance. */
 const KEY_ROWS = [13, 13, 12, 11]
 
-const CYCLE_MS = 2600
+const CYCLE_MS = 2200
 /** How long the finger takes to slide in. A real swipe-in is a quick flick. */
 const SWIPE_S = 0.32
 /** The control answers as the swipe lands. */
@@ -141,18 +145,18 @@ export default function HoloDemo({ className = '' }: { className?: string }) {
               type="button"
               onClick={() => handleSwipe(index)}
               aria-label={`Swipe in from the ${zone.where} of the trackpad to run ${control}`}
-              className={`absolute bottom-[7%] top-[58%] flex w-[22%] flex-col items-center justify-center rounded-2xl border border-dashed transition-colors duration-200 ${zone.position} ${
+              className={`absolute flex w-[22%] flex-col items-center justify-center rounded-xl border border-dashed transition-colors duration-200 ${zone.position} ${
                 isSwiping ? 'border-accent/60 bg-accent/[0.07]' : 'border-white/12 bg-white/[0.02] hover:border-white/25'
               }`}
             >
               <span
                 aria-hidden
-                className={`text-sm transition-colors duration-200 ${isSwiping ? 'text-accent-bright' : 'text-base-500'}`}
+                className={`text-xs leading-none transition-colors duration-200 ${isSwiping ? 'text-accent-bright' : 'text-base-500'}`}
               >
                 {zone.arrow}
               </span>
               <span
-                className={`mt-1.5 px-1 text-center text-[10px] font-medium tracking-tight transition-colors duration-200 ${
+                className={`mt-1 px-1 text-center text-[10px] font-medium leading-tight tracking-tight transition-colors duration-200 ${
                   isSwiping ? 'text-accent-bright' : 'text-base-400'
                 }`}
               >
@@ -168,7 +172,8 @@ export default function HoloDemo({ className = '' }: { className?: string }) {
             <motion.span
               key={swipeKey}
               aria-hidden
-              className="pointer-events-none absolute top-[75%] h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-accent bg-accent/30"
+              className="pointer-events-none absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-accent bg-accent/30"
+              style={{ top: `${active.y}%` }}
               initial={{ left: `${active.from}%`, opacity: 0, scale: 0.8 }}
               animate={{ left: [`${active.from}%`, `${active.from}%`, `${active.to}%`], opacity: [0, 1, 1], scale: 1 }}
               exit={{ opacity: 0 }}
@@ -178,7 +183,7 @@ export default function HoloDemo({ className = '' }: { className?: string }) {
         </AnimatePresence>
 
         <p className="absolute inset-x-0 -bottom-7 text-center font-mono text-[10px] uppercase tracking-[0.16em] text-base-500">
-          {taken ? 'Swipe in from a side' : 'Tap a side to swipe in'}
+          {taken ? 'Swipe in from a zone' : 'Tap a zone to swipe in'}
         </p>
       </div>
 

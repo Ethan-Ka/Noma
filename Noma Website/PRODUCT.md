@@ -19,7 +19,8 @@ Noma is one product with three parts. The website must carry all three.
    application, swaps four contextual controls, captures workflow metadata,
    recognises repeated patterns, and proposes them. Windows.
 2. **Holo** — swipe a finger onto the trackpad from the empty palm-rest
-   space either side of it. Read from the laptop's own precision touchpad
+   space either side of it, level with its upper or lower half: four
+   controls, the same four slots as the keyboard. Read from the laptop's own precision touchpad
    (Windows), so the adaptive interface needs no purchase at all. No
    microphone. Free, in the beta.
 3. **The device** — a physical surface whose controls and display change

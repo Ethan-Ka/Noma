@@ -55,7 +55,7 @@ export default function Context() {
 
       <Reveal delay={0.08}>
         <p className="mt-6 max-w-lg text-base leading-relaxed text-base-300">
-          Pick an application. The controls underneath are the ones Noma would put in front of you there —
+          Pick an application. The controls underneath are the ones Noma would put in front of you there,
           and they are the same four keys every time.
         </p>
       </Reveal>
