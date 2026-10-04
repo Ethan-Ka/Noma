@@ -30,7 +30,8 @@ if (TEST_USER_DATA_DIR) {
 }
 import icon from '../../resources/icon.png?asset'
 import iconIco from '../../resources/icon.ico?asset'
-import { IPC_CHANNELS } from '@shared/constants'
+import { IPC_CHANNELS, ISSUE_PAGE_URL } from '@shared/constants'
+import { buildDiagnosticsReport } from './diagnostics'
 import type { HoloTrackpadZoneCount } from '@shared/types'
 import { initDatabase } from './database/db'
 import { registerIpcHandlers } from './ipc/handlers'
@@ -43,16 +44,22 @@ import { DeviceTransportServer } from './hardware/deviceTransportServer'
 import { CaptureService } from './workflow/captureService'
 import { ClickCaptureService } from './workflow/clickCaptureService'
 import { createClickInspector } from './workflow/uiaInspector'
-import { TrackpadGestureService } from './holo/trackpadGestureService'
+import { GlideController } from './holo/glideController'
 import { latestTouchCheckAt, openRecordingsFolder } from './holo/recordingStore'
 import { insertWorkflowEvent } from './database/repositories/workflowEventsRepository'
 import { getClickCaptureEnabled, getWorkflowMonitoringEnabled } from './database/repositories/settingsRepository'
 import { getSuggestionHistoryForKind, getPendingSuggestions } from './database/repositories/suggestionsRepository'
-import { simulateDemoMultiStepWorkflow } from './demo/demoService'
+import { markDemoSuggestions, simulateDemoMultiStepWorkflow } from './demo/demoService'
 import { getApplicationById } from './database/repositories/applicationsRepository'
 import { LocalRuleBasedProvider } from './ai/localProvider'
 import { SuggestionEngine } from './ai/suggestionEngine'
-import { executeControlActionExclusively } from './actions/actionExecutor'
+import {
+  cancelRunningAction,
+  executeControlActionExclusively,
+  getActionRunState,
+  isActionRunning,
+  onActionRunState
+} from './actions/actionExecutor'
 import { WorkflowNotifier } from './notifications/workflowNotifier'
 import {
   closeWorkflowNoticeWindow,
@@ -75,18 +82,25 @@ let isQuitting = false
  *  that listener record one row per genuine switch, not one per emission. */
 let lastRecordedApplicationId: string | null = null
 
-/** Holo's trackpad swipe-ins (see holo/trackpadGesture.ts). Engaged only
- *  while the renderer turns them on. */
-const trackpadGestureService = new TrackpadGestureService(
-  (event) => {
-    mainWindow?.webContents.send(IPC_CHANNELS.HOLO_TRACKPAD_EVENT, event)
-  },
-  () => mainWindow
-)
-
 const osAdapter = createOSAdapter()
 const contextService = new ApplicationContextService(osAdapter)
 const hardwareDevice = getDefaultHardwareDevice()
+
+/** Glide, the trackpad swipe-in (see holo/glideController.ts). Its on/off
+ *  switch is stored in settings and it presses controls from here, so it
+ *  works with Noma's window closed to the tray. */
+const glide = new GlideController({
+  getWindow: () => mainWindow,
+  getContext: () => contextService.getContext(),
+  isNomaFocused: () => Boolean(mainWindow?.isVisible() && mainWindow.isFocused()),
+  isActionRunning,
+  press: (control) => hardwareDevice.pressControl(control.id),
+  emitState: (state) => {
+    mainWindow?.webContents.send(IPC_CHANNELS.GLIDE_STATE_CHANGED, state)
+    updateTrayMenu()
+  },
+  emitActivity: (activity) => mainWindow?.webContents.send(IPC_CHANNELS.GLIDE_ACTIVITY, activity)
+})
 const deviceTransportServer = new DeviceTransportServer(hardwareDevice)
 const aiProvider = new LocalRuleBasedProvider(
   getSuggestionHistoryForKind,
@@ -311,20 +325,41 @@ function showMainWindow(): void {
 function createTray(): void {
   const trayIcon = nativeImage.createFromPath(icon).resize({ width: 16, height: 16 })
   tray = new Tray(trayIcon)
-  tray.setToolTip(TEST_USER_DATA_DIR ? 'Noma — TEST PROFILE, running in the background' : 'Noma — running in the background')
-  updateTrayMenu(null)
+  tray.setToolTip(TEST_USER_DATA_DIR ? 'Noma (TEST PROFILE), running in the background' : 'Noma, running in the background')
+  updateTrayMenu()
   tray.on('click', () => {
     if (mainWindow?.isVisible()) mainWindow.hide()
     else showMainWindow()
   })
 }
 
-/** The tray menu, plus "Restart to update" once an update has downloaded
- *  (updater.ts). */
-function updateTrayMenu(readyUpdateVersion: string | null): void {
-  tray?.setContextMenu(
+/** Set once an update has downloaded (updater.ts). */
+let readyUpdateVersion: string | null = null
+
+/** The tray menu: open, Glide on/off (reachable from any app, so Glide can
+ *  always be switched off at once), Stop while an action is running, and
+ *  "Restart to update" once an update has downloaded. */
+function updateTrayMenu(): void {
+  if (!tray) return
+  const glideState = glide.getState()
+  const running = getActionRunState()
+  tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: 'Open Noma', click: () => showMainWindow() },
+      { type: 'separator' },
+      ...(glideState.platformSupported
+        ? [
+            {
+              label: 'Glide',
+              type: 'checkbox' as const,
+              checked: glideState.enabled,
+              click: () => glide.setEnabled(!glide.getState().enabled)
+            }
+          ]
+        : []),
+      ...(running.running
+        ? [{ label: `Stop “${running.label ?? 'action'}”`, click: () => cancelRunningAction() }]
+        : []),
       ...(readyUpdateVersion
         ? [{ label: `Restart to update to ${readyUpdateVersion}`, click: () => installUpdateNow() }]
         : []),
@@ -468,18 +503,26 @@ app.whenReady().then(() => {
 
   initDatabase()
   ipcMain.handle(IPC_CHANNELS.HOLO_OPEN_RECORDINGS, () => openRecordingsFolder())
-  ipcMain.handle(IPC_CHANNELS.HOLO_SET_TRACKPAD, (_event, enabled: boolean, zones?: HoloTrackpadZoneCount) => {
-    if (enabled) return trackpadGestureService.start(zones === 2 ? 2 : 4)
-    trackpadGestureService.stop()
-    return null
-  })
-  ipcMain.handle(IPC_CHANNELS.HOLO_TOUCH_CHECK_START, () => trackpadGestureService.startTrace())
+  ipcMain.handle(IPC_CHANNELS.GLIDE_GET_STATE, () => glide.getState())
+  ipcMain.handle(IPC_CHANNELS.GLIDE_SET_ENABLED, (_event, enabled: boolean) => glide.setEnabled(enabled === true))
+  ipcMain.handle(IPC_CHANNELS.GLIDE_SET_ZONE_COUNT, (_event, zoneCount: HoloTrackpadZoneCount) =>
+    glide.setZoneCount(zoneCount === 2 ? 2 : 4)
+  )
+  ipcMain.handle(IPC_CHANNELS.HOLO_TOUCH_CHECK_START, () => glide.startTouchCheck())
   ipcMain.handle(IPC_CHANNELS.HOLO_TOUCH_CHECK_LAST, () => latestTouchCheckAt())
   ipcMain.handle(
     IPC_CHANNELS.HOLO_TOUCH_CHECK_STOP,
     (_event, phases: Array<{ kind: 'left' | 'right' | 'normal'; startAt: number; endAt: number }>) =>
-      trackpadGestureService.stopTrace(phases)
+      glide.stopTouchCheck(phases)
   )
+  ipcMain.handle(IPC_CHANNELS.GET_DIAGNOSTICS_REPORT, () => buildDiagnosticsReport(glide.getState(), latestTouchCheckAt()))
+  ipcMain.handle(IPC_CHANNELS.OPEN_ISSUE_PAGE, () => shell.openExternal(ISSUE_PAGE_URL))
+  ipcMain.handle(IPC_CHANNELS.GET_ACTION_RUN_STATE, () => getActionRunState())
+  ipcMain.handle(IPC_CHANNELS.CANCEL_RUNNING_ACTION, () => cancelRunningAction())
+  onActionRunState((state) => {
+    mainWindow?.webContents.send(IPC_CHANNELS.ACTION_RUN_STATE, state)
+    updateTrayMenu()
+  })
 
   // Noma Notice. Registered here rather than in registerIpcHandlers because,
   // like the two above, these belong to a window this file owns.
@@ -509,6 +552,7 @@ app.whenReady().then(() => {
     // surface with production data, not a mock.
     simulateDemoMultiStepWorkflow()
     await refreshSuggestions()
+    markDemoSuggestions()
     // The most-repeated multi-application workflow, which after that replay
     // is the demo one — picked by the same "which workflow matters most"
     // rule the real policy uses, rather than by hardcoding the demo's id.
@@ -532,7 +576,8 @@ app.whenReady().then(() => {
       contextService.refreshIfCurrentApplication(applicationId)
     },
     () => osAdapter.getLastKnownWindowHandle(),
-    refreshSuggestions
+    refreshSuggestions,
+    () => glide.setEnabled(false)
   )
 
   // Application context -> hardware simulator + capture service: whenever
@@ -597,7 +642,7 @@ app.whenReady().then(() => {
         .getContext()
         .profile?.controls.find((item) => item.id === event.controlId)
       if (control) {
-        void executeControlActionExclusively(control.action, osAdapter.getLastKnownWindowHandle()).then(
+        void executeControlActionExclusively(control.action, osAdapter.getLastKnownWindowHandle(), control.label).then(
           (result) => {
             if (!result.ok) notifyActionFailed(control.label, result.reason)
             logActionResult(control.label, control.action.type, result)
@@ -648,7 +693,12 @@ app.whenReady().then(() => {
 
   createMainWindow()
   createTray()
-  startAutoUpdates((version) => updateTrayMenu(version))
+  // Needs the main window: Glide reads the touchpad through its message loop.
+  glide.resume()
+  startAutoUpdates((version) => {
+    readyUpdateVersion = version
+    updateTrayMenu()
+  })
 
   app.on('activate', function () {
     // Minimizing/closing now hides the window rather than destroying it
@@ -666,6 +716,7 @@ app.on('before-quit', () => {
 })
 
 app.on('window-all-closed', () => {
+  glide.shutDown()
   captureService.stop()
   clickCaptureService.stop()
   contextService.stop()

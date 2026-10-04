@@ -2,14 +2,15 @@ import Database from 'better-sqlite3'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { __setDatabaseForTesting, runMigrations, getDatabase } from '../database/db'
 import { getProfileForApplicationId } from '../database/repositories/profileRepository'
-import { getWorkflowEventsSince } from '../database/repositories/workflowEventsRepository'
+import { getWorkflowEventsSince, insertWorkflowEvent } from '../database/repositories/workflowEventsRepository'
 import { insertSuggestionIfNew } from '../database/repositories/suggestionsRepository'
 import { createMacro } from '../database/repositories/macrosRepository'
 import { assignControlAction } from '../database/repositories/controlsRepository'
 import { detectPatterns } from '../workflow/patternDetection'
-import { resetDemoData, simulateDemoMultiStepWorkflow, simulateDemoWorkflow } from './demoService'
+import { markDemoSuggestions, resetDemoData, simulateDemoMultiStepWorkflow, simulateDemoWorkflow } from './demoService'
 import { getApplicationById } from '../database/repositories/applicationsRepository'
 import type { Suggestion } from '@shared/types'
+import { DEMO_MACRO_TRIGGER, LEARNED_MACRO_TRIGGER } from '@shared/constants'
 
 /** Mirrors database/seed.ts's SEED_APPLICATIONS for 'code' and 'chrome' —
  *  demoService.resetDemoData relies on getSeedDefaultControl, which reads
@@ -134,48 +135,50 @@ describe('simulateDemoMultiStepWorkflow (WORKFLOW LEARNING flagship demo)', () =
 })
 
 describe('resetDemoData', () => {
-  it('clears workflow events and suggestions', () => {
+  const realSuggestion = {
+    id: 'suggestion:sequence:chrome::Control+S->Control+T',
+    title: 'Create a macro for this sequence?',
+    explanation: '...',
+    confidence: 0.6,
+    status: 'pending',
+    createdAt: Date.now(),
+    applicationId: 'chrome',
+    action: { kind: 'createMacroAndAssignToControl', sequence: ['Control+S', 'Control+T'] }
+  } as Suggestion
+
+  it('removes the demo events and suggestions, and nothing Noma really observed', () => {
+    insertWorkflowEvent({ applicationId: 'chrome', eventType: 'shortcut', comboKeys: ['Control', 'S'], timestamp: 1 })
     simulateDemoWorkflow()
-    insertSuggestionIfNew({
-      id: 'suggestion:sequence:chrome::Control+C->Control+V',
-      title: 'Create a macro for this sequence?',
-      explanation: '...',
-      confidence: 0.6,
-      status: 'pending',
-      createdAt: Date.now(),
-      applicationId: 'chrome'
-    } as Suggestion)
+    insertSuggestionIfNew(realSuggestion)
+    insertSuggestionIfNew({ ...realSuggestion, id: 'demo', action: { kind: 'createMacroAndAssignToControl', sequence: ['Control+D', 'Control+W'] } } as Suggestion)
+    markDemoSuggestions()
 
     resetDemoData()
 
-    expect(getWorkflowEventsSince(0)).toHaveLength(0)
-    const remainingSuggestions = getDatabase().prepare('SELECT COUNT(*) as count FROM suggestions').get() as {
-      count: number
-    }
-    expect(remainingSuggestions.count).toBe(0)
+    expect(getWorkflowEventsSince(0)).toHaveLength(1)
+    const remaining = getDatabase().prepare('SELECT id FROM suggestions').all() as Array<{ id: string }>
+    expect(remaining.map((row) => row.id)).toEqual([realSuggestion.id])
   })
 
-  it('restores both demo profiles to their seeded controls', () => {
+  it("leaves the user's own control changes alone", () => {
     const chromeProfile = getProfileForApplicationId('chrome')!
     assignControlAction(chromeProfile.id, 4, 'CUSTOM', { type: 'shortcut', keys: ['Control', 'Z'] })
 
     resetDemoData()
 
-    const restored = getProfileForApplicationId('chrome')!
-    const slot4 = restored.controls.find((c) => c.slot === 4)
-    expect(slot4?.label).toBe('FIND')
-    expect(slot4?.action).toEqual({ type: 'shortcut', keys: ['Control', 'F'] })
+    const slot4 = getProfileForApplicationId('chrome')!.controls.find((c) => c.slot === 4)
+    expect(slot4?.label).toBe('CUSTOM')
   })
 
-  it('deletes a macro left assigned to a demo control by a previous run', () => {
+  it('removes a workflow saved from a demo suggestion and restores its control', () => {
     const chromeProfile = getProfileForApplicationId('chrome')!
     const macro = createMacro({
-      name: 'Control+C → Control+V',
+      name: 'Bookmark → Close tab',
       applicationId: 'chrome',
-      trigger: 'flow-control',
+      trigger: DEMO_MACRO_TRIGGER,
       actions: [
-        { type: 'shortcut', keys: ['Control', 'C'] },
-        { type: 'shortcut', keys: ['Control', 'V'] }
+        { type: 'shortcut', keys: ['Control', 'D'] },
+        { type: 'shortcut', keys: ['Control', 'W'] }
       ],
       delayMs: 0,
       enabled: true
@@ -184,45 +187,52 @@ describe('resetDemoData', () => {
 
     resetDemoData()
 
-    const macroRow = getDatabase().prepare('SELECT * FROM macros WHERE id = ?').get(macro.id)
-    expect(macroRow).toBeUndefined()
-
-    const restored = getProfileForApplicationId('chrome')!
-    expect(restored.controls.find((c) => c.slot === 4)?.action).toEqual({
+    expect(getDatabase().prepare('SELECT * FROM macros WHERE id = ?').get(macro.id)).toBeUndefined()
+    expect(getProfileForApplicationId('chrome')!.controls.find((c) => c.slot === 4)?.action).toEqual({
       type: 'shortcut',
       keys: ['Control', 'F']
     })
   })
 
-  it('deletes a learned-workflow macro assigned to VS Code by a previous multi-step demo run', () => {
-    const codeProfile = getProfileForApplicationId('code')!
+  it('keeps a workflow saved from a real suggestion', () => {
     const macro = createMacro({
-      name: 'Screenshot → claude → Paste',
-      applicationId: 'code',
-      trigger: 'flow-control',
-      actions: [
-        { type: 'shortcut', keys: ['Meta', 'Shift', 'S'] },
-        { type: 'focusApplication', applicationId: 'claude' },
-        { type: 'shortcut', keys: ['Control', 'V'] },
-        { type: 'shortcut', keys: ['Enter'] }
-      ],
+      name: 'Save → New tab',
+      applicationId: 'chrome',
+      trigger: LEARNED_MACRO_TRIGGER,
+      actions: [{ type: 'shortcut', keys: ['Control', 'S'] }],
       delayMs: 0,
       enabled: true
     })
-    assignControlAction(codeProfile.id, 2, macro.name, { type: 'macro', macroId: macro.id })
 
     resetDemoData()
 
-    expect(getDatabase().prepare('SELECT * FROM macros WHERE id = ?').get(macro.id)).toBeUndefined()
-    const restored = getProfileForApplicationId('code')!
-    expect(restored.controls.find((c) => c.slot === 2)?.action).toEqual({
-      type: 'shortcut',
-      keys: ['F5']
-    })
+    expect(getDatabase().prepare('SELECT * FROM macros WHERE id = ?').get(macro.id)).toBeDefined()
   })
 
   it('is safe to call when the demo profiles do not exist', () => {
-    getDatabase().exec('DELETE FROM profiles; DELETE FROM applications;')
+    getDatabase().prepare('DELETE FROM applications').run()
     expect(() => resetDemoData()).not.toThrow()
+  })
+})
+
+describe('markDemoSuggestions', () => {
+  it("flags only suggestions made of a demo workflow's pieces", () => {
+    simulateDemoWorkflow()
+    insertSuggestionIfNew({ id: 'real', title: 't', explanation: 'e', confidence: 0.6, status: 'pending', createdAt: 1, applicationId: 'chrome', action: { kind: 'assignShortcutToControl', comboKeys: ['Control', 'S'] } } as Suggestion)
+    insertSuggestionIfNew({ id: 'demo', title: 't', explanation: 'e', confidence: 0.6, status: 'pending', createdAt: 1, applicationId: 'chrome', action: { kind: 'createMacroAndAssignToControl', sequence: ['Control+D', 'Control+W'] } } as Suggestion)
+
+    markDemoSuggestions()
+
+    const flags = getDatabase().prepare('SELECT id, is_demo FROM suggestions ORDER BY id').all()
+    expect(flags).toEqual([
+      { id: 'demo', is_demo: 1 },
+      { id: 'real', is_demo: 0 }
+    ])
+  })
+
+  it("marks the demo's scripted events, so the reset can tell them apart", () => {
+    simulateDemoMultiStepWorkflow()
+    const rows = getDatabase().prepare('SELECT DISTINCT is_demo FROM workflow_events').all()
+    expect(rows).toEqual([{ is_demo: 1 }])
   })
 })

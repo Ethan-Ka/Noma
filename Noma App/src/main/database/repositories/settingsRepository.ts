@@ -62,3 +62,44 @@ export function setClickCaptureEnabled(enabled: boolean): void {
      ON CONFLICT(key) DO UPDATE SET value = excluded.value`
   ).run({ key: CLICK_CAPTURE_KEY, value: enabled ? '1' : '0' })
 }
+
+const GLIDE_ENABLED_KEY = 'glideEnabled'
+const GLIDE_ZONE_COUNT_KEY = 'glideZoneCount'
+
+function readSetting(key: string): string | undefined {
+  const row = getDatabase().prepare('SELECT value FROM settings WHERE key = ?').get(key) as
+    | { value: string }
+    | undefined
+  return row?.value
+}
+
+function writeSetting(key: string, value: string): void {
+  getDatabase()
+    .prepare(
+      `INSERT INTO settings (key, value) VALUES (@key, @value)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+    )
+    .run({ key, value })
+}
+
+/** Glide on/off. Off on a fresh install. Before this setting existed, Glide
+ *  ran in the background only when Input Source was set to Glide, so that
+ *  is what an older install without the row reads as. */
+export function getGlideEnabled(): boolean {
+  const stored = readSetting(GLIDE_ENABLED_KEY)
+  if (stored !== undefined) return stored === '1'
+  return getInputSource() === 'holo'
+}
+
+export function setGlideEnabled(enabled: boolean): void {
+  writeSetting(GLIDE_ENABLED_KEY, enabled ? '1' : '0')
+}
+
+/** Four zones (upper and lower half of each side) unless set to two. */
+export function getGlideZoneCount(): 2 | 4 {
+  return readSetting(GLIDE_ZONE_COUNT_KEY) === '2' ? 2 : 4
+}
+
+export function setGlideZoneCount(zoneCount: 2 | 4): void {
+  writeSetting(GLIDE_ZONE_COUNT_KEY, zoneCount === 2 ? '2' : '4')
+}

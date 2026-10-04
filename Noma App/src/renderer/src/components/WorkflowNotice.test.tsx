@@ -148,11 +148,11 @@ describe('WorkflowNotice', () => {
     renderNotice()
     fireEvent.click(screen.getByText('Review →'))
     expect(screen.getByText(SUGGESTION.explanation)).toBeInTheDocument()
-    expect(screen.getByText('Add to Noma')).toBeInTheDocument()
+    expect(screen.getByText('Review steps in Noma')).toBeInTheDocument()
     expect(screen.getByText('Not now')).toBeInTheDocument()
   })
 
-  it('treats "Not now" as a real answer and "Add to Noma" as acceptance', () => {
+  it('treats "Not now" as a real answer and "Review steps in Noma" as acceptance', () => {
     const { onDismiss, onAccept } = renderNotice()
     fireEvent.click(screen.getByText('Review →'))
     fireEvent.click(screen.getByText('Not now'))
@@ -164,7 +164,7 @@ describe('WorkflowNotice', () => {
   it('accepts without dismissing itself — main decides what happens next', () => {
     const { onAccept } = renderNotice()
     fireEvent.click(screen.getByText('Review →'))
-    fireEvent.click(screen.getByText('Add to Noma'))
+    fireEvent.click(screen.getByText('Review steps in Noma'))
     expect(onAccept).toHaveBeenCalled()
   })
 

@@ -5,6 +5,9 @@ import { NomaMoment } from '../components/NomaMoment'
 import { WorkflowCard } from '../components/WorkflowCard'
 import { WorkflowDetailModal } from '../components/WorkflowDetailModal'
 import { EmptyState } from '../components/EmptyState'
+import { useWorkflowStore } from '../stores/workflowStore'
+import { CARD } from '../lib/surfaces'
+import { COMMAND_MODIFIERS_COPY } from '../lib/platform'
 
 /**
  * Workflows — "what has Noma learned that I actually do?"
@@ -22,9 +25,12 @@ export function Workflows() {
   const { suggestions, isLoading: suggestionsLoading, refresh, subscribe, resolve } = useSuggestionsStore()
   const learnedActions = useLearnedActions()
   const [selected, setSelected] = useState<LearnedAction | null>(null)
+  const { enabled: flowEnabled, isLoading: flowLoading, refresh: refreshFlow, setEnabled: setFlowEnabled } =
+    useWorkflowStore()
 
   useEffect(() => {
     refresh()
+    void refreshFlow()
     const unsubscribe = subscribe()
     return unsubscribe
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -48,15 +54,39 @@ export function Workflows() {
     <div className="mx-auto max-w-3xl px-12 py-16">
       <div className="mb-14">
         <h1 className="font-display text-2xl font-semibold text-neutral-100">Workflows</h1>
-        <p className="mt-2 text-sm text-neutral-600">Things Noma has noticed you repeatedly do.</p>
+        <p className="mt-2 max-w-xl text-sm text-neutral-500">
+          Flow notices shortcut sequences you repeat. You review the exact steps, then save one to a Glide zone so a
+          single swipe runs it. Nothing is saved or run without you.
+        </p>
       </div>
+
+      {!flowLoading && !flowEnabled && (
+        <div className={`mb-12 flex items-start justify-between gap-6 p-5 ${CARD}`}>
+          <div>
+            <p className="text-sm font-medium text-neutral-100">Flow is off, so Noma isn&apos;t noticing anything.</p>
+            <p className="mt-1 max-w-md text-xs leading-relaxed text-neutral-500">
+              When on, Flow records which app is in front and which shortcuts you press that hold {COMMAND_MODIFIERS_COPY}.
+              Never what you type, never screenshots. It all stays on this computer.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => void setFlowEnabled(true)}
+            className="shrink-0 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90"
+          >
+            Turn on Flow
+          </button>
+        </div>
+      )}
 
       {isLoading ? null : !hasPending && !hasLearned ? (
         // Case 1 — nothing at all: the page should read as active, not empty.
-        <EmptyState
-          title="Noma is watching."
-          hint="Keep working normally. When Noma notices a pattern you repeat, it'll show up here — first as something to review, then as a workflow you can use."
-        />
+        flowEnabled && (
+          <EmptyState
+            title="Nothing noticed yet."
+            hint="Keep working normally. Once you've repeated the same shortcut sequence about three times, it shows up here for you to review. Shortcuts that hold Ctrl, Alt or Win count; plain typing never does."
+          />
+        )
       ) : (
         <>
           <section className="mb-14">
@@ -85,8 +115,8 @@ export function Workflows() {
             <h2 className="mb-1 font-display text-lg font-semibold text-neutral-100">Your workflows</h2>
             <p className="mb-5 text-sm text-neutral-600">
               {hasLearned
-                ? "Workflows you've added to Noma."
-                : 'Workflows you add will appear here, as real, usable pieces of your interface.'}
+                ? 'Click one to pause it, change its zone, or remove it.'
+                : 'Workflows you save appear here, with the Glide zone that runs them.'}
             </p>
             {hasLearned ? (
               <div className="space-y-4">

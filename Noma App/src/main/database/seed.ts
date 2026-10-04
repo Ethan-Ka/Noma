@@ -61,14 +61,12 @@ const SEED_APPLICATIONS: SeedApplication[] = [
     profileName: 'Browsing',
     controls: [
       { slot: 1, label: 'NEW TAB', action: { type: 'shortcut', keys: ['Control', 'T'] }, macKeys: ['Meta', 'T'] },
-      // Not Ctrl+W, even though that's no longer a blocked keystroke combo
-      // (see actionExecutor.ts's BLOCKED_COMBOS — Ctrl+W was later
-      // deliberately unblocked by explicit user request, 2026-09-07): this
-      // is the seeded default, and WM_CLOSE remains the safer choice for
-      // it — no keystroke, no focus needed, and it closes the window
-      // gracefully the same way clicking X does. A user is still free to
-      // remap this control to a raw Ctrl+W shortcut themselves.
-      { slot: 2, label: 'CLOSE WINDOW', action: { type: 'flowAction', action: 'closeWindow' } },
+      // v0.1: was CLOSE WINDOW (WM_CLOSE). Slot 2 is Glide's upper-right
+      // zone, the one a new user's stray right-side swipe lands in, and a
+      // default that can close the whole browser is the wrong first
+      // accident. Reopen tab is harmless and pairs with New tab. Closing is
+      // still one choice away in the zone editor.
+      { slot: 2, label: 'REOPEN TAB', action: { type: 'shortcut', keys: ['Control', 'Shift', 'T'] }, macKeys: ['Meta', 'Shift', 'T'] },
       { slot: 3, label: 'RELOAD', action: { type: 'shortcut', keys: ['Control', 'R'] }, macKeys: ['Meta', 'R'] },
       { slot: 4, label: 'FIND', action: { type: 'shortcut', keys: ['Control', 'F'] }, macKeys: ['Meta', 'F'] }
     ]

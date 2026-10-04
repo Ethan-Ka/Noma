@@ -12,6 +12,10 @@ import { HomeSidePanel } from '../components/HomeSidePanel'
 import { AppIcon } from '../components/AppIcon'
 import { LearnedActionCard } from '../components/LearnedActionCard'
 import { useLearnedActions } from '../lib/useLearnedActions'
+import { GettingStartedCard } from '../components/GettingStartedCard'
+import { useGlideStore } from '../stores/glideStore'
+import { useActionRunStore } from '../stores/actionRunStore'
+import { glideActivityMessage, glideStatusLine } from '../lib/glideMessages'
 
 /** How many learned actions Home previews before pointing to the full list
  *  on Controls — a taste, not the whole catalog; keeps this section from
@@ -40,11 +44,15 @@ export function Home() {
     useSuggestionsStore()
   const setActivePage = useUiStore((state) => state.setActivePage)
   const [isCreatingProfile, setIsCreatingProfile] = useState(false)
+  const learnedActions = useLearnedActions()
+  const { state: glide, lastActivity, refresh: refreshGlide } = useGlideStore()
+  const lastResult = useActionRunStore((state) => state.lastResult)
 
   useEffect(() => {
     refresh()
     refreshWorkflow()
     refreshSuggestions()
+    void refreshGlide()
     const unsubscribeContext = subscribeToContext()
     const unsubscribeSuggestions = subscribe()
     return () => {
@@ -59,7 +67,6 @@ export function Home() {
   // The single most important thing to show — most recent first, since
   // that's the workflow Noma most recently confirmed is real.
   const topSuggestion = suggestions[0]
-  const learnedActions = useLearnedActions()
   const learnedActionsPreview = learnedActions?.slice(0, HOME_LEARNED_ACTIONS_PREVIEW_COUNT) ?? []
 
   return (
@@ -71,11 +78,19 @@ export function Home() {
               {greeting().replace('.', '')}
             </p>
             <h1 className="mt-1.5 font-display text-3xl font-semibold leading-tight text-neutral-100">
-              {monitoringEnabled ? 'Noma is learning your workflow.' : "Noma isn't learning yet."}
+              {glide?.enabled ? 'Glide is ready.' : monitoringEnabled ? 'Noma is learning your workflow.' : 'Welcome to Noma.'}
             </h1>
-            <p className="mt-2.5 max-w-md text-sm text-neutral-600">
-              The more you use your computer, the more useful your Noma becomes.
+            <p className="mt-2.5 max-w-md text-sm text-neutral-500">
+              Glide: {glideStatusLine(glide).text.replace(/^On, /, 'on, ')}. Flow: {monitoringEnabled ? 'learning' : 'off'}.
             </p>
+            {lastActivity && glide?.enabled && glide.zoneCount && (
+              <p className="mt-1 max-w-md text-xs text-neutral-500">
+                Last swipe: {glideActivityMessage(lastActivity, glide.zoneCount)}
+                {lastResult && !lastResult.ok && lastResult.at >= lastActivity.at && lastActivity.type === 'fire' && lastActivity.outcome === 'pressed'
+                  ? ` It didn't finish: ${lastResult.reason ?? 'unknown reason'}.`
+                  : ''}
+              </p>
+            )}
           </div>
           {/* Understated on purpose — a status signal, not a second
               headline competing with the one above it. */}
@@ -84,11 +99,13 @@ export function Home() {
           </div>
         </div>
 
+        <GettingStartedCard flowEnabled={monitoringEnabled} savedWorkflows={learnedActions?.length ?? 0} />
+
         <section className="mb-12">
           {!monitoringEnabled ? (
             <EmptyState
-              title="Noma isn't learning yet."
-              hint="Turn on monitoring in Settings and Noma will start noticing the workflows you repeat."
+              title="Flow is off."
+              hint="Turn on Flow (Workflows page) and Noma starts noticing the shortcut sequences you repeat, so you can save them to a Glide zone."
             />
           ) : suggestionsLoading ? null : topSuggestion ? (
             <NomaMoment
@@ -155,10 +172,10 @@ export function Home() {
               </div>
               <button
                 type="button"
-                onClick={() => setActivePage('controls')}
+                onClick={() => setActivePage('holo')}
                 className="mt-4 text-xs text-neutral-500 hover:text-neutral-100"
               >
-                See all controls →
+                Change what each zone does →
               </button>
             </>
           ) : (
@@ -178,7 +195,7 @@ export function Home() {
                 {(learnedActions?.length ?? 0) > HOME_LEARNED_ACTIONS_PREVIEW_COUNT && (
                   <button
                     type="button"
-                    onClick={() => setActivePage('controls')}
+                    onClick={() => setActivePage('workflows')}
                     className="shrink-0 text-xs text-neutral-500 hover:text-neutral-100"
                   >
                     View all →

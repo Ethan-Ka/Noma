@@ -1,4 +1,5 @@
 import type { ApplicationProfile, MacroStep, Suggestion, WorkflowStep } from '@shared/types'
+import { DEMO_MACRO_TRIGGER, LEARNED_MACRO_TRIGGER } from '@shared/constants'
 import { getProfileForApplicationId } from '../database/repositories/profileRepository'
 import { assignControlAction, toDisplayLabel } from '../database/repositories/controlsRepository'
 import { createMacro } from '../database/repositories/macrosRepository'
@@ -57,7 +58,7 @@ function buildControlUpdate(
       const macro = createMacro({
         name: action.sequence.join(' → '),
         applicationId: suggestion.applicationId ?? undefined,
-        trigger: 'flow-control',
+        trigger: suggestion.isDemo ? DEMO_MACRO_TRIGGER : LEARNED_MACRO_TRIGGER,
         // A detected sequence is combo strings like 'Control+C' — convert
         // each into a proper shortcut step (Macro.actions is MacroStep[],
         // not the raw string[] a repeated-sequence pattern produces).
@@ -77,7 +78,7 @@ function buildControlUpdate(
       const macro = createMacro({
         name: action.steps.map(describeStep).join(' → '),
         applicationId: suggestion.applicationId ?? undefined,
-        trigger: 'flow-control',
+        trigger: suggestion.isDemo ? DEMO_MACRO_TRIGGER : LEARNED_MACRO_TRIGGER,
         actions: buildWorkflowMacroSteps(action.steps, action.stepDelaysMs),
         delayMs: 0,
         enabled: true
@@ -148,7 +149,7 @@ const MIN_REPLAY_DELAY_MS = 300
  * suggestion built before this existed — no delay steps then, same as
  * before.
  */
-function buildWorkflowMacroSteps(steps: WorkflowStep[], stepDelaysMs?: number[]): MacroStep[] {
+export function buildWorkflowMacroSteps(steps: WorkflowStep[], stepDelaysMs?: number[]): MacroStep[] {
   const core = trimTrailingAppSwitches(steps)
   const macroSteps: MacroStep[] = []
 

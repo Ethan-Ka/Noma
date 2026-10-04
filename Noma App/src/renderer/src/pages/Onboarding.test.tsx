@@ -1,16 +1,15 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 // Also imported by src/test/setup.ts at runtime; imported again here so
 // tsc (which typechecks this file independent of vitest's setupFiles) sees
 // the jest-dom matcher types too.
 import '@testing-library/jest-dom/vitest'
-import type { DeviceStatus, FlowApi, OnboardingState } from '@shared/types'
+import type { ApplicationProfile, FlowApi, GlideState, OnboardingState } from '@shared/types'
 import { Onboarding } from './Onboarding'
 import { useOnboardingStore } from '../stores/onboardingStore'
 import { useUiStore } from '../stores/uiStore'
-import { useHardwareStore } from '../stores/hardwareStore'
-import { useWorkflowStore } from '../stores/workflowStore'
+import { useGlideStore } from '../stores/glideStore'
 
 const DEFAULT_STATE: OnboardingState = {
   completed: false,
@@ -20,127 +19,170 @@ const DEFAULT_STATE: OnboardingState = {
   hardwareSkipped: false
 }
 
-const VIRTUAL_STATUS: DeviceStatus = {
-  connected: true,
-  deviceType: 'virtual',
-  protocolVersion: '0.1.0',
-  controls: [],
-  displays: {},
-  modules: []
+const GLIDE_OFF: GlideState = { enabled: false, zoneCount: 4, platformSupported: true, touchpads: null, error: null }
+const GLIDE_ON: GlideState = { ...GLIDE_OFF, enabled: true, touchpads: 1 }
+
+const CHROME = { id: 'chrome', name: 'Google Chrome', processName: 'chrome.exe' }
+const CHROME_PROFILE: ApplicationProfile = {
+  id: 'chrome-default',
+  applicationId: 'chrome',
+  name: 'Browsing',
+  controls: [
+    { id: 'c1', slot: 1, label: 'NEW TAB', action: { type: 'shortcut', keys: ['Control', 'T'] } },
+    { id: 'c2', slot: 2, label: 'REOPEN TAB', action: { type: 'shortcut', keys: ['Control', 'Shift', 'T'] } },
+    { id: 'c3', slot: 3, label: 'RELOAD', action: { type: 'shortcut', keys: ['Control', 'R'] } },
+    { id: 'c4', slot: 4, label: 'FIND', action: { type: 'shortcut', keys: ['Control', 'F'] } }
+  ],
+  macroIds: [],
+  moduleRecommendationIds: []
 }
 
-function mockFlow(overrides: Partial<FlowApi> = {}): FlowApi {
+function mockFlow(glide: GlideState = GLIDE_OFF, overrides: Partial<FlowApi> = {}): FlowApi {
   return {
     getOnboardingState: vi.fn().mockResolvedValue(DEFAULT_STATE),
     saveOnboardingState: vi.fn(async (update: Partial<OnboardingState>) => ({ ...DEFAULT_STATE, ...update })),
     setWorkflowMonitoringEnabled: vi.fn().mockResolvedValue(true),
-    getWorkflowMonitoringEnabled: vi.fn().mockResolvedValue(false),
-    getClickCaptureEnabled: vi.fn().mockResolvedValue(false),
-    getDetectedPatterns: vi.fn().mockResolvedValue([]),
-    getHardwareStatus: vi.fn().mockResolvedValue(VIRTUAL_STATUS),
-    onHardwareStatusChanged: vi.fn(() => () => {}),
-    onDeviceEvent: vi.fn(() => () => {}),
-    onActionExecuted: vi.fn(() => () => {}),
-    pingHardware: vi.fn().mockResolvedValue({ ok: true, latencyMs: 1 }),
+    getGlideState: vi.fn().mockResolvedValue(glide),
+    setGlideEnabled: vi.fn().mockResolvedValue(GLIDE_ON),
+    getHoloTouchCheckLast: vi.fn().mockResolvedValue(null),
+    getActiveContext: vi.fn().mockResolvedValue({ application: null, profile: null }),
+    getFlowStatus: vi.fn().mockResolvedValue({ actionsObservedToday: 0, patternsDetected: 0, suggestionsCount: 0 }),
+    onActiveContextChanged: vi.fn(() => () => {}),
+    listApplicationProfileSummaries: vi.fn().mockResolvedValue([{ application: CHROME, hasProfile: true }]),
+    getProfileForApplication: vi.fn().mockResolvedValue(CHROME_PROFILE),
     ...overrides
   } as unknown as FlowApi
 }
 
-function seedStores(initialState: OnboardingState = DEFAULT_STATE): void {
+function seed(initialState: OnboardingState = DEFAULT_STATE, glide: GlideState | null = GLIDE_OFF): void {
   useOnboardingStore.setState({ state: initialState, isLoading: false })
-  // Deliberately not 'home' — the completion test below asserts this
-  // actually changes, not that it was 'home' all along.
+  // Deliberately not 'home', so the finish test sees it change.
   useUiStore.setState({ activePage: 'settings' })
-  useHardwareStore.setState({ status: VIRTUAL_STATUS, lastEvent: null, lastExecution: null, isLoading: false })
-  useWorkflowStore.setState({ enabled: false, patterns: [], isLoading: false })
+  useGlideStore.setState({ state: glide, lastActivity: null, isChanging: false })
 }
 
 beforeEach(() => {
-  seedStores()
+  seed()
 })
 
 describe('Onboarding', () => {
-  it('starts on Welcome for a brand-new onboarding record', () => {
+  it('starts on Welcome, saying what Noma does in one breath', () => {
     window.flow = mockFlow()
     render(<Onboarding />)
-    expect(screen.getByText('Your keyboard adapts to you.')).toBeInTheDocument()
-  })
-
-  it('resumes from a previously-persisted step instead of restarting at Welcome', () => {
-    window.flow = mockFlow()
-    seedStores({ ...DEFAULT_STATE, step: 'hardware' })
-
-    render(<Onboarding />)
-
-    expect(screen.getByText('Connect your Noma')).toBeInTheDocument()
-  })
-
-  it('keeps a use-case selection after navigating back and forward again', async () => {
-    window.flow = mockFlow()
-    render(<Onboarding />)
-
-    fireEvent.click(screen.getByRole('button', { name: 'Get Started' }))
-    expect(await screen.findByText('What do you use your computer for?')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Design' }))
-    expect(screen.getByRole('button', { name: 'Design' })).toHaveAttribute('aria-pressed', 'true')
-
-    // Back to Welcome, then forward again — the selection must survive.
-    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
-    expect(await screen.findByText('Your keyboard adapts to you.')).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Get Started' }))
-    expect(await screen.findByText('What do you use your computer for?')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Design' })).toHaveAttribute('aria-pressed', 'true')
-  })
-
-  it('has no Back button on the first screen', () => {
-    window.flow = mockFlow()
-    render(<Onboarding />)
+    expect(screen.getByText('Your next action, one swipe away.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Back' })).toBeDisabled()
   })
 
-  it('"Not now" on the Flow screen persists flowEnabled:false without touching capture', async () => {
+  it('resumes at the saved step', () => {
     window.flow = mockFlow()
-    seedStores({ ...DEFAULT_STATE, step: 'flowPrivacy' })
+    seed({ ...DEFAULT_STATE, step: 'flow' })
+    render(<Onboarding />)
+    expect(screen.getByText('Let Noma notice your repeats')).toBeInTheDocument()
+  })
 
+  it('treats a step saved by an older build as the start', () => {
+    window.flow = mockFlow()
+    seed({ ...DEFAULT_STATE, step: 'hardware' as OnboardingState['step'] })
+    render(<Onboarding />)
+    expect(screen.getByText('Your next action, one swipe away.')).toBeInTheDocument()
+  })
+
+  it('turns Glide on, then waits for one real (practice) swipe before moving on', async () => {
+    window.flow = mockFlow()
+    seed({ ...DEFAULT_STATE, step: 'glide' })
+    render(<Onboarding />)
+    // Let the screen's own state refresh land first, as it would in use.
+    await act(async () => {})
+
+    fireEvent.click(screen.getByRole('button', { name: 'Turn on Glide' }))
+    expect(window.flow.setGlideEnabled).toHaveBeenCalledWith(true)
+
+    expect(await screen.findByRole('button', { name: 'Waiting for a swipe…' })).toBeDisabled()
+
+    act(() => {
+      useGlideStore.setState({
+        lastActivity: { type: 'fire', zone: 'topLeft', slot: 1, at: Date.now() + 1, outcome: 'practice' }
+      })
+    })
+    expect(await screen.findByText(/That's it: upper left zone/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeEnabled()
+  })
+
+  it('says plainly when Glide can’t work here, and lets you carry on', () => {
+    window.flow = mockFlow({ ...GLIDE_OFF, platformSupported: false })
+    seed({ ...DEFAULT_STATE, step: 'glide' }, { ...GLIDE_OFF, platformSupported: false })
+    render(<Onboarding />)
+    expect(screen.getByRole('button', { name: 'Continue without Glide' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Turn on Glide' })).not.toBeInTheDocument()
+  })
+
+  it('"Not now" on the Flow screen persists flowEnabled:false without touching capture', () => {
+    window.flow = mockFlow()
+    seed({ ...DEFAULT_STATE, step: 'flow' })
     render(<Onboarding />)
     fireEvent.click(screen.getByRole('button', { name: 'Not now' }))
 
     expect(window.flow.setWorkflowMonitoringEnabled).not.toHaveBeenCalled()
     expect(window.flow.saveOnboardingState).toHaveBeenCalledWith(
-      expect.objectContaining({ flowEnabled: false, step: 'hardware' })
+      expect.objectContaining({ flowEnabled: false, step: 'firstAction' })
     )
   })
 
-  it('"Enable Flow" turns on the real capture toggle and persists flowEnabled:true', async () => {
+  it('"Turn on Flow" turns on the real capture switch', async () => {
     window.flow = mockFlow()
-    seedStores({ ...DEFAULT_STATE, step: 'flowPrivacy' })
-
+    seed({ ...DEFAULT_STATE, step: 'flow' })
     render(<Onboarding />)
-    fireEvent.click(screen.getByRole('button', { name: 'Enable Flow' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Turn on Flow' }))
 
     expect(window.flow.setWorkflowMonitoringEnabled).toHaveBeenCalledWith(true)
-    await screen.findByText('Connect your Noma')
-    expect(window.flow.saveOnboardingState).toHaveBeenCalledWith(
-      expect.objectContaining({ flowEnabled: true, step: 'hardware' })
+    await vi.waitFor(() =>
+      expect(window.flow.saveOnboardingState).toHaveBeenCalledWith(
+        expect.objectContaining({ flowEnabled: true, step: 'firstAction' })
+      )
     )
   })
 
-  it('completing onboarding persists completed:true and switches to the Dashboard page', async () => {
-    window.flow = mockFlow()
-    seedStores({ ...DEFAULT_STATE, step: 'completion' })
-
+  it('first action: shows the app’s zones, waits for a swipe that really ran, then finishes', async () => {
+    window.flow = mockFlow(GLIDE_ON)
+    seed({ ...DEFAULT_STATE, step: 'firstAction' }, GLIDE_ON)
     render(<Onboarding />)
-    fireEvent.click(screen.getByRole('button', { name: 'Start using Noma' }))
 
-    // setActivePage only runs after `await save(...)` resolves, so poll for
-    // the end result rather than the (synchronously-true) call assertion.
-    await vi.waitFor(() => {
-      expect(useUiStore.getState().activePage).toBe('home')
+    expect(await screen.findByText('2. Swipe in from the upper left: “NEW TAB”.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Finish setup' })).toBeInTheDocument()
+
+    act(() => {
+      useGlideStore.setState({
+        lastActivity: {
+          type: 'fire',
+          zone: 'topLeft',
+          slot: 1,
+          at: Date.now() + 1,
+          outcome: 'pressed',
+          controlLabel: 'NEW TAB',
+          applicationName: 'Google Chrome'
+        }
+      })
     })
-    expect(window.flow.saveOnboardingState).toHaveBeenCalledWith(
-      expect.objectContaining({ completed: true, step: 'completion' })
-    )
+    expect(await screen.findByText('It worked.')).toBeInTheDocument()
+    expect(screen.getByText(/“NEW TAB” ran in Google Chrome/)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Start using Noma' }))
+    await vi.waitFor(() => expect(useUiStore.getState().activePage).toBe('home'))
+    expect(window.flow.saveOnboardingState).toHaveBeenCalledWith(expect.objectContaining({ completed: true }))
+  })
+
+  it('first action: a practice swipe (Noma in front) is explained, not counted', async () => {
+    window.flow = mockFlow(GLIDE_ON)
+    seed({ ...DEFAULT_STATE, step: 'firstAction' }, GLIDE_ON)
+    render(<Onboarding />)
+    await screen.findByText('2. Swipe in from the upper left: “NEW TAB”.')
+
+    act(() => {
+      useGlideStore.setState({
+        lastActivity: { type: 'fire', zone: 'topLeft', slot: 1, at: Date.now() + 1, outcome: 'practice' }
+      })
+    })
+    expect(await screen.findByText(/Noma was in front, so it was practice/)).toBeInTheDocument()
+    expect(screen.queryByText('It worked.')).not.toBeInTheDocument()
   })
 })

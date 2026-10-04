@@ -1,5 +1,8 @@
 import { useState } from 'react'
-import type { ApplicationProfile, Suggestion } from '@shared/types'
+import type { ApplicationProfile, Suggestion, WorkflowPreview } from '@shared/types'
+import { GLIDE_ZONE_LABELS, glideZoneForSlot } from '@shared/constants'
+import { useGlideStore } from '../stores/glideStore'
+import { useUiStore } from '../stores/uiStore'
 import { useSuggestionsStore } from '../stores/suggestionsStore'
 import { explainConfidence } from '../lib/explainConfidence'
 import { confidenceLabel } from '../lib/confidenceLabel'
@@ -56,6 +59,7 @@ function occurrenceSentence(suggestion: Suggestion): string {
   const count = suggestion.confidenceBreakdown?.occurrenceCount
   if (count === undefined) return suggestion.explanation
   const where = suggestion.applicationName ? ` in ${suggestion.applicationName}` : ''
+  if (suggestion.isDemo) return `Demo Mode acted out this workflow ${count} time${count === 1 ? '' : 's'}${where}.`
   return `You've repeated this workflow ${count} time${count === 1 ? '' : 's'}${where}.`
 }
 
@@ -71,14 +75,24 @@ export function NomaMoment({
   const [showMore, setShowMore] = useState(false)
   const [showWhy, setShowWhy] = useState(false)
   const [createdLabel, setCreatedLabel] = useState<string | null>(null)
+  const [preview, setPreview] = useState<WorkflowPreview | null | undefined>(undefined)
+  const [savedSlot, setSavedSlot] = useState<number | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const glide = useGlideStore((state) => state.state)
+  const setGlideEnabled = useGlideStore((state) => state.setEnabled)
+  const setActivePage = useUiStore((state) => state.setActivePage)
+  const zoneCount = glide?.zoneCount ?? 4
   const assignToControl = useSuggestionsStore((state) => state.assignToControl)
   const resolve = useSuggestionsStore((state) => state.resolve)
+  const dismissSaved = useSuggestionsStore((state) => state.dismissSaved)
 
   const isHero = variant === 'hero'
   const chain = workflowChainSteps(suggestion)
 
   const startPicking = async (): Promise<void> => {
     setIsPicking(true)
+    setSaveError(null)
+    if (suggestion.action) void window.flow.previewSuggestionAction(suggestion.id).then(setPreview)
     if (!suggestion.applicationId) {
       setProfile(null)
       return
@@ -98,38 +112,68 @@ export function NomaMoment({
   }
 
   const handleAssign = async (slot: number): Promise<void> => {
-    const label = profile?.controls.find((control) => control.slot === slot)?.label
+    setSaveError(null)
     const ok = await assignToControl(suggestion.id, slot)
-    if (ok) {
-      setCreatedLabel(label ?? null)
-      if (label) onCreated?.(label)
+    if (!ok) {
+      setSaveError('Noma couldn’t save this. The suggestion may have changed; close this and try again.')
+      return
     }
+    // The control's new label, read back from what was actually saved.
+    const saved = suggestion.applicationId ? await window.flow.getProfileForApplication(suggestion.applicationId) : null
+    const label = saved?.controls.find((control) => control.slot === slot)?.label ?? 'Saved'
+    setSavedSlot(slot)
+    setCreatedLabel(label)
+    onCreated?.(label)
   }
 
   const handleAcceptInformational = async (): Promise<void> => {
-    await resolve(suggestion.id, 'accepted')
+    await window.flow.resolveSuggestion(suggestion.id, 'accepted')
     setCreatedLabel('Noted')
     onCreated?.('Noted')
   }
 
-  // Success: something real was actually created (or, for an
-  // informational-only suggestion, actually acknowledged) — never shown
-  // speculatively.
+  // Success: something real was actually saved (or, for an
+  // informational-only suggestion, acknowledged), never shown speculatively.
   if (createdLabel) {
+    const zone = savedSlot !== null ? glideZoneForSlot(savedSlot, zoneCount) : null
+    const zoneName = zone ? GLIDE_ZONE_LABELS[zoneCount][zone] : null
+    const appName = suggestion.applicationName ?? 'that app'
     return (
-      <div
-        className={isHero ? `${HERO_CARD} p-8` : ''}
-        style={{ animation: 'noma-settle 350ms ease-out' }}
-      >
-        <p className="text-xs text-neutral-600">Action created</p>
+      <div className={isHero ? `${HERO_CARD} p-8` : ''} style={{ animation: 'noma-settle 350ms ease-out' }}>
+        <p className="text-xs text-neutral-500">{createdLabel === 'Noted' ? 'Accepted' : 'Saved'}</p>
         <p className={`mt-1.5 font-display font-semibold text-neutral-100 ${isHero ? 'text-2xl' : 'text-lg'}`}>
           {createdLabel === 'Noted' ? 'Noted' : createdLabel}
         </p>
-        <p className="mt-1.5 text-sm text-neutral-500">
+        <p className="mt-1.5 max-w-md text-sm text-neutral-400">
           {createdLabel === 'Noted'
-            ? "Noma will keep this in mind. It'll factor into what it suggests next."
-            : 'Added to your interface.'}
+            ? "Noma will keep this in mind when deciding what to suggest next."
+            : zoneName
+              ? `Now on the ${zoneName.toLowerCase()} Glide zone in ${appName}. To run it, switch to ${appName} and swipe in from the ${zoneName.toLowerCase()}.`
+              : `Saved to control ${savedSlot} in ${appName}. Switch Glide to four zones to reach it with a swipe.`}
         </p>
+        {createdLabel !== 'Noted' && (
+          <div className="mt-4 flex flex-wrap items-center gap-4 text-sm">
+            {glide && glide.platformSupported && !glide.enabled && (
+              <button
+                type="button"
+                onClick={() => void setGlideEnabled(true)}
+                className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90"
+              >
+                Turn on Glide
+              </button>
+            )}
+            <button type="button" onClick={() => setActivePage('holo')} className="text-xs text-accent hover:opacity-80">
+              See it on the Glide page
+            </button>
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={() => dismissSaved(suggestion.id)}
+          className="mt-4 text-xs text-neutral-500 hover:text-neutral-100"
+        >
+          Done
+        </button>
       </div>
     )
   }
@@ -144,7 +188,12 @@ export function NomaMoment({
               : 'font-display text-base font-semibold text-neutral-100'
           }
         >
-          Noma noticed
+          <span className={isHero ? 'text-violet' : ''}>{suggestion.isDemo ? 'Demo workflow' : 'Noma noticed'}</span>
+          {suggestion.isDemo && (
+            <span className="ml-2 rounded border border-base-600 px-1.5 py-px text-[10px] font-normal normal-case tracking-normal text-neutral-500">
+              Simulated by Demo Mode, not learned from you
+            </span>
+          )}
         </p>
         {isHero && (
           <span className="shrink-0 text-xs text-neutral-500" title={formatAbsoluteTime(suggestion.createdAt)}>
@@ -175,17 +224,17 @@ export function NomaMoment({
       {!isPicking ? (
         <>
           <p className={`text-neutral-100 ${isHero ? 'mt-6 text-base' : 'mt-3 text-sm'}`}>
-            {suggestion.action ? 'Turn this into one action?' : 'Worth remembering for next time?'}
+            {suggestion.action ? 'Turn this into one Glide action?' : 'Worth remembering for next time?'}
           </p>
           <div className={`flex items-center gap-4 ${isHero ? 'mt-3' : 'mt-2'}`}>
             <button
               type="button"
               onClick={() => void startPicking()}
-              className={`rounded-md bg-accent font-medium text-white shadow-[0_2px_8px_-2px_rgba(91,111,245,0.35)] transition-colors duration-150 hover:bg-accent/90 active:opacity-90 ${
+              className={`rounded-md bg-accent font-medium text-white shadow-[0_2px_8px_-2px_rgba(76,126,255,0.35)] transition-colors duration-150 hover:bg-accent/90 active:opacity-90 ${
                 isHero ? 'px-4 py-2 text-sm' : 'px-3 py-1.5 text-xs'
               }`}
             >
-              {suggestion.action ? 'Create action' : 'Sounds right'}
+              {suggestion.action ? 'Review steps' : 'Sounds right'}
             </button>
             <button
               type="button"
@@ -233,34 +282,72 @@ export function NomaMoment({
               <button
                 type="button"
                 onClick={() => void handleAcceptInformational()}
-                className="shrink-0 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white shadow-[0_2px_8px_-2px_rgba(91,111,245,0.35)] transition-colors duration-150 hover:bg-accent/90"
+                className="shrink-0 rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white shadow-[0_2px_8px_-2px_rgba(76,126,255,0.35)] transition-colors duration-150 hover:bg-accent/90"
               >
                 Accept
               </button>
             </div>
           )}
 
+          {suggestion.action && (
+            <div className="mb-4">
+              <p className="mb-2 text-xs text-neutral-500">Exactly what this will do, in order:</p>
+              {preview === undefined ? (
+                <p className="text-xs text-neutral-600">Working it out…</p>
+              ) : preview === null ? (
+                <p className="text-xs text-neutral-600">This suggestion has no steps to run.</p>
+              ) : (
+                <>
+                  <ol className="space-y-1 text-sm">
+                    {preview.steps.map((step, index) => (
+                      <li key={index} className="flex gap-2.5">
+                        <span className="w-4 shrink-0 text-right font-mono text-[11px] leading-5 text-neutral-600">{index + 1}</span>
+                        <span className="min-w-0">
+                          <span className={step.kind === 'wait' ? 'text-neutral-500' : 'text-neutral-100'}>
+                            {step.description}
+                          </span>
+                          {step.added && <span className="ml-1.5 text-[11px] text-neutral-500">(added by Noma)</span>}
+                          {step.warning && <span className="block text-xs text-error">{step.warning}</span>}
+                        </span>
+                      </li>
+                    ))}
+                  </ol>
+                  <p className="mt-2 text-xs text-neutral-600">
+                    {preview.replayable
+                      ? 'It only runs when you swipe its zone (or press its control), and stops at the first step that fails.'
+                      : 'Some steps may not replay reliably. You can still save it; it stops at the first step that fails and tells you which.'}
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+
           {profile && (
             <>
-              <p className="mb-2 text-xs text-neutral-600">
-                Which control should this replace? You choose: Noma never picks for you.
+              <p className="mb-2 text-xs text-neutral-500">
+                Which Glide zone in {suggestion.applicationName ?? 'this app'} should run it? It replaces what&apos;s there now.
               </p>
               <div className="grid grid-cols-4 gap-2">
                 {[1, 2, 3, 4].map((slot) => {
                   const control = profile.controls.find((item) => item.slot === slot)
+                  const zone = glideZoneForSlot(slot, zoneCount)
                   return (
                     <button
                       key={slot}
                       type="button"
                       onClick={() => void handleAssign(slot)}
-                      className="rounded-md border border-base-700 px-2 py-2 text-center text-xs text-neutral-600 transition-colors hover:border-accent hover:text-neutral-100"
+                      className="rounded-md border border-base-700 px-2 py-2 text-center text-xs text-neutral-500 transition-colors hover:border-violet hover:text-neutral-100"
                     >
-                      <div className="text-[10px] text-neutral-500">{slot}</div>
+                      <div className="text-[10px] text-neutral-500">{zone ? GLIDE_ZONE_LABELS[zoneCount][zone] : `Control ${slot}`}</div>
                       <div className="mt-0.5 truncate text-neutral-100">{control?.label ?? '–'}</div>
                     </button>
                   )
                 })}
               </div>
+              {zoneCount === 2 && (
+                <p className="mt-2 text-[11px] text-neutral-600">Glide is in two-zone mode, so controls 3 and 4 have no swipe.</p>
+              )}
+              {saveError && <p className="mt-2 text-xs text-error">{saveError}</p>}
             </>
           )}
 

@@ -41,16 +41,15 @@ module.exports = {
           600: '#30333a'
         },
         accent: {
-          DEFAULT: '#5b6ff5',
-          muted: '#384497',
+          DEFAULT: '#4c7eff',
+          muted: '#2f4f9e',
           // The active-nav-item / "part of the adaptive loop" wash — a
           // translucent accent tint over dark glass, not a light color.
-          subtle: 'rgba(91,111,245,0.12)'
+          subtle: 'rgba(76,126,255,0.12)'
         },
-        // Dead token, deliberately: see this file's own top-of-block
-        // comment. Retained only so nothing importing `violet` from an
-        // older branch hard-fails; no component should add a new
-        // reference to it.
+        // Flow's own voice, used sparingly (v0.1): only to mark a Flow
+        // suggestion ("Noma noticed" labels, the approve button of a
+        // suggestion). Never on general UI, never as a glow or gradient.
         violet: {
           DEFAULT: '#8b6cff',
           muted: 'rgba(139,108,255,0.16)'

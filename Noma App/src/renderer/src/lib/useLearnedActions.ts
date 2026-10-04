@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { Application, ControlUsageStat, Macro } from '@shared/types'
+import { DEMO_MACRO_TRIGGER, LEARNED_MACRO_TRIGGER } from '@shared/constants'
 import { macroChainSteps, type WorkflowChainStep } from './workflowChain'
+import { useSuggestionsStore } from '../stores/suggestionsStore'
 
 export interface LearnedActionAssignment {
   controlId: string
@@ -35,6 +37,7 @@ export interface LearnedAction {
  */
 export function useLearnedActions(): LearnedAction[] | null {
   const [learnedActions, setLearnedActions] = useState<LearnedAction[] | null>(null)
+  const workflowsVersion = useSuggestionsStore((state) => state.workflowsVersion)
 
   useEffect(() => {
     const load = async (): Promise<void> => {
@@ -47,7 +50,9 @@ export function useLearnedActions(): LearnedAction[] | null {
       const applicationNames = Object.fromEntries(applications.map((app: Application) => [app.id, app.name]))
       const usageByControlId = new Map<string, ControlUsageStat>(usageStats.map((stat) => [stat.controlId, stat]))
 
-      const learned = macros.filter((macro) => macro.trigger === 'flow-control')
+      const learned = macros.filter(
+        (macro) => macro.trigger === LEARNED_MACRO_TRIGGER || macro.trigger === DEMO_MACRO_TRIGGER
+      )
       const withContext = await Promise.all(
         learned.map(async (macro): Promise<LearnedAction> => {
           const referencing = await window.flow.getControlsReferencingMacro(macro.id)
@@ -76,7 +81,7 @@ export function useLearnedActions(): LearnedAction[] | null {
     void load()
     const unsubscribe = window.flow.onSuggestionsChanged(() => void load())
     return unsubscribe
-  }, [])
+  }, [workflowsVersion])
 
   return learnedActions
 }

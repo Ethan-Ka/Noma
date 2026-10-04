@@ -1,5 +1,14 @@
 # Noma
 
+> **v0.1 beta (2026-10-04).** Glide (trackpad swipe-in, four actions per
+> app) + Flow (notices repeated shortcut sequences; you review the steps and
+> put one on a Glide zone). Start with `PRODUCT.md` (what v0.1 is),
+> `docs/v0.1-audit.md` (what was found and fixed), and
+> `docs/beta-testing-guide.md` (for testers). Build and run:
+> `npm install`, `npm test`, `npm run dev`; installer: `npm run dist:win`
+> (writes `dist/Noma-Setup-<version>.exe`). Much of the history below
+> predates v0.1 and describes earlier phases.
+
 Adaptive computer interface — software brain and development platform for a
 future modular keyboard. **Noma** is the product/company name; **Flow** is
 specifically the adaptive suggestion/pattern-learning feature within it (the

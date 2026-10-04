@@ -23,6 +23,7 @@ interface SuggestionRow {
   chain_application_names: string | null
   occurrence_count: number | null
   notified_at: number | null
+  is_demo?: number | null
 }
 
 const SUGGESTION_SELECT = `
@@ -56,7 +57,8 @@ function rowToSuggestion(row: SuggestionRow): Suggestion {
       ? (JSON.parse(row.chain_application_names) as Record<string, string | null>)
       : undefined,
     occurrenceCount: row.occurrence_count ?? undefined,
-    notifiedAt: row.notified_at ?? undefined
+    notifiedAt: row.notified_at ?? undefined,
+    ...(row.is_demo ? { isDemo: true } : {})
   }
 }
 
@@ -280,4 +282,10 @@ export function recordSuggestionOccurrences(id: string, occurrenceCount: number)
 /** Marks a workflow as announced on screen, so it is never announced twice. */
 export function markSuggestionNotified(id: string, notifiedAt: number): void {
   getDatabase().prepare('UPDATE suggestions SET notified_at = @at WHERE id = @id').run({ id, at: notifiedAt })
+}
+
+/** Flags suggestions as Demo Mode's (see demoService.markDemoSuggestions). */
+export function markSuggestionsDemo(ids: string[]): void {
+  const statement = getDatabase().prepare('UPDATE suggestions SET is_demo = 1 WHERE id = ?')
+  for (const id of ids) statement.run(id)
 }

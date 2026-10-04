@@ -5,7 +5,7 @@ import { Controls } from './pages/Controls'
 import { Workflows } from './pages/Workflows'
 import { Demo } from './pages/Demo'
 import { VirtualKeyboard } from './pages/VirtualKeyboard'
-import { Holo } from './pages/Holo'
+import { Glide } from './pages/Glide'
 import { MacroStudio } from './pages/MacroStudio'
 import { Learning } from './pages/Learning'
 import { Activity } from './pages/Activity'
@@ -16,7 +16,10 @@ import { Developer } from './pages/Developer'
 import { Onboarding } from './pages/Onboarding'
 import { useUiStore } from './stores/uiStore'
 import { useOnboardingStore } from './stores/onboardingStore'
-import { useHoloStore } from './stores/holoStore'
+// Imported for their side effect: both subscribe to main's pushes at load,
+// so Glide and running-action state are current whichever page is open.
+import './stores/glideStore'
+import './stores/actionRunStore'
 
 function App() {
   const activePage = useUiStore((state) => state.activePage)
@@ -37,12 +40,6 @@ function App() {
   // disappear. Workflows' "Noma noticed" section lists every pending
   // suggestion, so the reviewed one is guaranteed to actually be there.
   useEffect(() => window.flow.onOpenSuggestionInApp(() => setActivePage('workflows')), [setActivePage])
-
-  // Holo's swipe-ins carry on from the last run, without the Holo page
-  // having to be opened first.
-  useEffect(() => {
-    void useHoloStore.getState().resumeTrackpad()
-  }, [])
 
   // Blank instead of a spinner while the very first IPC round-trip is in
   // flight — same background as every other state below, so there's no
@@ -68,7 +65,7 @@ function App() {
       {activePage === 'settings' && <Settings />}
       {activePage === 'demo' && <Demo />}
       {activePage === 'virtual-keyboard' && <VirtualKeyboard />}
-      {activePage === 'holo' && <Holo />}
+      {activePage === 'holo' && <Glide />}
       {activePage === 'macros' && <MacroStudio />}
       {activePage === 'usage-stats' && <UsageStats />}
       {activePage === 'profiles' && <Profiles />}

@@ -211,6 +211,9 @@ export interface Suggestion {
   /** When this workflow was announced by Noma Notice, if it ever was —
    *  what stops the same one being announced twice. */
   notifiedAt?: number
+  /** Produced by Demo Mode's scripted events, not learned from the user.
+   *  Shown with a "Demo" label, never presented as something Noma noticed. */
+  isDemo?: boolean
 }
 
 /**
@@ -417,6 +420,64 @@ export type HoloTrackpadEvent =
       reason: 'too-slow' | 'not-sideways' | 'second-finger' | 'palm' | 'typing' | 'click'
     }
 
+/** Glide's state. Owned by main (stored in settings), so it survives
+ *  restarts and works with Noma's window closed to the tray. */
+export interface GlideState {
+  enabled: boolean
+  zoneCount: HoloTrackpadZoneCount
+  /** Glide can run here at all: Windows, with raw touchpad input. */
+  platformSupported: boolean
+  /** Precision touchpads found the last time Glide started or checked;
+   *  null when it hasn't looked yet. */
+  touchpads: number | null
+  /** Why Glide couldn't start, in plain words; null when fine. */
+  error: string | null
+}
+
+/** What a recognised swipe-in came to. `practice`: Noma's own window was in
+ *  front, so nothing ran (the app behind it would have got the press, out of
+ *  sight). `paused`: a touch check was recording. `busy`: another action was
+ *  still running. */
+export type GlideOutcome = 'pressed' | 'practice' | 'no-app' | 'no-control' | 'paused' | 'busy'
+
+/** One swipe-in, pushed to the renderer for feedback. */
+export type GlideActivity =
+  | {
+      type: 'fire'
+      zone: HoloTrackpadZone
+      slot: number
+      at: number
+      outcome: GlideOutcome
+      controlLabel?: string
+      applicationName?: string
+    }
+  | Extract<HoloTrackpadEvent, { type: 'miss' }>
+
+/** Whether an action (a control press or an editor Test) is running now. */
+export interface ActionRunState {
+  running: boolean
+  label?: string
+  startedAt?: number
+}
+
+/** One step of what an approved workflow will do, in the order it runs. */
+export interface WorkflowPreviewStep {
+  /** Plain words: "Press Ctrl+D", "Switch to Google Chrome", "Wait 0.6 s". */
+  description: string
+  kind: 'shortcut' | 'focus' | 'click' | 'wait' | 'other'
+  /** Added by Noma rather than seen (e.g. Enter after a final paste). */
+  added?: boolean
+  /** Why this step may not replay reliably, in plain words. */
+  warning?: string
+}
+
+/** What accepting a suggestion would save, shown before the user agrees. */
+export interface WorkflowPreview {
+  steps: WorkflowPreviewStep[]
+  /** No step carries a warning (as far as Noma can tell beforehand). */
+  replayable: boolean
+}
+
 export interface HoloTrackpadStatus {
   /** Precision touchpads found (swipe-ins need at least one). */
   touchpads: number
@@ -586,21 +647,19 @@ export interface DeviceLogEntry {
  * data, so it lives in the same generic `settings` key/value table
  * workflowMonitoringEnabled already uses.
  */
-export type OnboardingStepId =
-  | 'welcome'
-  | 'useCases'
-  | 'flowPrivacy'
-  | 'hardware'
-  | 'demo'
-  | 'completion'
+/** v0.1 onboarding: what Noma is, try Glide, Flow opt-in, first real
+ *  action. A step id saved by an older build reads as 'welcome'. */
+export type OnboardingStepId = 'welcome' | 'glide' | 'flow' | 'firstAction'
 
 export interface OnboardingState {
   completed: boolean
   /** The last screen reached — lets a relaunch mid-onboarding resume there
    *  instead of restarting from Welcome. */
   step: OnboardingStepId
+  /** Kept for older saved states; v0.1 onboarding doesn't ask. */
   selectedUseCases: string[]
   flowEnabled: boolean
+  /** Kept for older saved states; v0.1 onboarding doesn't ask. */
   hardwareSkipped: boolean
 }
 
@@ -856,24 +915,36 @@ export interface FlowApi {
    *  the flow, not just once at the end. */
   saveOnboardingState(update: Partial<OnboardingState>): Promise<OnboardingState>
 
-  /**
-   * Holo — the free, no-hardware input option (Settings). Which "keyboard"
-   * Flow currently trusts to fire pressControl; 'keyboard' (physical/
-   * virtual) by default.
-   */
-  getInputSource(): Promise<InputSource>
-  setInputSource(source: InputSource): Promise<InputSource>
   /** Opens the folder touch checks are saved in (Noma's own, on this
    *  computer). */
   openHoloRecordings(): Promise<void>
-  /**
-   * Holo's trackpad swipe-ins: while enabled, main reads the precision
-   * touchpad's finger positions (in memory only) and reports swipe-ins.
-   * Resolves with how many precision touchpads were found, or null when
-   * disabling or when raw touchpad input isn't available (not Windows).
-   */
-  setHoloTrackpad(enabled: boolean, zones?: HoloTrackpadZoneCount): Promise<HoloTrackpadStatus | null>
-  onHoloTrackpadEvent(callback: (event: HoloTrackpadEvent) => void): () => void
+  /** Glide: the trackpad swipe-in. On/off and zone count are stored by main
+   *  and take effect immediately, with or without this window open. */
+  getGlideState(): Promise<GlideState>
+  setGlideEnabled(enabled: boolean): Promise<GlideState>
+  setGlideZoneCount(zoneCount: HoloTrackpadZoneCount): Promise<GlideState>
+  onGlideState(callback: (state: GlideState) => void): () => void
+  onGlideActivity(callback: (activity: GlideActivity) => void): () => void
+
+  /** The action running right now, if any, and a way to stop it between
+   *  steps. Stopping never undoes steps that already ran. */
+  getActionRunState(): Promise<ActionRunState>
+  onActionRunState(callback: (state: ActionRunState) => void): () => void
+  cancelRunningAction(): Promise<boolean>
+
+  /** Removes a saved workflow and puts every control it was on back to its
+   *  starter action (or an empty slot). False when there's no such workflow. */
+  removeWorkflow(macroId: string): Promise<boolean>
+  /** The exact steps accepting this suggestion would save, before anything
+   *  is saved. Null when the suggestion has no action. */
+  previewSuggestionAction(suggestionId: string): Promise<WorkflowPreview | null>
+
+  /** Beta issue reports: a plain-text summary of this install (versions,
+   *  touchpad, settings, recent action results, never what was typed or
+   *  clicked) for the tester to read and paste themselves. Never sent. */
+  getDiagnosticsReport(): Promise<string>
+  /** Opens the issue page in the browser, with nothing attached. */
+  openIssuePage(): Promise<void>
   /** The trackpad touch check: records finger positions (dry run, nothing
    *  fires) until stopped, then saves them on this computer and returns a
    *  summary. `phases` are the guided steps, in Date.now() time. */

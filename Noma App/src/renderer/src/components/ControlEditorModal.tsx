@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { FLOW_ACTION_CATALOG, SYSTEM_COMMAND_CATALOG } from '@shared/constants'
+import { FLOW_ACTION_CATALOG, GLIDE_ZONE_LABELS, SYSTEM_COMMAND_CATALOG, glideZoneForSlot } from '@shared/constants'
+import { useGlideStore } from '../stores/glideStore'
 import type { Control, ControlAction, Macro } from '@shared/types'
 import { ShortcutRecorder } from './ShortcutRecorder'
 import { GLASS_PANEL, MODAL_SCRIM } from '../lib/surfaces'
@@ -32,7 +33,7 @@ type SelectableActionType = Exclude<ControlAction['type'], 'launchApplication' |
 
 const ACTION_TYPE_LABELS: Record<SelectableActionType, string> = {
   shortcut: 'Keyboard shortcut',
-  macro: 'Macro',
+  macro: 'Saved workflow',
   systemCommand: 'System action',
   flowAction: 'Flow action'
 }
@@ -65,6 +66,9 @@ export function ControlEditorModal({
   const [saveError, setSaveError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [isTesting, setIsTesting] = useState(false)
+  const zoneCount = useGlideStore((state) => state.state?.zoneCount ?? 4)
+  const zone = glideZoneForSlot(slot, zoneCount)
+  const zoneLabel = zone ? GLIDE_ZONE_LABELS[zoneCount][zone] : null
 
   useEffect(() => {
     window.flow.getMacros().then(setMacros)
@@ -119,9 +123,9 @@ export function ControlEditorModal({
       <div className={`w-full max-w-md p-6 ${GLASS_PANEL}`}>
         <div className="mb-5">
           <div className="text-[10px] uppercase tracking-widest text-neutral-600">
-            {applicationName} · Control {slot}
+            {applicationName} · {zoneLabel ? `${zoneLabel} zone` : `Control ${slot}`}
           </div>
-          <h2 className="mt-1 font-display text-lg font-semibold text-neutral-100">Configure control</h2>
+          <h2 className="mt-1 font-display text-lg font-semibold text-neutral-100">Choose what this runs</h2>
         </div>
 
         <div className="mb-4">
@@ -169,8 +173,8 @@ export function ControlEditorModal({
           {action.type === 'macro' &&
             (macros.length === 0 ? (
               <p className="rounded-md border border-dashed border-white/10 px-3 py-2 text-xs text-neutral-600">
-                No macros yet. Build one in Macro Studio, or accept a repeated-sequence suggestion
-                on the Dashboard.
+                No saved workflows yet. Approve one Flow noticed on the Workflows page, or build one
+                in Macro Studio.
               </p>
             ) : (
               <select
@@ -179,7 +183,7 @@ export function ControlEditorModal({
                 className="w-full rounded-md border border-white/10 bg-base-950 px-3 py-2 text-sm text-neutral-100"
               >
                 <option value="" disabled>
-                  Choose a macro…
+                  Choose a workflow…
                 </option>
                 {macros.map((macro) => (
                   <option key={macro.id} value={macro.id}>

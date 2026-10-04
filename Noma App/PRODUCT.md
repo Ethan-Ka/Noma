@@ -5,105 +5,83 @@
 ## Platform
 
 web
-<!-- Electron desktop app — a Chromium renderer, not a native iOS/Android/adaptive
-     surface, so web design conventions (not platform HIG) apply. -->
+<!-- Electron desktop app: a Chromium renderer, so web design conventions
+     apply, not a native platform HIG. -->
+
+## What Noma is (v0.1)
+
+Noma gives every app four actions you run by sliding a finger from the palm
+rest onto your laptop's trackpad (**Glide**), and notices the shortcut
+sequences you repeat so you can turn one into one of those actions (**Flow**).
+No extra hardware is needed. A dedicated physical device is the long-term
+plan; v0.1 does not depend on it, and its UI is behind developer tools.
+
+One story: *I'm in an app → I swipe in from a side → the action for that
+zone runs in that app. Flow noticed something I keep doing → I check its
+steps → I put it on a zone.*
 
 ## Users
 
-People who own (or plan to own) a physical Noma keyboard, plus early
-testers/investors/Purdue Innovates evaluators seeing it pre-hardware. The
-primary daily user is a power user who switches between a handful of
-applications all day (a developer in VS Code, a browser, a media app) and
-wants their physical controls to mean something different in each one
-without manually reconfiguring anything.
+People who live in a handful of apps on a Windows laptop with a precision
+touchpad: first, Purdue students in a small external beta. They have never
+heard of Noma and give it a few minutes to prove itself.
 
-## Product Purpose
+## The v0.1 journey
 
-Noma is an adaptive modular keyboard: the physical (eventually) and virtual
-(today) 4-button deck's meaning changes automatically based on which
-application is focused, and "Flow" — a local, deterministic (not AI/cloud)
-pattern-detection engine — notices repeated keyboard shortcuts and suggests
-promoting them to a dedicated physical control. Success is a user
-understanding, within seconds of looking at the app, what their keyboard is
-currently doing and why, and trusting that Flow's suggestions are genuinely
-useful rather than noisy.
+1. **Install and launch.** Single instance, tray icon, Noma identity on the
+   taskbar and in notifications.
+2. **Onboarding, four screens.** What Noma is (one sentence) → Meet Glide
+   (gesture demonstration, turn it on, one real practice swipe that only
+   lights its zone) → Flow (what it records and never records; opt in or
+   not) → Your first action (pick an app, see or change its four zones,
+   switch to it and swipe; the screen confirms what actually ran).
+3. **Daily use.** Glide works in any app with Noma's window closed to the
+   tray. Swipes are practice only while Noma itself is in front.
+4. **Flow.** After about three repeats of the same shortcut sequence, a
+   suggestion appears (in-app and as a small bottom-centre notice). "Review
+   steps" shows exactly what will run, flags steps that may not replay, and
+   asks which Glide zone should run it. Nothing is saved or run without that
+   choice.
+5. **Return.** Settings, Glide on/off, zone count, zone actions and saved
+   workflows persist in local SQLite. Home shows a getting-started checklist
+   until each step has really happened.
 
-## Positioning
+## What's real
 
-Not a general macro-pad / Stream-Deck-style utility (assign-a-button-by-hand
-tools exist already) and not an AI copilot. Noma's mechanism is specifically:
-(1) contextual controls that change with the focused application, ported
-today onto seeded profiles (VS Code / Chrome / Spotify) with a real profile
-editor for any other app, and (2) Flow's local rule-based learning loop
-(observe → detect a repeated pattern → explain a suggestion with real
-arithmetic, never a black-box score → the user assigns the slot, Flow never
-does). Both halves are demonstrable end-to-end today in software, ahead of
-the physical hardware shipping.
+- Foreground-app detection; four actions per app (starter actions for
+  Chrome, VS Code and Spotify; any other app can be set up in one click).
+- Glide on Windows precision touchpads: raw HID reports, a pure tested
+  recognizer, pointer put back after a swipe, typing/palm/two-finger/click
+  rejection, owned by the main process.
+- Real execution of shortcuts, saved workflows, app focus, named-button
+  clicks; one action at a time; stop between steps (app bar or tray).
+- Flow: modifier-only capture, hard "makes sense" rules, learned quality
+  filter, step preview, pause / change zone / remove for saved workflows.
+- Demo Mode (developer tools only): scripted, labelled "Demo", and its reset
+  removes only demo data.
+- Beta bug reports: a visible, copyable technical summary and the issue page;
+  nothing is sent automatically.
 
-## Operating Context
+## Constraints and never-claims
 
-Runs as an always-present Electron desktop app (dark theme, no light mode
-today) alongside whatever the user is actually working in. Core loops: the
-Dashboard (what is Noma doing right now), the Virtual Keyboard (the
-day-one-standin for the physical deck — every press really executes),
-Macro Studio, Profiles, Settings/Privacy, and a first-launch onboarding
-flow. Demo Mode and Developer Mode exist for presentations and hardware
-bring-up respectively, not for the primary daily user.
+- Flow records which app, which modifier shortcut, which Noma action, and
+  when. Never typed text, screenshots, clipboard, or passwords. No network
+  calls except the update check against GitHub Releases.
+- Glide is verified on one laptop (ASUS ROG Zephyrus G14). Do not claim
+  broad touchpad compatibility. macOS: Glide unavailable; the rest of the
+  macOS port is untested on real hardware.
+- No physical device exists for users; never fake a hardware connection.
+- Visual identity: near-black graphite, Sora / Inter / JetBrains Mono, blue
+  accent `#4c7eff`, violet only to mark a Flow suggestion, gold only for real
+  hardware contact. No AI gradients or glow, no fake 3D hardware.
+- Voice: plain, specific, quiet. Never "AI-powered", "supercharge",
+  "unlock".
 
-## Capabilities and Constraints
+## Product principles
 
-- Real execution: pressing a control actually sends the configured
-  keystroke/macro/system command — not a simulation.
-- Flow is 100% local/deterministic (SQLite + rule-based pattern detection);
-  no network calls, no cloud AI, anywhere in the app. This is a load-bearing
-  trust claim already verified against the implementation in a prior pass —
-  any new UI must not contradict it.
-- No physical hardware exists yet; `getDefaultHardwareDevice()` is always a
-  virtual/software device today. Hardware-connected UI states must stay
-  honest about this (see `HardwareStatusPill`), never fake a connection.
-- Existing design tokens (`tailwind.config.js`): a signature brand blue
-  accent (`#4c7eff`), gold (real hardware contact), flow violet (Flow's own
-  cognition/suggestions), Sora display / Inter body / JetBrains Mono
-  technical fonts — all synced with the sibling marketing site
-  (`Noma Website/`) and **not** to be redesigned away; this task is about
-  chrome, materiality, and hierarchy, not the brand palette or type family.
-- Text-contrast floor: the app's `neutral` gray text scale was deliberately
-  rebalanced (2026-08-31) after a real readability complaint — any new glass/
-  translucency treatment must not put text back under ~3:1 contrast.
-
-## Brand Commitments
-
-Name "Noma"; the adaptive-suggestion feature is branded "Flow" specifically
-(never "AI" in user-facing copy). Existing wordmark/logo assets in
-`src/renderer/src/assets/logo.png`. The sibling `Noma Website/` already
-established a "liquid glass" floating-pill nav treatment
-(`Navigation.tsx`'s `GLASS` class: backdrop-blur-2xl + saturate + a
-gradient + an inset top-highlight/bottom-shadow rim) that the user has
-explicitly asked to be ported into this app's chrome — treat that
-implementation as the literal reference, not just a mood description.
-
-## Product Principles
-
-1. Contextual clarity over feature density — every screen answers "what is
-   Noma doing right now" before anything else.
-2. Real, not simulated — the virtual keyboard, Flow's suggestions, and every
-   status indicator reflect actual system state, never a canned demo (Demo
-   Mode is the sole, clearly-labeled exception).
-3. Trustworthy by construction — privacy and "is this really connected"
-   claims are only ever as strong as what the code actually does.
-4. Calm over loud — one accent color family, restrained motion, no
-   gamification.
-
-## Evidence on Hand
-
-Real, working code for every capability above (this is a functioning
-pre-hardware product, not a mockup). No customer testimonials, pricing, or
-production hardware photography exist yet — do not fabricate any.
-
-<!-- PRODUCT.md written from accumulated repository/session evidence rather
-     than a fresh user interview: prior sessions in this same project built
-     the onboarding flow, the hardware-status system, the color-contrast
-     fix, and a first-time-user UX audit, so users/purpose/positioning/
-     constraints above are load-bearing facts already established through
-     that work, not a guess. Flagged here per Impeccable's init step so a
-     future session can tell this file wasn't rubber-stamped. -->
+1. Get the user to one working action fast; explain only what's needed.
+2. Real, not simulated: every state shown is the actual state. The demo is
+   the one labelled exception.
+3. Nothing runs that the user didn't choose, and they can see what it will
+   do first.
+4. Calm over loud.

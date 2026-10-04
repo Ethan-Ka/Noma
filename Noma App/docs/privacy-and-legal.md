@@ -235,3 +235,25 @@ any deployment on shared or employer-owned machines, or any feature that
 adds screen content, clipboard, or cloud sync — have this reviewed by an
 actual attorney familiar with wiretap, computer-monitoring, and state
 spyware statutes in the relevant jurisdictions.
+
+## Beta issue reports (v0.1)
+
+Settings > Report a problem never sends anything by itself. "Open the issue
+page" opens an empty GitHub issue form in the tester's browser; nothing is
+put in the URL. "Show technical details" builds a plain-text summary on
+request (`main/diagnostics.ts`) and shows all of it before the tester can
+copy it: Noma and Electron versions, OS version, Glide on/off, zone count,
+touchpad count and any Glide error, Flow on/off, counts of pending
+suggestions, saved workflows and set-up apps, and the time, action kind and
+success or failure reason of the last 15 presses. It deliberately leaves out
+control and workflow names, shortcuts, app names, typed text and
+screenshots. Failure reasons can name a button Noma looked for ("Found 2
+buttons named …"), which is why the tester reads it before pasting.
+
+## Glide in v0.1
+
+Glide's on/off switch and zone count are stored in the local `settings`
+table and the main process reads the touchpad only while Glide is on (or
+during a touch check the user starts). The recorded touch-check fixture in
+`src/main/holo/fixtures/` holds finger positions from the developer's own
+laptop and no key presses.

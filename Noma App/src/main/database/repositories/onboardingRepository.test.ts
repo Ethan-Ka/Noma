@@ -23,10 +23,10 @@ describe('getOnboardingState', () => {
 
 describe('saveOnboardingState', () => {
   it('persists a partial update merged onto the current state', () => {
-    saveOnboardingState({ step: 'useCases', selectedUseCases: ['Development'] })
+    saveOnboardingState({ step: 'glide', selectedUseCases: ['Development'] })
     expect(getOnboardingState()).toEqual({
       completed: false,
-      step: 'useCases',
+      step: 'glide',
       selectedUseCases: ['Development'],
       flowEnabled: false,
       hardwareSkipped: false
@@ -35,12 +35,12 @@ describe('saveOnboardingState', () => {
 
   it('accumulates updates across multiple calls without losing earlier fields', () => {
     saveOnboardingState({ selectedUseCases: ['Design', 'Video'] })
-    saveOnboardingState({ flowEnabled: true, step: 'hardware' })
-    saveOnboardingState({ hardwareSkipped: true, step: 'demo' })
+    saveOnboardingState({ flowEnabled: true, step: 'flow' })
+    saveOnboardingState({ hardwareSkipped: true, step: 'firstAction' })
 
     expect(getOnboardingState()).toEqual({
       completed: false,
-      step: 'demo',
+      step: 'firstAction',
       selectedUseCases: ['Design', 'Video'],
       flowEnabled: true,
       hardwareSkipped: true
@@ -49,11 +49,11 @@ describe('saveOnboardingState', () => {
 
   it('marks onboarding complete without disturbing the rest of the record', () => {
     saveOnboardingState({ selectedUseCases: ['Writing'], flowEnabled: true })
-    const result = saveOnboardingState({ completed: true, step: 'completion' })
+    const result = saveOnboardingState({ completed: true, step: 'firstAction' })
 
     expect(result).toEqual({
       completed: true,
-      step: 'completion',
+      step: 'firstAction',
       selectedUseCases: ['Writing'],
       flowEnabled: true,
       hardwareSkipped: false
@@ -62,7 +62,7 @@ describe('saveOnboardingState', () => {
   })
 
   it('returns the update it just persisted, not a stale copy', () => {
-    const result = saveOnboardingState({ step: 'flowPrivacy' })
-    expect(result.step).toBe('flowPrivacy')
+    const result = saveOnboardingState({ step: 'flow' })
+    expect(result.step).toBe('flow')
   })
 })

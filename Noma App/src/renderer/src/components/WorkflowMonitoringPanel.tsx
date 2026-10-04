@@ -15,17 +15,16 @@ export function WorkflowMonitoringPanel() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="text-xs uppercase tracking-widest text-neutral-500">
-            Workflow Monitoring
+            Flow learning
           </div>
           <p className="mt-2 max-w-md text-sm text-neutral-400">
-            When enabled, Flow watches for keyboard shortcuts that hold down {COMMAND_MODIFIERS_COPY},
-            never single keys, never what you type. Nothing leaves this device. See{' '}
-            <span className="text-neutral-300">docs/privacy-and-legal.md</span> for the full policy.
+            When on, Flow notes which app is in front and the shortcuts you press that hold down{' '}
+            {COMMAND_MODIFIERS_COPY}: never single keys, never what you type. Nothing leaves this computer.
           </p>
         </div>
         <div className="flex items-center gap-2 pt-1">
-          <span className="text-xs text-neutral-500">{enabled ? 'Enabled' : 'Disabled'}</span>
-          <ToggleSwitch checked={enabled} onChange={setEnabled} label="Workflow monitoring" />
+          <span className="text-xs text-neutral-500">{enabled ? 'On' : 'Off'}</span>
+          <ToggleSwitch checked={enabled} onChange={setEnabled} label="Flow learning" />
         </div>
       </div>
 

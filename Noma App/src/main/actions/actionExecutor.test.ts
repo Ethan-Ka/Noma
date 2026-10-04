@@ -10,9 +10,14 @@ import { focusWindowAndVerify } from './windowFocus'
 import { executeClick } from './click'
 import {
   ACTION_BUSY_REASON,
+  ACTION_CANCELLED_REASON,
+  cancelRunningAction,
+  getActionRunState,
+  onActionRunState,
   executeControlAction,
   executeMacroSteps,
   runActionExclusively,
+  MACRO_PAUSED_REASON,
   isBlockedShortcut,
   isKeystrokeExecutionEnabled,
   isKnownFlowAction,
@@ -321,7 +326,7 @@ describe('executeMacroSteps', () => {
     })
     const result = await executeMacroSteps([{ type: 'macro', macroId: inner.id }], null)
     expect(result.ok).toBe(false)
-    expect(result.reason).toBe('Macro is disabled')
+    expect(result.reason).toBe(MACRO_PAUSED_REASON)
   })
 
   it('refuses a macro step that references itself directly', async () => {
@@ -479,5 +484,37 @@ describe('one action at a time', () => {
   it('releases the lock even when the action throws', async () => {
     await expect(runActionExclusively(async () => Promise.reject(new Error('boom')))).rejects.toThrow('boom')
     expect(await runActionExclusively(async () => ({ ok: true }))).toEqual({ ok: true })
+  })
+})
+
+describe('stopping a running action', () => {
+  it('stops before the next step, says where, and never sends the rest', async () => {
+    const steps: MacroStep[] = [
+      { type: 'delay', ms: 2000 },
+      { type: 'shortcut', keys: ['Control', 'S'] }
+    ]
+    const running = runActionExclusively(() => executeMacroSteps(steps, null), 'Save twice')
+    expect(getActionRunState()).toMatchObject({ running: true, label: 'Save twice' })
+    expect(cancelRunningAction()).toBe(true)
+
+    const result = await running
+    expect(result.ok).toBe(false)
+    expect(result.reason).toContain(ACTION_CANCELLED_REASON)
+    expect(uIOhook.keyTap).not.toHaveBeenCalled()
+    expect(getActionRunState()).toEqual({ running: false })
+  })
+
+  it('reports nothing to stop when idle, and a stop never leaks into the next run', async () => {
+    expect(cancelRunningAction()).toBe(false)
+    const result = await runActionExclusively(() => executeMacroSteps([{ type: 'delay', ms: 1 }], null))
+    expect(result).toEqual({ ok: true })
+  })
+
+  it('tells listeners when an action starts and ends', async () => {
+    const seen: boolean[] = []
+    const unsubscribe = onActionRunState((state) => seen.push(state.running))
+    await runActionExclusively(async () => ({ ok: true }), 'x')
+    unsubscribe()
+    expect(seen).toEqual([true, false])
   })
 })

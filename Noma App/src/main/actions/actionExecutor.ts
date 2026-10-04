@@ -1,6 +1,6 @@
 import { uIOhook } from 'uiohook-napi'
 import { FLOW_ACTION_CATALOG } from '@shared/constants'
-import type { ControlAction, MacroStep } from '@shared/types'
+import type { ActionRunState, ControlAction, MacroStep } from '@shared/types'
 import { keyCodeForName } from '../workflow/keyNames'
 import { markSelfInjected } from '../workflow/selfInjectedKeys'
 import { getMacroById } from '../database/repositories/macrosRepository'
@@ -30,6 +30,9 @@ const CLOSE_WINDOW_ACTION = 'closeWindow'
 export function isKnownFlowAction(action: string): boolean {
   return FLOW_ACTION_CATALOG.includes(action) && action === CLOSE_WINDOW_ACTION
 }
+
+/** A saved workflow the user has paused (Workflows page). */
+export const MACRO_PAUSED_REASON = 'This workflow is paused. Resume it on the Workflows page to use it'
 
 export interface ExecutionResult {
   ok: boolean
@@ -186,6 +189,22 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+/** Set by cancelRunningAction; checked between steps and during waits. */
+let cancelRequested = false
+
+/** Shown when the user stopped a running action. */
+export const ACTION_CANCELLED_REASON = 'You stopped it'
+
+/** Waits like sleep, but returns early (false) once a stop is requested. */
+async function waitUnlessCancelled(ms: number): Promise<boolean> {
+  const until = Date.now() + ms
+  while (Date.now() < until) {
+    if (cancelRequested) return false
+    await sleep(Math.min(50, until - Date.now()))
+  }
+  return !cancelRequested
+}
+
 /**
  * Switches to an already-running application by id — the `focusApplication`
  * ControlAction/MacroStep (see its doc comment in shared/types). Resolves
@@ -257,7 +276,12 @@ export async function executeMacroSteps(
   if (steps.some((step) => step.type === 'click' && step.target.startsWith('label:'))) uiaControlFinder.warmUp()
   for (const step of steps) {
     if (step.type !== 'delay') actionIndex++
-    const result = await executeMacroStep(step, targetHwnd, visitedMacroIds)
+    // Checked before every step, so a stop lands between steps: never
+    // halfway through a shortcut or a click, and nothing already done is
+    // undone. The message says exactly where it stopped.
+    const result = cancelRequested
+      ? { ok: false, reason: ACTION_CANCELLED_REASON }
+      : await executeMacroStep(step, targetHwnd, visitedMacroIds)
     if (!result.ok) {
       // Say where it stopped, so a half-run workflow is never a mystery:
       // "Stopped at step 3 of 5: ..." tells the user exactly what did and
@@ -290,8 +314,9 @@ async function executeMacroStep(
 ): Promise<ExecutionResult> {
   switch (step.type) {
     case 'delay':
-      await sleep(Math.max(0, step.ms))
-      return { ok: true }
+      return (await waitUnlessCancelled(Math.max(0, step.ms)))
+        ? { ok: true }
+        : { ok: false, reason: ACTION_CANCELLED_REASON }
 
     case 'shortcut':
       return sendShortcut(step.keys)
@@ -335,7 +360,7 @@ async function executeMacroStep(
       }
       const nested = getMacroById(step.macroId)
       if (!nested) return { ok: false, reason: 'Macro not found' }
-      if (!nested.enabled) return { ok: false, reason: 'Macro is disabled' }
+      if (!nested.enabled) return { ok: false, reason: MACRO_PAUSED_REASON }
 
       return executeMacroSteps(nested.actions, targetHwnd, new Set([...visitedMacroIds, step.macroId]))
     }
@@ -362,20 +387,62 @@ export const ACTION_BUSY_REASON = 'Still finishing the previous action, so this 
  */
 export function executeControlActionExclusively(
   action: ControlAction,
-  targetHwnd: number | null
+  targetHwnd: number | null,
+  label?: string
 ): Promise<ExecutionResult> {
-  return runActionExclusively(() => executeControlAction(action, targetHwnd))
+  return runActionExclusively(() => executeControlAction(action, targetHwnd), label)
+}
+
+let runState: ActionRunState = { running: false }
+const runStateListeners = new Set<(state: ActionRunState) => void>()
+
+function setRunState(state: ActionRunState): void {
+  runState = state
+  for (const listener of runStateListeners) listener(state)
+}
+
+/** What's running now (for the app's Stop button and the tray). */
+export function getActionRunState(): ActionRunState {
+  return runState
+}
+
+/** Called whenever an action starts or ends. Returns an unsubscribe. */
+export function onActionRunState(listener: (state: ActionRunState) => void): () => void {
+  runStateListeners.add(listener)
+  return () => runStateListeners.delete(listener)
+}
+
+export function isActionRunning(): boolean {
+  return actionInProgress
+}
+
+/**
+ * Asks the running action to stop before its next step. Steps already done
+ * stay done (there's no undo for a keystroke someone else's app received).
+ * False when nothing is running.
+ */
+export function cancelRunningAction(): boolean {
+  if (!actionInProgress) return false
+  cancelRequested = true
+  return true
 }
 
 /** The lock itself, shared by every way an action can be started (a press,
  *  and the editors' Test buttons). */
-export async function runActionExclusively(run: () => Promise<ExecutionResult>): Promise<ExecutionResult> {
+export async function runActionExclusively(
+  run: () => Promise<ExecutionResult>,
+  label?: string
+): Promise<ExecutionResult> {
   if (actionInProgress) return { ok: false, reason: ACTION_BUSY_REASON }
   actionInProgress = true
+  cancelRequested = false
+  setRunState({ running: true, label, startedAt: Date.now() })
   try {
     return await run()
   } finally {
     actionInProgress = false
+    cancelRequested = false
+    setRunState({ running: false })
   }
 }
 
@@ -415,7 +482,7 @@ export async function executeControlAction(
 
       const macro = getMacroById(action.macroId)
       if (!macro) return { ok: false, reason: 'Macro not found' }
-      if (!macro.enabled) return { ok: false, reason: 'Macro is disabled' }
+      if (!macro.enabled) return { ok: false, reason: MACRO_PAUSED_REASON }
 
       if (targetHwnd !== null && !(await focusWindowAndVerify(targetHwnd))) {
         return { ok: false, reason: 'Could not confirm focus on the target window, refused to send' }

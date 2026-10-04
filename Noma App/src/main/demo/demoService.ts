@@ -1,11 +1,11 @@
-import type { Application } from '@shared/types'
+import type { Application, Suggestion } from '@shared/types'
+import { DEMO_MACRO_TRIGGER } from '@shared/constants'
 import { getDatabase } from '../database/db'
-import { getProfileForApplicationId } from '../database/repositories/profileRepository'
-import { assignControlAction } from '../database/repositories/controlsRepository'
-import { deleteMacro } from '../database/repositories/macrosRepository'
+import { getAllMacros } from '../database/repositories/macrosRepository'
 import { insertWorkflowEvent } from '../database/repositories/workflowEventsRepository'
 import { upsertApplication } from '../database/repositories/applicationsRepository'
-import { getSeedDefaultControl } from '../database/seed'
+import { getPendingSuggestions, markSuggestionsDemo } from '../database/repositories/suggestionsRepository'
+import { removeLearnedWorkflow } from '../applications/workflowRemoval'
 
 /**
  * Demo Mode — "the Noma Moment" (Product Development Phase 2). A polished,
@@ -86,13 +86,15 @@ export function simulateDemoWorkflow(): void {
       applicationId: DEMO_WORKFLOW_APPLICATION_ID,
       eventType: 'shortcut',
       comboKeys: ['Control', 'D'],
-      timestamp: bookmarkAt
+      timestamp: bookmarkAt,
+      isDemo: true
     })
     insertWorkflowEvent({
       applicationId: DEMO_WORKFLOW_APPLICATION_ID,
       eventType: 'shortcut',
       comboKeys: ['Control', 'W'],
-      timestamp: closeAt
+      timestamp: closeAt,
+      isDemo: true
     })
   }
 }
@@ -137,60 +139,88 @@ export function simulateDemoMultiStepWorkflow(): void {
       applicationId: DEMO_APPLICATIONS.code.id,
       eventType: 'shortcut',
       comboKeys: ['Meta', 'Shift', 'S'], // Windows' own screenshot shortcut
-      timestamp: start
+      timestamp: start,
+      isDemo: true
     })
     insertWorkflowEvent({
       applicationId: DEMO_APPLICATIONS.claude.id,
       eventType: 'appSwitch',
-      timestamp: start + MULTI_STEP_DEMO_STEP_GAP_MS
+      timestamp: start + MULTI_STEP_DEMO_STEP_GAP_MS,
+      isDemo: true
     })
     insertWorkflowEvent({
       applicationId: DEMO_APPLICATIONS.claude.id,
       eventType: 'shortcut',
       comboKeys: ['Control', 'V'],
-      timestamp: start + 2 * MULTI_STEP_DEMO_STEP_GAP_MS
+      timestamp: start + 2 * MULTI_STEP_DEMO_STEP_GAP_MS,
+      isDemo: true
     })
     insertWorkflowEvent({
       applicationId: DEMO_APPLICATIONS.code.id,
       eventType: 'appSwitch',
-      timestamp: start + 3 * MULTI_STEP_DEMO_STEP_GAP_MS
+      timestamp: start + 3 * MULTI_STEP_DEMO_STEP_GAP_MS,
+      isDemo: true
     })
   }
 }
 
+/** Which combos and apps each scripted demo workflow is made of. A pending
+ *  suggestion built only from these, right after a demo run, is the demo's. */
+const DEMO_SIGNATURES: Array<{ combos: string[]; applicationIds: string[] }> = [
+  { combos: ['Control+D', 'Control+W'], applicationIds: [DEMO_WORKFLOW_APPLICATION_ID] },
+  { combos: ['Meta+Shift+S', 'Control+V'], applicationIds: [DEMO_APPLICATIONS.code.id, DEMO_APPLICATIONS.claude.id] }
+]
+
+/** The combos and applications a suggestion's action is made of. */
+function suggestionShape(suggestion: Suggestion): { combos: string[]; applicationIds: string[] } {
+  const action = suggestion.action
+  const applicationIds = new Set<string>(suggestion.applicationId ? [suggestion.applicationId] : [])
+  const combos: string[] = []
+  if (action?.kind === 'assignShortcutToControl') combos.push(action.comboKeys.join('+'))
+  if (action?.kind === 'createMacroAndAssignToControl') combos.push(...action.sequence)
+  if (action?.kind === 'createWorkflowMacroAndAssignToControl') {
+    for (const step of action.steps) {
+      if (step.type === 'shortcut') combos.push(step.comboKeys.join('+'))
+      if (step.applicationId) applicationIds.add(step.applicationId)
+    }
+  }
+  return { combos, applicationIds: [...applicationIds] }
+}
+
+/** True when a suggestion is made only of one demo workflow's pieces. */
+export function looksLikeDemoSuggestion(suggestion: Suggestion): boolean {
+  const shape = suggestionShape(suggestion)
+  if (shape.combos.length === 0) return false
+  return DEMO_SIGNATURES.some(
+    (signature) =>
+      shape.combos.every((combo) => signature.combos.includes(combo)) &&
+      shape.applicationIds.every((id) => signature.applicationIds.includes(id))
+  )
+}
+
 /**
- * Restores Demo Mode to a clean, replayable state (Phase 21's "demo
- * reset"): clears all workflow events and suggestions, and restores the
- * two demo profiles' controls to their seeded defaults — cleaning up any
- * macro a previous demo run created and assigned in the process. Scoped
- * deliberately to only the demo's own applications; a user's other
- * profiles/macros (from real use, outside Demo Mode) are untouched.
- *
- * This is a development/demo-only operation, exposed only from the Demo
- * page — never offered as a normal end-user action, since it deletes real
- * learning history.
+ * Called right after a demo run has been through detection: flags the
+ * pending suggestions it produced, so they show as a demo and the reset can
+ * find them. Matching is by shape because detection doesn't carry where its
+ * events came from; it only runs straight after a demo, so a real habit is
+ * flagged only if it is the identical workflow seen in the same moment.
+ */
+export function markDemoSuggestions(): void {
+  markSuggestionsDemo(getPendingSuggestions().filter(looksLikeDemoSuggestion).map((suggestion) => suggestion.id))
+}
+
+/**
+ * Restores Demo Mode to a clean, replayable state: removes the demo's own
+ * scripted events, the suggestions they produced, and any workflow saved
+ * from one of those suggestions (its control goes back to its starter
+ * action). Nothing real is touched: events Noma observed, suggestions it
+ * made from them, and workflows the user saved all stay.
  */
 export function resetDemoData(): void {
   const db = getDatabase()
-  db.prepare('DELETE FROM workflow_events').run()
-  db.prepare('DELETE FROM suggestions').run()
-
-  for (const applicationId of Object.keys(DEMO_APPLICATIONS) as DemoApplicationId[]) {
-    const profile = getProfileForApplicationId(applicationId)
-    if (!profile) continue
-
-    for (const control of profile.controls) {
-      const seedDefault = getSeedDefaultControl(applicationId, control.slot)
-      if (!seedDefault) continue
-
-      // A prior demo run may have assigned a macro (from accepting the
-      // Bookmark->Close tab suggestion) to this slot — delete it now that nothing
-      // will reference it, rather than leaving an orphaned row behind.
-      if (control.action.type === 'macro') {
-        deleteMacro(control.action.macroId)
-      }
-
-      assignControlAction(profile.id, control.slot, seedDefault.label, seedDefault.action)
-    }
+  db.prepare('DELETE FROM workflow_events WHERE is_demo = 1').run()
+  db.prepare('DELETE FROM suggestions WHERE is_demo = 1').run()
+  for (const macro of getAllMacros()) {
+    if (macro.trigger === DEMO_MACRO_TRIGGER) removeLearnedWorkflow(macro.id)
   }
 }

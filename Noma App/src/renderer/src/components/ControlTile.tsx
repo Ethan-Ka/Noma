@@ -2,6 +2,8 @@ import type { Application, Control } from '@shared/types'
 import { actionCaption, actionGlyph } from '../lib/describeAction'
 import { KEYCAP_SHADOW } from '../lib/surfaces'
 import { AppIcon } from './AppIcon'
+import { GLIDE_ZONE_LABELS, glideZoneForSlot } from '@shared/constants'
+import { useGlideStore } from '../stores/glideStore'
 
 interface ControlTileProps {
   slot: number
@@ -31,6 +33,8 @@ interface ControlTileProps {
 export function ControlTile({ slot, control, application }: ControlTileProps) {
   const caption = actionCaption(control?.action)
   const glyph = actionGlyph(control?.action)
+  const zoneCount = useGlideStore((state) => state.state?.zoneCount ?? 4)
+  const zone = glideZoneForSlot(slot, zoneCount)
 
   return (
     <div
@@ -41,7 +45,9 @@ export function ControlTile({ slot, control, application }: ControlTileProps) {
       }`}
     >
       <div className="flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-widest text-neutral-500">Control {slot}</span>
+        <span className="text-[10px] uppercase tracking-widest text-neutral-500">
+          {zone ? GLIDE_ZONE_LABELS[zoneCount][zone] : `Control ${slot}`}
+        </span>
         {glyph && <span className="text-sm text-neutral-500">{glyph}</span>}
       </div>
       {application && (

@@ -42,7 +42,7 @@ export function OnboardingLayout({ stepIndex, onBack, wide = false, children }: 
             <span
               key={step}
               className={`h-1.5 w-6 rounded-full transition-colors duration-200 ${
-                index <= stepIndex ? 'bg-accent' : 'bg-black/10'
+                index <= stepIndex ? 'bg-accent' : 'bg-white/10'
               }`}
             />
           ))}

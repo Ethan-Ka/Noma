@@ -54,9 +54,9 @@ export function actionCaption(action: ControlAction | undefined): string | null 
     case 'systemCommand':
       return action.command
     case 'flowAction':
-      return action.action
+      return action.action === 'closeWindow' ? 'Close window' : action.action
     case 'macro':
-      return 'Macro'
+      return 'Workflow'
     case 'launchApplication':
       return 'Launch'
     case 'focusApplication':

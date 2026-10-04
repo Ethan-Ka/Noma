@@ -1,6 +1,7 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useUiStore, type Page } from '../stores/uiStore'
 import { useApplicationsStore } from '../stores/applicationsStore'
+import { useActionRunStore } from '../stores/actionRunStore'
 import logo from '../assets/logo.png'
 import wordmark from '../assets/noma-wordmark.png'
 import {
@@ -22,37 +23,32 @@ import {
 
 type NavItem = { label: string; page: Page; Icon: IconComponent }
 
-// The primary loop, quiet and text-led — four items, not a wall of icons.
-// Workflows sits between Controls (what Noma is doing right now) and
-// Learning (how Noma decides) — the collection of things it has actually
-// learned to do sits naturally between "now" and "the model behind it."
+// What a new user needs, in the order they need it: what Noma is doing
+// (Home), the trackpad actions (Glide), and what Flow has noticed or saved
+// (Workflows). Everything else is one group down.
 const PRIMARY_NAV_ITEMS: NavItem[] = [
   { label: 'Home', page: 'home', Icon: HomeIcon },
-  { label: 'Controls', page: 'controls', Icon: ControlsIcon },
-  { label: 'Workflows', page: 'workflows', Icon: WorkflowsIcon },
-  { label: 'Learning', page: 'learning', Icon: LearningIcon }
+  { label: 'Glide', page: 'holo', Icon: GlideIcon },
+  { label: 'Workflows', page: 'workflows', Icon: WorkflowsIcon }
 ]
 
-// Noma understands your workflow -> Noma builds the interface -> Holo or
-// the physical Noma Device displays it. Both are different physical
-// manifestations of the same underlying system, so they sit together, as
-// their own small group — not lumped in with the rest of the app.
-const DEVICE_NAV_ITEMS: NavItem[] = [
-  { label: 'Glide', page: 'holo', Icon: GlideIcon },
-  { label: 'Noma Device', page: 'virtual-keyboard', Icon: KeyboardIcon }
+// Real, working pages for people who want more detail or control.
+const MORE_NAV_ITEMS: NavItem[] = [
+  { label: 'Controls', page: 'controls', Icon: ControlsIcon },
+  { label: 'Learning', page: 'learning', Icon: LearningIcon },
+  { label: 'Activity', page: 'activity', Icon: ActivityIcon },
+  { label: 'Macro Studio', page: 'macros', Icon: MacroIcon },
+  { label: 'Profiles', page: 'profiles', Icon: ProfilesIcon },
+  { label: 'Usage Stats', page: 'usage-stats', Icon: StatsIcon }
 ]
 
 const SETTINGS_NAV_ITEM: NavItem = { label: 'Settings', page: 'settings', Icon: SettingsIcon }
 
-// Power-user and presentation/engineering tools — real, working
-// functionality that just isn't part of the quiet primary story. Anchored
-// to the bottom, below Settings, so they read as available but clearly
-// tertiary — never deleted just to make the sidebar shorter.
-const TOOLS_NAV_ITEMS: NavItem[] = [
-  { label: 'Activity', page: 'activity', Icon: ActivityIcon },
-  { label: 'Macro Studio', page: 'macros', Icon: MacroIcon },
-  { label: 'Profiles', page: 'profiles', Icon: ProfilesIcon },
-  { label: 'Usage Stats', page: 'usage-stats', Icon: StatsIcon },
+// For building and presenting Noma, shown only with developer tools on
+// (Settings): the hardware simulator's page, Demo Mode (scripted data) and
+// the device log.
+const DEVELOPER_NAV_ITEMS: NavItem[] = [
+  { label: 'Noma Device', page: 'virtual-keyboard', Icon: KeyboardIcon },
   { label: 'Demo', page: 'demo', Icon: DemoIcon },
   { label: 'Developer', page: 'developer', Icon: DeveloperIcon }
 ]
@@ -62,6 +58,7 @@ function NavRow({ label, page, Icon, isActive, onClick }: NavItem & { isActive: 
     <button
       type="button"
       onClick={onClick}
+      aria-current={isActive ? 'page' : undefined}
       className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm transition-colors duration-150 ${
         isActive
           ? 'border border-accent/25 bg-accent/[0.12] font-medium text-accent'
@@ -95,6 +92,7 @@ function NavGroupLabel({ children }: { children: ReactNode }) {
 export function AppShell({ children }: { children: ReactNode }) {
   const activePage = useUiStore((state) => state.activePage)
   const setActivePage = useUiStore((state) => state.setActivePage)
+  const developerTools = useUiStore((state) => state.developerTools)
   const refreshApplications = useApplicationsStore((state) => state.refresh)
   const subscribeApplications = useApplicationsStore((state) => state.subscribe)
 
@@ -118,7 +116,7 @@ export function AppShell({ children }: { children: ReactNode }) {
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
         <div
           className="absolute -right-1/4 -top-1/3 h-[900px] w-[900px] rounded-full opacity-[0.05] blur-[180px]"
-          style={{ background: 'radial-gradient(circle, #5b6ff5 0%, transparent 70%)' }}
+          style={{ background: 'radial-gradient(circle, #4c7eff 0%, transparent 70%)' }}
         />
       </div>
 
@@ -128,50 +126,88 @@ export function AppShell({ children }: { children: ReactNode }) {
           <img src={wordmark} alt="Noma" className="h-4 w-auto" />
         </div>
 
-        <nav className="flex flex-col gap-0.5">
-          {PRIMARY_NAV_ITEMS.map((item) => (
-            <NavRow
-              key={item.label}
-              {...item}
-              isActive={item.page === activePage}
-              onClick={() => setActivePage(item.page)}
-            />
-          ))}
-        </nav>
+        <nav aria-label="Main" className="flex min-h-0 flex-1 flex-col">
+          <div className="flex flex-col gap-0.5">
+            {PRIMARY_NAV_ITEMS.map((item) => (
+              <NavRow key={item.label} {...item} isActive={item.page === activePage} onClick={() => setActivePage(item.page)} />
+            ))}
+          </div>
 
-        <NavDivider />
-        <NavGroupLabel>Device</NavGroupLabel>
-        <div className="flex flex-col gap-0.5">
-          {DEVICE_NAV_ITEMS.map((item) => (
-            <NavRow
-              key={item.label}
-              {...item}
-              isActive={item.page === activePage}
-              onClick={() => setActivePage(item.page)}
-            />
-          ))}
-        </div>
-
-        <NavDivider />
-        <NavRow
-          {...SETTINGS_NAV_ITEM}
-          isActive={SETTINGS_NAV_ITEM.page === activePage}
-          onClick={() => setActivePage(SETTINGS_NAV_ITEM.page)}
-        />
-
-        <div className="mt-auto flex flex-col gap-0.5 pt-4">
           <NavDivider />
-          {TOOLS_NAV_ITEMS.map((item) => (
+          <NavGroupLabel>More</NavGroupLabel>
+          <div className="flex flex-col gap-0.5">
+            {MORE_NAV_ITEMS.map((item) => (
+              <NavRow key={item.label} {...item} isActive={item.page === activePage} onClick={() => setActivePage(item.page)} />
+            ))}
+          </div>
+
+          {developerTools && (
+            <>
+              <NavDivider />
+              <NavGroupLabel>Developer</NavGroupLabel>
+              <div className="flex flex-col gap-0.5">
+                {DEVELOPER_NAV_ITEMS.map((item) => (
+                  <NavRow key={item.label} {...item} isActive={item.page === activePage} onClick={() => setActivePage(item.page)} />
+                ))}
+              </div>
+            </>
+          )}
+
+          <div className="mt-auto pt-4">
+            <NavDivider />
             <NavRow
-              key={item.label}
-              {...item}
-              isActive={item.page === activePage}
-              onClick={() => setActivePage(item.page)}
+              {...SETTINGS_NAV_ITEM}
+              isActive={SETTINGS_NAV_ITEM.page === activePage}
+              onClick={() => setActivePage(SETTINGS_NAV_ITEM.page)}
             />
-          ))}
-        </div>
+          </div>
+        </nav>
       </aside>
-      <main className="relative z-10 flex-1 overflow-y-auto">{children}</main>
+      <main className="relative z-10 flex-1 overflow-y-auto">
+        <RunningActionBar />
+        {children}
+      </main>
+    </div>
+  )
+}
+
+/** Below this an action is over before a bar could help, so none appears. */
+const RUNNING_BAR_DELAY_MS = 400
+
+/**
+ * Shown while an action has been running for a moment (a saved workflow
+ * replaying, typically), with a way to stop it before its next step. The
+ * same Stop is in the tray menu, for when Noma's window isn't open.
+ */
+function RunningActionBar() {
+  const run = useActionRunStore((state) => state.run)
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    if (!run.running) {
+      setVisible(false)
+      return
+    }
+    const timeout = window.setTimeout(() => setVisible(true), RUNNING_BAR_DELAY_MS)
+    return () => window.clearTimeout(timeout)
+  }, [run.running, run.startedAt])
+
+  if (!visible) return null
+  return (
+    <div
+      role="status"
+      className="sticky top-0 z-20 flex items-center justify-between gap-4 border-b border-accent/30 bg-base-900/95 px-10 py-2.5 text-sm text-neutral-100 backdrop-blur"
+    >
+      <span>
+        Running <span className="font-medium">“{run.label ?? 'action'}”</span>… it stops by itself when done.
+      </span>
+      <button
+        type="button"
+        onClick={() => void window.flow.cancelRunningAction()}
+        className="rounded-md border border-base-600 px-3 py-1 text-xs text-neutral-100 hover:border-neutral-400"
+      >
+        Stop after this step
+      </button>
     </div>
   )
 }

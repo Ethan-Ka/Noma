@@ -8,7 +8,9 @@ import type {
   DeviceLogEntry,
   DeviceStatus,
   FlowApi,
-  HoloTrackpadEvent,
+  ActionRunState,
+  GlideActivity,
+  GlideState,
   MacroStep,
   ModuleFunctionConfig,
   Suggestion,
@@ -151,20 +153,42 @@ const flowApi: FlowApi = {
   getOnboardingState: () => ipcRenderer.invoke(IPC_CHANNELS.GET_ONBOARDING_STATE),
   saveOnboardingState: (update) => ipcRenderer.invoke(IPC_CHANNELS.SAVE_ONBOARDING_STATE, update),
 
-  getInputSource: () => ipcRenderer.invoke(IPC_CHANNELS.GET_INPUT_SOURCE),
-  setInputSource: (source) => ipcRenderer.invoke(IPC_CHANNELS.SET_INPUT_SOURCE, source),
   openHoloRecordings: () => ipcRenderer.invoke(IPC_CHANNELS.HOLO_OPEN_RECORDINGS),
-  setHoloTrackpad: (enabled, zones) => ipcRenderer.invoke(IPC_CHANNELS.HOLO_SET_TRACKPAD, enabled, zones),
   startHoloTouchCheck: () => ipcRenderer.invoke(IPC_CHANNELS.HOLO_TOUCH_CHECK_START),
   getHoloTouchCheckLast: () => ipcRenderer.invoke(IPC_CHANNELS.HOLO_TOUCH_CHECK_LAST),
   stopHoloTouchCheck: (phases) => ipcRenderer.invoke(IPC_CHANNELS.HOLO_TOUCH_CHECK_STOP, phases),
-  onHoloTrackpadEvent: (callback) => {
-    const listener = (_event: IpcRendererEvent, event: HoloTrackpadEvent): void => callback(event)
-    ipcRenderer.on(IPC_CHANNELS.HOLO_TRACKPAD_EVENT, listener)
+  getGlideState: () => ipcRenderer.invoke(IPC_CHANNELS.GLIDE_GET_STATE),
+  setGlideEnabled: (enabled) => ipcRenderer.invoke(IPC_CHANNELS.GLIDE_SET_ENABLED, enabled),
+  setGlideZoneCount: (zoneCount) => ipcRenderer.invoke(IPC_CHANNELS.GLIDE_SET_ZONE_COUNT, zoneCount),
+  onGlideState: (callback) => {
+    const listener = (_event: IpcRendererEvent, value: GlideState): void => callback(value)
+    ipcRenderer.on(IPC_CHANNELS.GLIDE_STATE_CHANGED, listener)
     return () => {
-      ipcRenderer.removeListener(IPC_CHANNELS.HOLO_TRACKPAD_EVENT, listener)
+      ipcRenderer.removeListener(IPC_CHANNELS.GLIDE_STATE_CHANGED, listener)
     }
   },
+  onGlideActivity: (callback) => {
+    const listener = (_event: IpcRendererEvent, value: GlideActivity): void => callback(value)
+    ipcRenderer.on(IPC_CHANNELS.GLIDE_ACTIVITY, listener)
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.GLIDE_ACTIVITY, listener)
+    }
+  },
+
+  getActionRunState: () => ipcRenderer.invoke(IPC_CHANNELS.GET_ACTION_RUN_STATE),
+  onActionRunState: (callback) => {
+    const listener = (_event: IpcRendererEvent, value: ActionRunState): void => callback(value)
+    ipcRenderer.on(IPC_CHANNELS.ACTION_RUN_STATE, listener)
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.ACTION_RUN_STATE, listener)
+    }
+  },
+  cancelRunningAction: () => ipcRenderer.invoke(IPC_CHANNELS.CANCEL_RUNNING_ACTION),
+  removeWorkflow: (macroId) => ipcRenderer.invoke(IPC_CHANNELS.REMOVE_WORKFLOW, macroId),
+  previewSuggestionAction: (suggestionId) =>
+    ipcRenderer.invoke(IPC_CHANNELS.PREVIEW_SUGGESTION_ACTION, suggestionId),
+  getDiagnosticsReport: () => ipcRenderer.invoke(IPC_CHANNELS.GET_DIAGNOSTICS_REPORT),
+  openIssuePage: () => ipcRenderer.invoke(IPC_CHANNELS.OPEN_ISSUE_PAGE),
 
   onWorkflowNoticeShown: (callback) => {
     const listener = (_event: IpcRendererEvent, notice: WorkflowNotice): void => callback(notice)

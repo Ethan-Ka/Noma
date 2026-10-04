@@ -143,7 +143,9 @@ export function WorkflowNotice({
           </button>
         </div>
 
-        <p className="mt-2 text-xs font-medium text-neutral-100">New workflow detected</p>
+        <p className="mt-2 text-xs font-medium text-neutral-100">
+          {suggestion.isDemo ? 'Demo workflow (simulated, not learned from you)' : 'New workflow detected'}
+        </p>
 
         {chain && (
           <div className="mt-2">
@@ -165,7 +167,7 @@ export function WorkflowNotice({
                 onClick={onAccept}
                 className="rounded-md bg-accent px-2.5 py-1 text-[11px] font-medium text-white transition-colors duration-150 hover:bg-accent/90"
               >
-                Add to Noma
+                Review steps in Noma
               </button>
               <button
                 type="button"

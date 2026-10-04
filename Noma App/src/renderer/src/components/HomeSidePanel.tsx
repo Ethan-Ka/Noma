@@ -4,7 +4,7 @@ import { useHardwareStore } from '../stores/hardwareStore'
 import { useUiStore } from '../stores/uiStore'
 import { HardwareStatusPill } from './HardwareStatusPill'
 import { AppIcon } from './AppIcon'
-import { CARD, DEVICE_GLASS_CARD } from '../lib/surfaces'
+import { DEVICE_GLASS_CARD } from '../lib/surfaces'
 
 /** Holo's four swipe-in zones press control slots 1-4. */
 const HOLO_SLOTS = [1, 2, 3, 4]
@@ -23,7 +23,6 @@ const HOLO_SLOTS = [1, 2, 3, 4]
  * navigates there, the same way "See all controls" does on the center
  * column.
  */
-const LOOP_STAGES = ['Observe', 'Learn', 'Adapt', 'Execute'] as const
 export function HomeSidePanel({
   profile,
   application
@@ -43,6 +42,33 @@ export function HomeSidePanel({
 
   return (
     <aside className="w-72 shrink-0 space-y-4">
+      <button type="button" onClick={() => setActivePage('holo')} className="block w-full text-left">
+        <div className="rounded-2xl bg-holo-bg p-5 transition-transform duration-150 hover:-translate-y-0.5">
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-holo-muted">
+              {application && <AppIcon applicationId={application.id} name={application.name} size={14} />}
+              Glide zones{application ? ` · ${application.name}` : ''}
+            </span>
+            <span aria-hidden className="text-holo-muted">
+              →
+            </span>
+          </div>
+          <div className="mt-3 space-y-1.5">
+            {HOLO_SLOTS.map((slot) => {
+              const control = profile?.controls.find((item) => item.slot === slot)
+              return (
+                <div key={slot} className="truncate text-sm text-holo-text">
+                  {control?.label ?? <span className="text-holo-muted">Nothing yet</span>}
+                </div>
+              )
+            })}
+          </div>
+          <p className="mt-3 text-[11px] leading-relaxed text-holo-muted">
+            Upper left, upper right, lower left, lower right. Click to change them.
+          </p>
+        </div>
+      </button>
+
       <div className={`${DEVICE_GLASS_CARD} p-5`}>
         <div className="flex items-center justify-between">
           <span className="text-[11px] font-semibold uppercase tracking-widest text-neutral-500">Noma Device</span>
@@ -88,54 +114,6 @@ export function HomeSidePanel({
         )}
       </div>
 
-      <div className={`${CARD} p-5`}>
-        <p className="font-display text-lg font-semibold leading-snug text-neutral-100">A smarter way to work.</p>
-        <p className="mt-1.5 text-xs leading-relaxed text-neutral-600">
-          Noma adapts to how you work, on your laptop or with your device.
-        </p>
-        <div className="mt-4 flex items-center gap-1.5">
-          {LOOP_STAGES.map((stage, index) => (
-            <div key={stage} className="flex flex-1 items-center gap-1.5 last:flex-none">
-              <div className="flex flex-col items-center gap-1.5">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-accent/30 bg-accent/[0.08] font-mono text-[10px] text-accent">
-                  {index + 1}
-                </span>
-                <span className="text-[10px] font-medium text-neutral-400">{stage}</span>
-              </div>
-              {index < LOOP_STAGES.length - 1 && (
-                <span aria-hidden className="h-px flex-1 bg-white/[0.08]" />
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <button type="button" onClick={() => setActivePage('holo')} className="block w-full text-left">
-        <div className="rounded-2xl bg-holo-bg p-5 transition-transform duration-150 hover:-translate-y-0.5">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-holo-muted">
-              {application && <AppIcon applicationId={application.id} name={application.name} size={14} />}
-              Glide · Free
-            </span>
-            <span aria-hidden className="text-holo-muted">
-              →
-            </span>
-          </div>
-          <div className="mt-3 space-y-1.5">
-            {HOLO_SLOTS.map((slot) => {
-              const control = profile?.controls.find((item) => item.slot === slot)
-              return (
-                <div key={slot} className="truncate text-sm text-holo-text">
-                  {control?.label ?? <span className="text-holo-muted">Slot {slot}</span>}
-                </div>
-              )
-            })}
-          </div>
-          <p className="mt-3 text-[11px] leading-relaxed text-holo-muted">
-            No hardware needed. Swipe onto your trackpad to press a control.
-          </p>
-        </div>
-      </button>
     </aside>
   )
 }

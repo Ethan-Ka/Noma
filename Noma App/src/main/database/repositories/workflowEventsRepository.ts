@@ -25,12 +25,15 @@ export function insertWorkflowEvent(event: {
   controlId?: string
   clickTarget?: string
   timestamp: number
+  /** Scripted by Demo Mode, not observed (see demoService.ts). */
+  isDemo?: boolean
 }): void {
   const db = getDatabase()
   db.prepare(
-    `INSERT INTO workflow_events (application_id, event_type, combo_keys, control_id, click_target, timestamp)
-     VALUES (@applicationId, @eventType, @comboKeys, @controlId, @clickTarget, @timestamp)`
+    `INSERT INTO workflow_events (application_id, event_type, combo_keys, control_id, click_target, timestamp, is_demo)
+     VALUES (@applicationId, @eventType, @comboKeys, @controlId, @clickTarget, @timestamp, @isDemo)`
   ).run({
+    isDemo: event.isDemo ? 1 : 0,
     applicationId: event.applicationId,
     eventType: event.eventType,
     comboKeys: event.comboKeys ? JSON.stringify(event.comboKeys) : null,

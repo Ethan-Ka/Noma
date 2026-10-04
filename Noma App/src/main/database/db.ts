@@ -141,6 +141,12 @@ export function runMigrations(database: Database.Database): void {
   // picks them up with no reset — same pattern as every column above.
   ensureColumn(database, 'suggestions', 'occurrence_count', 'occurrence_count INTEGER')
   ensureColumn(database, 'suggestions', 'notified_at', 'notified_at INTEGER')
+  // Demo Mode's scripted events and the suggestions they produce. Kept apart
+  // so the Demo page can show them as a demonstration (never as something
+  // Noma learned from you) and its reset can remove them without touching a
+  // single real event or suggestion.
+  ensureColumn(database, 'workflow_events', 'is_demo', 'is_demo INTEGER NOT NULL DEFAULT 0')
+  ensureColumn(database, 'suggestions', 'is_demo', 'is_demo INTEGER NOT NULL DEFAULT 0')
 }
 
 /**

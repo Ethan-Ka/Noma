@@ -51,7 +51,7 @@ export function VirtualControlButton({
         // A real press gets a brief, real feedback flash in the signature
         // brand blue — this is the one moment a colored glow belongs here:
         // an actual interaction just happened, not ambient decoration.
-        isPressed ? 'border-accent/60 shadow-[0_4px_16px_-6px_rgba(91,111,245,0.45)]' : ''
+        isPressed ? 'border-accent/60 shadow-[0_4px_16px_-6px_rgba(76,126,255,0.45)]' : ''
       }`}
     >
       <div className="flex items-center justify-between">

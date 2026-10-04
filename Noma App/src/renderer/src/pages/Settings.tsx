@@ -1,6 +1,12 @@
 import { WorkflowMonitoringPanel } from '../components/WorkflowMonitoringPanel'
-import { InputSourcePanel } from '../components/InputSourcePanel'
+import { useEffect } from 'react'
 import { DataManagementPanel } from '../components/DataManagementPanel'
+import { ReportProblemPanel } from '../components/ReportProblemPanel'
+import { ToggleSwitch } from '../components/ToggleSwitch'
+import { useGlideStore } from '../stores/glideStore'
+import { useUiStore } from '../stores/uiStore'
+import { useOnboardingStore } from '../stores/onboardingStore'
+import { glideStatusLine } from '../lib/glideMessages'
 import { CARD } from '../lib/surfaces'
 import { COMMAND_MODIFIERS_COPY } from '../lib/platform'
 
@@ -21,12 +27,39 @@ const NEVER_COLLECTED = [
 ]
 
 export function Settings() {
+  const { state: glide, refresh: refreshGlide, setEnabled: setGlideEnabled } = useGlideStore()
+  const { developerTools, setDeveloperTools, setActivePage } = useUiStore()
+  const saveOnboarding = useOnboardingStore((state) => state.save)
+
+  useEffect(() => {
+    void refreshGlide()
+  }, [refreshGlide])
+
+  const glideStatus = glideStatusLine(glide)
+
   return (
     <div className="mx-auto max-w-3xl px-10 py-10">
       <div className="mb-8">
         <h1 className="font-display text-xl font-semibold text-neutral-100">Settings</h1>
-        <p className="mt-1 text-sm text-neutral-500">Flow learning, and your data.</p>
+        <p className="mt-1 text-sm text-neutral-500">Glide, Flow learning, your data, and getting help.</p>
       </div>
+
+      <section className={`mb-8 px-5 py-4 ${CARD}`}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-xs uppercase tracking-widest text-neutral-500">Glide</div>
+            <p className={`mt-2 max-w-md text-sm ${glideStatus.tone === 'problem' ? 'text-error' : 'text-neutral-400'}`}>
+              {glideStatus.text}
+            </p>
+            <button type="button" onClick={() => setActivePage('holo')} className="mt-2 text-xs text-accent hover:opacity-80">
+              Zones and actions →
+            </button>
+          </div>
+          {glide?.platformSupported && (
+            <ToggleSwitch checked={glide.enabled} onChange={(checked) => void setGlideEnabled(checked)} label="Glide" />
+          )}
+        </div>
+      </section>
 
       <section className={`mb-8 px-5 py-4 ${CARD}`}>
         <div className="text-xs uppercase tracking-widest text-neutral-500">Flow Learning</div>
@@ -68,9 +101,31 @@ export function Settings() {
         <WorkflowMonitoringPanel />
       </div>
 
-      <InputSourcePanel />
-
       <DataManagementPanel />
+
+      <ReportProblemPanel />
+
+      <section className={`mb-8 px-5 py-4 ${CARD}`}>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-xs uppercase tracking-widest text-neutral-500">Developer tools</div>
+            <p className="mt-2 max-w-md text-sm text-neutral-400">
+              Shows the Noma Device simulator page, Demo Mode and the device log in the sidebar. Demo Mode adds scripted,
+              clearly labelled example data; its reset removes only that.
+            </p>
+            {developerTools && (
+              <button
+                type="button"
+                onClick={() => void saveOnboarding({ completed: false, step: 'welcome' })}
+                className="mt-2 text-xs text-accent hover:opacity-80"
+              >
+                Show the first-run setup again
+              </button>
+            )}
+          </div>
+          <ToggleSwitch checked={developerTools} onChange={setDeveloperTools} label="Developer tools" />
+        </div>
+      </section>
     </div>
   )
 }

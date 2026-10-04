@@ -13,6 +13,13 @@
   color-scheme: light;
 }
 
+/* The app is dark, so its native scrollbars, selects and menus should be
+   too. Set on #root, not the document root: on the root it would also give
+   the transparent Noma Notice window an opaque dark canvas. */
+#root {
+  color-scheme: dark;
+}
+
 html,
 body,
 #root {
@@ -122,3 +129,37 @@ html.noma-notice-surface #root {
   }
 }
 
+
+/* Glide's gesture demonstration (GlideGestureDemo.tsx): a fingertip resting
+   on the palm rest slides onto the trackpad, first on the left, then on the
+   right, and the zone it lands in lights up. Plain transforms and opacity;
+   reduced motion shows the still frame instead. */
+@keyframes glide-finger-left {
+  0%, 8% { transform: translateX(0); opacity: 0; }
+  14% { transform: translateX(0); opacity: 1; }
+  30% { transform: translateX(46px); opacity: 1; }
+  38%, 100% { transform: translateX(46px); opacity: 0; }
+}
+@keyframes glide-finger-right {
+  0%, 50% { transform: translateX(0); opacity: 0; }
+  56% { transform: translateX(0); opacity: 1; }
+  72% { transform: translateX(-46px); opacity: 1; }
+  80%, 100% { transform: translateX(-46px); opacity: 0; }
+}
+@keyframes glide-zone-left {
+  0%, 26% { opacity: 0; }
+  30%, 40% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+@keyframes glide-zone-right {
+  0%, 68% { opacity: 0; }
+  72%, 82% { opacity: 1; }
+  92%, 100% { opacity: 0; }
+}
+.glide-finger-left { animation: glide-finger-left 4.2s ease-in-out infinite; }
+.glide-finger-right { animation: glide-finger-right 4.2s ease-in-out infinite; }
+.glide-zone-left { animation: glide-zone-left 4.2s ease-in-out infinite; }
+.glide-zone-right { animation: glide-zone-right 4.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .glide-finger-left, .glide-finger-right, .glide-zone-left, .glide-zone-right { animation: none; }
+}

@@ -59,14 +59,22 @@ export const IPC_CHANNELS = {
   CLEAR_DEVICE_LOG: 'flow:clear-device-log',
   GET_ONBOARDING_STATE: 'flow:get-onboarding-state',
   SAVE_ONBOARDING_STATE: 'flow:save-onboarding-state',
-  GET_INPUT_SOURCE: 'flow:get-input-source',
-  SET_INPUT_SOURCE: 'flow:set-input-source',
   HOLO_OPEN_RECORDINGS: 'flow:holo-open-recordings',
-  HOLO_SET_TRACKPAD: 'flow:holo-set-trackpad',
-  HOLO_TRACKPAD_EVENT: 'flow:holo-trackpad-event',
   HOLO_TOUCH_CHECK_START: 'flow:holo-touch-check-start',
   HOLO_TOUCH_CHECK_STOP: 'flow:holo-touch-check-stop',
   HOLO_TOUCH_CHECK_LAST: 'flow:holo-touch-check-last',
+  GLIDE_GET_STATE: 'flow:glide-get-state',
+  GLIDE_SET_ENABLED: 'flow:glide-set-enabled',
+  GLIDE_SET_ZONE_COUNT: 'flow:glide-set-zone-count',
+  GLIDE_STATE_CHANGED: 'flow:glide-state-changed',
+  GLIDE_ACTIVITY: 'flow:glide-activity',
+  ACTION_RUN_STATE: 'flow:action-run-state',
+  GET_ACTION_RUN_STATE: 'flow:get-action-run-state',
+  CANCEL_RUNNING_ACTION: 'flow:cancel-running-action',
+  REMOVE_WORKFLOW: 'flow:remove-workflow',
+  PREVIEW_SUGGESTION_ACTION: 'flow:preview-suggestion-action',
+  GET_DIAGNOSTICS_REPORT: 'flow:get-diagnostics-report',
+  OPEN_ISSUE_PAGE: 'flow:open-issue-page',
 
   /**
    * Noma Notice — the small glass surface that appears bottom-centre of the
@@ -170,3 +178,41 @@ export const WORKFLOW_NOTIFICATION_MIN_CONFIDENCE = 0.5
  */
 export const NOTIFIABLE_PATTERN_KINDS: PatternKind[] = ['multiStepWorkflow', 'crossAppWorkflow']
 
+
+/** `Macro.trigger` of a workflow saved from a Flow suggestion. */
+export const LEARNED_MACRO_TRIGGER = 'flow-control'
+/** `Macro.trigger` of a workflow saved from a Demo Mode suggestion: shown as
+ *  a demo, and removed by the demo reset. */
+export const DEMO_MACRO_TRIGGER = 'flow-demo'
+
+/** Which control slot each Glide zone presses. With two zones only the
+ *  upper ones are used, and each covers its whole side. */
+export const GLIDE_ZONE_SLOTS = {
+  topLeft: 1,
+  topRight: 2,
+  bottomLeft: 3,
+  bottomRight: 4
+} as const
+
+export type GlideZoneName = keyof typeof GLIDE_ZONE_SLOTS
+
+/** The zones in use for a zone count, in slot order. */
+export function glideZonesFor(zoneCount: 2 | 4): GlideZoneName[] {
+  return zoneCount === 4 ? ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'] : ['topLeft', 'topRight']
+}
+
+/** What each zone is called, by zone count. */
+export const GLIDE_ZONE_LABELS: Record<2 | 4, Record<GlideZoneName, string>> = {
+  2: { topLeft: 'Left', topRight: 'Right', bottomLeft: 'Left', bottomRight: 'Right' },
+  4: { topLeft: 'Upper left', topRight: 'Upper right', bottomLeft: 'Lower left', bottomRight: 'Lower right' }
+}
+
+/** The Glide zone that presses `slot`, or null when that slot has no zone
+ *  with this many zones (slots 3 and 4 in two-zone mode). */
+export function glideZoneForSlot(slot: number, zoneCount: 2 | 4): GlideZoneName | null {
+  return glideZonesFor(zoneCount).find((zone) => GLIDE_ZONE_SLOTS[zone] === slot) ?? null
+}
+
+/** Where beta testers report problems. Opened in the browser with nothing
+ *  attached: the tester pastes what they choose to share. */
+export const ISSUE_PAGE_URL = 'https://github.com/awnsh/Noma/issues/new'

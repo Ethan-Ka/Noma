@@ -85,30 +85,62 @@ describe('NomaMoment', () => {
     expect(screen.getByText(/Noma noticed a strong pattern/)).toBeInTheDocument()
   })
 
-  it('walks through Create action -> pick a slot -> success, ending on the real assigned label', async () => {
+  it('shows the exact steps (with warnings) before saving, then saves to the chosen Glide zone', async () => {
     const getProfileForApplication = vi.fn().mockResolvedValue(PROFILE)
-    const assignSuggestionToControl = vi.fn().mockResolvedValue({
-      suggestion: { ...WORKFLOW_SUGGESTION, status: 'accepted' },
-      profile: {
-        ...PROFILE,
-        controls: PROFILE.controls.map((c) =>
-          c.slot === 2 ? { ...c, label: 'Screenshot…', action: { type: 'macro', macroId: 'm1' } } : c
-        )
-      }
+    const previewSuggestionAction = vi.fn().mockResolvedValue({
+      steps: [
+        { kind: 'shortcut', description: 'Screenshot (Win+Shift+S)' },
+        { kind: 'focus', description: 'Switch to Claude Code (it has to be open already)' },
+        { kind: 'shortcut', description: 'Paste (Ctrl+V)' },
+        { kind: 'shortcut', description: 'Press Enter, to send what was just pasted', added: true }
+      ],
+      replayable: true
     })
-    window.flow = mockFlow({ getProfileForApplication, assignSuggestionToControl })
+    const assignSuggestionToControl = vi.fn().mockResolvedValue({ suggestion: { ...WORKFLOW_SUGGESTION, status: 'accepted' }, profile: PROFILE })
+    window.flow = mockFlow({ getProfileForApplication, previewSuggestionAction, assignSuggestionToControl })
 
     render(<NomaMoment suggestion={WORKFLOW_SUGGESTION} onReject={vi.fn()} onDismiss={vi.fn()} />)
+    fireEvent.click(screen.getByText('Review steps'))
 
-    fireEvent.click(screen.getByText('Create action'))
-    await waitFor(() => expect(getProfileForApplication).toHaveBeenCalledWith('code'))
+    expect(await screen.findByText('Press Enter, to send what was just pasted')).toBeInTheDocument()
+    expect(screen.getByText('(added by Noma)')).toBeInTheDocument()
+    expect(assignSuggestionToControl).not.toHaveBeenCalled()
 
-    const slot2Button = await screen.findByText('DEBUG')
-    fireEvent.click(slot2Button)
+    // Slot buttons are named after the Glide zone that presses them.
+    expect(screen.getByText('Upper right')).toBeInTheDocument()
+    getProfileForApplication.mockResolvedValue({
+      ...PROFILE,
+      controls: PROFILE.controls.map((c) => (c.slot === 2 ? { ...c, label: 'Screenshot…', action: { type: 'macro', macroId: 'm1' } } : c))
+    })
+    fireEvent.click(screen.getByText('DEBUG'))
 
     await waitFor(() => expect(assignSuggestionToControl).toHaveBeenCalledWith(WORKFLOW_SUGGESTION.id, 2))
-    expect(await screen.findByText('Action created')).toBeInTheDocument()
-    expect(screen.getByText('Added to your interface.')).toBeInTheDocument()
+    expect(await screen.findByText('Screenshot…')).toBeInTheDocument()
+    expect(screen.getByText(/Now on the upper right Glide zone in Visual Studio Code/)).toBeInTheDocument()
+  })
+
+  it('flags steps that may not replay, without hiding the save', async () => {
+    window.flow = mockFlow({
+      getProfileForApplication: vi.fn().mockResolvedValue(PROFILE),
+      previewSuggestionAction: vi.fn().mockResolvedValue({
+        steps: [{ kind: 'click', description: 'Click a spot in the top-left', warning: 'The click goes by position.' }],
+        replayable: false
+      })
+    })
+    render(<NomaMoment suggestion={WORKFLOW_SUGGESTION} onReject={vi.fn()} onDismiss={vi.fn()} />)
+    fireEvent.click(screen.getByText('Review steps'))
+
+    expect(await screen.findByText('The click goes by position.')).toBeInTheDocument()
+    expect(screen.getByText(/Some steps may not replay reliably/)).toBeInTheDocument()
+    expect(await screen.findByText('DEBUG')).toBeInTheDocument()
+  })
+
+  it('labels a Demo Mode suggestion as simulated, never as something Noma noticed', () => {
+    window.flow = mockFlow()
+    render(<NomaMoment suggestion={{ ...WORKFLOW_SUGGESTION, isDemo: true }} onReject={vi.fn()} onDismiss={vi.fn()} />)
+    expect(screen.getByText('Demo workflow')).toBeInTheDocument()
+    expect(screen.getByText('Simulated by Demo Mode, not learned from you')).toBeInTheDocument()
+    expect(screen.queryByText('Noma noticed')).not.toBeInTheDocument()
   })
 
   it('offers an acknowledge-only path (no slot picker) for an informational suggestion with no action', async () => {
@@ -134,14 +166,15 @@ describe('NomaMoment', () => {
       .fn()
       .mockResolvedValue([{ application: notepad, hasProfile: false }])
     const createProfileForApplication = vi.fn().mockResolvedValue(created)
-    window.flow = mockFlow({ getProfileForApplication, listApplicationProfileSummaries, createProfileForApplication })
+    const previewSuggestionAction = vi.fn().mockResolvedValue({ steps: [], replayable: true })
+    window.flow = mockFlow({ getProfileForApplication, listApplicationProfileSummaries, createProfileForApplication, previewSuggestionAction })
 
     const inNotepad: Suggestion = { ...WORKFLOW_SUGGESTION, applicationId: 'notepad', applicationName: 'Notepad' }
     render(<NomaMoment suggestion={inNotepad} onReject={vi.fn()} onDismiss={vi.fn()} />)
-    fireEvent.click(screen.getByText('Create action'))
+    fireEvent.click(screen.getByText('Review steps'))
 
     await waitFor(() => expect(createProfileForApplication).toHaveBeenCalledWith(notepad, 'Notepad'))
-    expect(await screen.findByText(/Which control should this replace/)).toBeInTheDocument()
+    expect(await screen.findByText(/Which Glide zone in Notepad should run it/)).toBeInTheDocument()
     expect(screen.queryByText(/accepting just remembers/i)).not.toBeInTheDocument()
   })
 

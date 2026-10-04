@@ -4,7 +4,6 @@ import type {
   Application,
   ControlAction,
   FlowStatus,
-  InputSource,
   MacroStep,
   ModuleFunctionConfig,
   OnboardingState
@@ -16,13 +15,13 @@ import type { CaptureService } from '../workflow/captureService'
 import type { ClickCaptureService } from '../workflow/clickCaptureService'
 import type { SuggestionEngine } from '../ai/suggestionEngine'
 import {
-  getInputSource,
   getClickCaptureEnabled,
   getWorkflowMonitoringEnabled,
   setClickCaptureEnabled,
-  setInputSource,
   setWorkflowMonitoringEnabled
 } from '../database/repositories/settingsRepository'
+import { removeLearnedWorkflow } from '../applications/workflowRemoval'
+import { previewSuggestion } from '../applications/workflowPreview'
 import {
   getControlUsageStats,
   getDailyActivityCounts,
@@ -32,6 +31,7 @@ import {
 import {
   getAllSuggestions,
   getPendingSuggestions,
+  getSuggestionById,
   getSuggestionHistoryForKind,
   resolveSuggestion
 } from '../database/repositories/suggestionsRepository'
@@ -65,6 +65,7 @@ import {
 } from '../actions/actionExecutor'
 import {
   DEMO_APPLICATIONS,
+  markDemoSuggestions,
   resetDemoData,
   simulateDemoMultiStepWorkflow,
   simulateDemoWorkflow
@@ -91,7 +92,10 @@ export function registerIpcHandlers(
    *  real captured event (main/index.ts's `refreshSuggestions`), reused
    *  here so Demo Mode's simulated events flow through the identical
    *  pipeline. */
-  triggerSuggestionRefresh: () => Promise<void>
+  triggerSuggestionRefresh: () => Promise<void>,
+  /** After a factory reset: anything else main runs from a now-deleted
+   *  setting (Glide) is stopped too. */
+  afterDeleteAllData: () => void = () => {}
 ): void {
   ipcMain.handle(IPC_CHANNELS.GET_FLOW_STATUS, async (): Promise<FlowStatus> => {
     await suggestionEngine.refresh()
@@ -205,7 +209,7 @@ export function registerIpcHandlers(
   })
 
   ipcMain.handle(IPC_CHANNELS.TEST_CONTROL_ACTION, async (_event, action: ControlAction) => {
-    const result = await executeControlActionExclusively(action, getTargetWindowHandle())
+    const result = await executeControlActionExclusively(action, getTargetWindowHandle(), 'Test')
     return { ok: result.ok, reason: result.reason }
   })
 
@@ -245,7 +249,7 @@ export function registerIpcHandlers(
   )
 
   ipcMain.handle(IPC_CHANNELS.TEST_MACRO_STEPS, async (_event, actions: MacroStep[]) => {
-    const result = await runActionExclusively(() => executeMacroSteps(actions, getTargetWindowHandle()))
+    const result = await runActionExclusively(() => executeMacroSteps(actions, getTargetWindowHandle()), 'Test')
     return { ok: result.ok, reason: result.reason }
   })
 
@@ -298,10 +302,14 @@ export function registerIpcHandlers(
   ipcMain.handle(IPC_CHANNELS.DEMO_SIMULATE_WORKFLOW, async () => {
     simulateDemoWorkflow()
     await triggerSuggestionRefresh()
+    markDemoSuggestions()
+    await triggerSuggestionRefresh()
   })
 
   ipcMain.handle(IPC_CHANNELS.DEMO_SIMULATE_MULTI_STEP_WORKFLOW, async () => {
     simulateDemoMultiStepWorkflow()
+    await triggerSuggestionRefresh()
+    markDemoSuggestions()
     await triggerSuggestionRefresh()
   })
 
@@ -327,6 +335,7 @@ export function registerIpcHandlers(
     captureService.stop()
     clickCaptureService.stop()
     deleteAllData()
+    afterDeleteAllData()
     const currentApplicationId = contextService.getContext().application?.id
     if (currentApplicationId) contextService.refreshIfCurrentApplication(currentApplicationId)
     await triggerSuggestionRefresh()
@@ -359,10 +368,15 @@ export function registerIpcHandlers(
     saveOnboardingState(update)
   )
 
-  ipcMain.handle(IPC_CHANNELS.GET_INPUT_SOURCE, () => getInputSource())
+  ipcMain.handle(IPC_CHANNELS.REMOVE_WORKFLOW, (_event, macroId: string) => {
+    const result = removeLearnedWorkflow(macroId)
+    if (!result) return false
+    for (const applicationId of result.applicationIds) onProfileUpdated(applicationId)
+    return true
+  })
 
-  ipcMain.handle(IPC_CHANNELS.SET_INPUT_SOURCE, (_event, source: InputSource) => {
-    setInputSource(source)
-    return getInputSource()
+  ipcMain.handle(IPC_CHANNELS.PREVIEW_SUGGESTION_ACTION, (_event, suggestionId: string) => {
+    const suggestion = getSuggestionById(suggestionId)
+    return suggestion ? previewSuggestion(suggestion) : null
   })
 }
