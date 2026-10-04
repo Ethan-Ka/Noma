@@ -7,7 +7,7 @@ import {
   HomeIcon,
   DemoIcon,
   KeyboardIcon,
-  HoloIcon,
+  GlideIcon,
   MacroIcon,
   WorkflowsIcon,
   LearningIcon,
@@ -38,7 +38,7 @@ const PRIMARY_NAV_ITEMS: NavItem[] = [
 // manifestations of the same underlying system, so they sit together, as
 // their own small group — not lumped in with the rest of the app.
 const DEVICE_NAV_ITEMS: NavItem[] = [
-  { label: 'Holo', page: 'holo', Icon: HoloIcon },
+  { label: 'Glide', page: 'holo', Icon: GlideIcon },
   { label: 'Noma Device', page: 'virtual-keyboard', Icon: KeyboardIcon }
 ]
 

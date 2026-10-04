@@ -27,18 +27,18 @@ export function Holo() {
   return (
     <div className="mx-auto max-w-3xl px-10 py-10">
       <div className="mb-8">
-        <h1 className="font-display text-xl font-semibold text-neutral-100">Holo</h1>
+        <h1 className="font-display text-xl font-semibold text-neutral-100">Glide</h1>
         <p className="mt-1 max-w-xl text-sm text-neutral-600">
           No physical keyboard needed. Swipe a finger onto your trackpad from the empty space beside it, and Noma
           presses the control for that side, exactly as if a real button were pressed. Free, and keeps working in the
-          background while Holo is your chosen input (Settings).
+          background while Glide is your chosen input (Settings).
         </p>
       </div>
 
       {inputSource !== 'holo' && (
         <div className="mb-6 rounded-lg border border-base-700 bg-base-900 px-4 py-3 text-xs text-neutral-600">
-          Input Source is currently <span className="text-neutral-100">Keyboard</span>. Holo still works here for
-          testing, but stops when you leave this page until you switch Input Source to Holo in Settings.
+          Input Source is currently <span className="text-neutral-100">Keyboard</span>. Glide still works here for
+          testing, but stops when you leave this page until you switch Input Source to Glide in Settings.
         </div>
       )}
 

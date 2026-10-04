@@ -358,7 +358,15 @@ the target application decides how to respond, including raising an
 "unsaved changes" prompt and declining to close — exactly as it would for
 a real click on X, and never a forceful termination.
 
-## Holo — the free, no-hardware input option
+## Glide (formerly Holo) — the free, no-hardware input option
+
+**Naming (2026-10-04):** shown to users as **Glide** everywhere (app,
+Settings, website, `#glide`). Code still says `holo` on purpose: file and
+folder names (`main/holo/`, `holoStore`, `pages/Holo.tsx`), IPC channels
+(`flow:holo-*`), the `holo` colour tokens, the saved Input Source value
+`'holo'`, `noma.holo.*` localStorage keys and the `holo-recordings` folder.
+Renaming those would reset saved settings for no user-visible gain; do it
+only with a migration.
 
 Not everyone wants to buy the physical keyboard. Holo is a second way to
 fire the exact same 4 `Control` slots from a laptop alone: **slide a finger

@@ -127,7 +127,7 @@ export function HoloTrackpadPanel({ controls }: { controls: Control[] }) {
       </div>
 
       <p className="mt-4 text-xs text-holo-muted">
-        Prototype. Holo reads where your fingers are on the trackpad, in memory only, to recognise a swipe-in;
+        Prototype. Glide reads where your fingers are on the trackpad, in memory only, to recognise a swipe-in;
         nothing is recorded or saved (except during a touch check you start). It also notices <em>when</em> you press
         a key (never which one) so a hand coming off the keyboard isn&apos;t mistaken for a swipe. Needs a Windows
         precision touchpad.
@@ -257,7 +257,7 @@ function TouchCheckCard() {
     <div className="mb-5 rounded-lg border border-holo-border px-4 py-3 text-xs text-holo-muted">
       <div className="mb-2 text-holo-text">Touch check</div>
       <p className="mb-3 max-w-xl">
-        Under a minute: swipe in from each side a few times, then use the trackpad normally. Holo measures how your
+        Under a minute: swipe in from each side a few times, then use the trackpad normally. Glide measures how your
         trackpad sees those touches, so swipe-ins can be tuned to it. Steps move on by themselves, so you never need to
         click. Finger positions are saved only on this computer, in Noma&apos;s folder.
       </p>

@@ -76,13 +76,13 @@ export function HomeSidePanel({
             device, which always reports itself as connected. */}
         {!(status.connected && status.deviceType !== 'virtual') && (
           <div className="mt-4 border-t border-white/[0.08] pt-4">
-            <p className="text-xs text-neutral-600">Not connected. Use Holo on your laptop instead.</p>
+            <p className="text-xs text-neutral-600">Not connected. Use Glide on your laptop instead.</p>
             <button
               type="button"
               onClick={() => setActivePage('holo')}
               className="mt-1.5 text-xs font-medium text-accent hover:opacity-80"
             >
-              Open Holo →
+              Open Glide →
             </button>
           </div>
         )}
@@ -115,7 +115,7 @@ export function HomeSidePanel({
           <div className="flex items-center justify-between">
             <span className="flex items-center gap-1.5 text-[11px] uppercase tracking-widest text-holo-muted">
               {application && <AppIcon applicationId={application.id} name={application.name} size={14} />}
-              Holo · Free
+              Glide · Free
             </span>
             <span aria-hidden className="text-holo-muted">
               →

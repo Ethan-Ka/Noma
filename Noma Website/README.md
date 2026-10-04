@@ -21,7 +21,7 @@ src/
     ui/           Button, ControlChip, WaitlistForm, Reveal (scroll-in animation)
     visuals/      KeyboardVisual (the keyboard SVG, reused across Hero/ProductDemo/
                    Hardware), ModuleEnclosure (module cards + the attach animation),
-                   AppIcon (real brand icons — Problem/Applications/Holo's marketing
+                   AppIcon (real brand icons — Problem/Applications/Glide's marketing
                    chips), appGlyphIcons/DemoAppIcon (the app's own hand-drawn glyph
                    icons — used only inside AppPreview's demo, to stay faithful to how
                    the real app looks; don't mix the two), demoSurfaces (the app's
@@ -69,4 +69,4 @@ the Vite preset.
 - The footer/CTA "Contact" link points at a placeholder `mailto:` address — swap in a real one.
 - `KeyboardVisual` is an abstract, hand-drawn SVG concept, not a CAD render — replace it once real hardware imagery exists.
 - Social links (YouTube, TikTok, LinkedIn) are placeholder `#` hrefs, as are the footer's GitHub/Privacy/Terms links.
-- "Try Holo Free" (Hero, Nav, Holo, CTA) currently routes to the waitlist section (`#cta`) rather than a real download — there's no public Holo distribution yet. Point it at the real thing once one exists.
+- "Try Glide Free" (Hero, Nav, Glide, CTA) currently routes to the waitlist section (`#cta`) rather than a real download — there's no public Glide distribution yet. Point it at the real thing once one exists.

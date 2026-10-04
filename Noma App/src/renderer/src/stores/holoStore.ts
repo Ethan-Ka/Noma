@@ -62,7 +62,7 @@ export const TRACKPAD_ZONE_SLOTS: Record<HoloTrackpadZone, number> = {
 }
 
 const NO_TOUCHPAD_MESSAGE =
-  'Holo needs Windows and a precision touchpad, which this computer does not report. Most laptops from the last several years have one; check Settings > Bluetooth & devices > Touchpad.'
+  'Glide needs Windows and a precision touchpad, which this computer does not report. Most laptops from the last several years have one; check Settings > Bluetooth & devices > Touchpad.'
 
 interface HoloStoreState {
   inputSource: InputSource

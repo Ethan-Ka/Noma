@@ -13,7 +13,7 @@ import HoloDemo from '../visuals/HoloDemo'
 
 export default function Holo() {
   return (
-    <Section id="holo">
+    <Section id="glide">
       <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-16">
         <div>
           <Reveal>
@@ -23,7 +23,7 @@ export default function Holo() {
           </Reveal>
           <Reveal delay={0.08}>
             <p className="mt-6 max-w-md text-base leading-relaxed text-base-300">
-              Holo turns the empty space either side of your trackpad into four controls. Start a finger beside
+              Glide turns the empty space either side of your trackpad into four controls. Start a finger beside
               the trackpad, level with its upper or lower half, and flick it on: that zone&apos;s control runs.
               Nothing clicks, and your pointer goes back to where it was. Ordinary trackpad use rarely starts at
               the very edge and flicks inward, so moving the pointer, scrolling and resting your hands leave it

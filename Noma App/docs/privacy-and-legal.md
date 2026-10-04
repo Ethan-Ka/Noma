@@ -145,9 +145,9 @@ Principle") is the constraint this document exists to satisfy.
   *that* you repeated screenshot → switch app → paste, and how many times,
   never *what* was in any of those steps.
 
-## Holo — trackpad swipe-in (the free, no-hardware option)
+## Glide (formerly Holo) — trackpad swipe-in (the free, no-hardware option)
 
-Holo lets someone use Noma without buying the physical keyboard: slide a
+Glide lets someone use Noma without buying the physical keyboard: slide a
 finger from the empty space beside the trackpad onto it, and that side's
 control runs (`main/holo/trackpadGesture.ts`). It uses no microphone. (An
 earlier version listened for desk taps through the microphone; it was
@@ -167,12 +167,12 @@ recordings. See docs/architecture.md's Holo section.)
   which), via the shared keyboard hook, so a hand brushing the pad's edge
   as it comes off the keyboard is ignored.
 - **Off until turned on.** The raw-input registration and the key hook exist
-  only between the Holo page's "Turn on" and turning it off (or switching
+  only between the Glide page's "Turn on" and turning it off (or switching
   Input Source back to Keyboard), and are removed then. If it was on when
-  Noma last closed and Holo is the chosen Input Source, it comes back on at
+  Noma last closed and Glide is the chosen Input Source, it comes back on at
   launch.
 - **The touch check is the one exception to "nothing is stored".** The
-  Holo page's touch check, which the user starts, records under a minute of
+  Glide page's touch check, which the user starts, records under a minute of
   finger positions and key-press times (never which key) while they swipe
   and use the trackpad as instructed, and saves them as a JSON file in
   %APPDATA%/noma/holo-recordings so the swipe-in rules can be tuned on

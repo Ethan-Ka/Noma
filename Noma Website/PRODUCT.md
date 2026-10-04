@@ -18,7 +18,7 @@ Noma is one product with three parts. The website must carry all three.
 1. **The software (Flow)** — real and working today. Detects the foreground
    application, swaps four contextual controls, captures workflow metadata,
    recognises repeated patterns, and proposes them. Windows.
-2. **Holo** — swipe a finger onto the trackpad from the empty palm-rest
+2. **Glide** (formerly Holo) — swipe a finger onto the trackpad from the empty palm-rest
    space either side of it, level with its upper or lower half: four
    controls, the same four slots as the keyboard. Read from the laptop's own precision touchpad
    (Windows), so the adaptive interface needs no purchase at all. No

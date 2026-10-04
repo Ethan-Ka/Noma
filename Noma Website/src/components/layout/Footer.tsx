@@ -8,7 +8,7 @@ const columns: { title: string; links: { label: string; href: string }[] }[] = [
     links: [
       { label: 'How it works', href: '#context' },
       { label: 'Flow', href: '#flow' },
-      { label: 'Holo', href: '#holo' },
+      { label: 'Glide', href: '#glide' },
       { label: 'Device', href: '#device' },
       { label: 'Beta', href: '#beta' },
     ],

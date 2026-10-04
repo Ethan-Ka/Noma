@@ -13,7 +13,7 @@ import WaitlistForm from '../ui/WaitlistForm'
  * above it.
  */
 
-const FACTS = ['Free during the beta', 'Windows', 'Holo included']
+const FACTS = ['Free during the beta', 'Windows', 'Glide included']
 
 export default function Beta() {
   return (
