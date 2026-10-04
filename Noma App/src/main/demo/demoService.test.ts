@@ -61,7 +61,7 @@ describe('simulateDemoWorkflow', () => {
     expect(sequencePatterns[0].applicationId).toBe('chrome')
     expect(sequencePatterns[0].count).toBeGreaterThanOrEqual(3)
     if (sequencePatterns[0].kind === 'repeatedSequence') {
-      expect(sequencePatterns[0].sequence).toEqual(['Control+C', 'Control+V'])
+      expect(sequencePatterns[0].sequence).toEqual(['Control+D', 'Control+W'])
     }
 
     // Deliberately tuned to stay under the repeatedShortcut threshold so the

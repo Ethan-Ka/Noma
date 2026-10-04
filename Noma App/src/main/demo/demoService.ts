@@ -44,27 +44,30 @@ export const DEMO_APPLICATIONS: Record<DemoApplicationId, Application> = {
 const DEMO_WORKFLOW_APPLICATION_ID: DemoApplicationId = 'chrome'
 
 /**
- * How many Copy -> Paste repetitions to simulate, and the timing between
+ * How many Bookmark -> Close tab repetitions to simulate (save a page for
+ * later, then close it: a real two-step tab-triage habit; Copy -> Paste was
+ * used before, but in one app that's not something a press can usefully
+ * replay, and workflowSense.ts now refuses to suggest it), and the timing between
  * them. Tuned to a specific, deliberate outcome, not an arbitrary number:
  *
  * - 4 repetitions of the pair is >= SEQUENCE_THRESHOLD (3), so exactly one
  *   `repeatedSequence` suggestion ("Create a macro for this sequence?")
  *   is generated.
- * - 4 is < REPEATED_SHORTCUT_THRESHOLD (5), so neither Control+C nor
- *   Control+V alone crosses the "assign this shortcut to a control?"
+ * - 4 is < REPEATED_SHORTCUT_THRESHOLD (5), so neither Control+D nor
+ *   Control+W alone crosses the "assign this shortcut to a control?"
  *   threshold — the demo shows exactly one clean suggestion, not three.
- * - Each Copy/Paste pair is 500ms apart (comfortably inside the 15s
+ * - Each Bookmark/Close pair is 500ms apart (comfortably inside the 15s
  *   sequence window); each repetition starts 20s after the last (safely
- *   outside that window), so Paste -> next-Copy is never itself counted as
+ *   outside that window), so Close -> next-Bookmark is never itself counted as
  *   a repeated sequence. All timestamps are backdated from "now" so the
  *   demo never has to actually wait.
  */
 const REPEAT_COUNT = 4
 const REPEAT_GAP_MS = 20_000
-const PASTE_DELAY_MS = 500
+const CLOSE_DELAY_MS = 500
 
 /**
- * Inserts a deterministic, backdated Copy -> Paste workflow into
+ * Inserts a deterministic, backdated Bookmark -> Close tab workflow into
  * workflow_events via the same `insertWorkflowEvent` real capture uses, then
  * leaves pattern detection / suggestion generation to the caller (via
  * whatever already re-runs `SuggestionEngine.refresh()` after a real
@@ -77,19 +80,19 @@ export function simulateDemoWorkflow(): void {
   const base = now - REPEAT_COUNT * REPEAT_GAP_MS
 
   for (let i = 0; i < REPEAT_COUNT; i++) {
-    const copyAt = base + i * REPEAT_GAP_MS
-    const pasteAt = copyAt + PASTE_DELAY_MS
+    const bookmarkAt = base + i * REPEAT_GAP_MS
+    const closeAt = bookmarkAt + CLOSE_DELAY_MS
     insertWorkflowEvent({
       applicationId: DEMO_WORKFLOW_APPLICATION_ID,
       eventType: 'shortcut',
-      comboKeys: ['Control', 'C'],
-      timestamp: copyAt
+      comboKeys: ['Control', 'D'],
+      timestamp: bookmarkAt
     })
     insertWorkflowEvent({
       applicationId: DEMO_WORKFLOW_APPLICATION_ID,
       eventType: 'shortcut',
-      comboKeys: ['Control', 'V'],
-      timestamp: pasteAt
+      comboKeys: ['Control', 'W'],
+      timestamp: closeAt
     })
   }
 }
@@ -181,7 +184,7 @@ export function resetDemoData(): void {
       if (!seedDefault) continue
 
       // A prior demo run may have assigned a macro (from accepting the
-      // Copy->Paste suggestion) to this slot — delete it now that nothing
+      // Bookmark->Close tab suggestion) to this slot — delete it now that nothing
       // will reference it, rather than leaving an orphaned row behind.
       if (control.action.type === 'macro') {
         deleteMacro(control.action.macroId)

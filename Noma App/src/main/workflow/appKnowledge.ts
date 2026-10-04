@@ -96,6 +96,39 @@ export function isAmbientApp(applicationId: string | null): boolean {
   return categoryOf(applicationId) === 'ambient'
 }
 
+/** Pieces of the operating system (Start menu, search, sign-in prompts, tray
+ *  helpers) and Noma itself. They take focus for a moment while you get
+ *  somewhere else, so they're never a step of anyone's workflow — real data
+ *  had "Chrome → ShellHost → Explorer" and "electron → Claude → electron"
+ *  (Noma's own window, opened to read a suggestion). */
+const SYSTEM_SURFACES = new Set([
+  'shellhost',
+  'searchhost',
+  'searchapp',
+  'searchui',
+  'startmenuexperiencehost',
+  'shellexperiencehost',
+  'credentialuibroker',
+  'consent',
+  'lockapp',
+  'logonui',
+  'textinputhost',
+  'spacedeskservicetray',
+  'electron',
+  'noma',
+  'noma virtual device',
+  'loginwindow',
+  'dock',
+  'spotlight',
+  'systemuiserver',
+  'controlcenter',
+  'notificationcenter'
+])
+
+export function isSystemSurface(applicationId: string | null): boolean {
+  return applicationId !== null && SYSTEM_SURFACES.has(applicationId.toLowerCase())
+}
+
 // ---------------------------------------------------------------------------
 // Realistic cross-app workflows
 // ---------------------------------------------------------------------------
@@ -313,6 +346,7 @@ const IN_APP_PROFILES: InAppProfile[] = [
     groups: {
       tabs: {
         'Control+T': 'New tab',
+        'Control+D': 'Bookmark page',
         'Control+W': 'Close tab',
         'Control+Shift+T': 'Reopen closed tab',
         'Control+L': 'Address bar'

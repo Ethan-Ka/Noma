@@ -1,6 +1,7 @@
 import type { DetectedPattern, WorkflowEvent, WorkflowStep } from '@shared/types'
-import { inAppLabel, isAmbientApp } from './appKnowledge'
+import { inAppLabel } from './appKnowledge'
 import { describeClickTarget } from './clickTarget'
+import { chainMakesSense, isIgnoredApp, isNoiseShortcut, isTrivialShortcut, shortcutRole } from './workflowSense'
 
 /**
  * Deterministic/statistical pattern detection (brainstorm.md sections
@@ -124,7 +125,45 @@ function countSessions(timestamps: number[]): number {
   return sessions
 }
 
-export function detectPatterns(events: WorkflowEvent[]): DetectedPattern[] {
+/** An Undo this soon after an action, in the same app, takes it back. */
+const UNDO_WINDOW_MS = 10_000
+
+/**
+ * The events with everything that isn't part of what the user meant to do
+ * taken out (see workflowSense.ts): getting-around shortcuts (Alt+Tab,
+ * Ctrl+Arrow, Ctrl+Backspace), system windows, and corrections. An Undo
+ * removes itself *and* the action it took back, so "Paste → Undo → Paste as
+ * plain text" is just "Paste as plain text", which is what was meant.
+ * Idempotent, so every detector can safely start from it.
+ */
+function withoutNoise(events: WorkflowEvent[]): WorkflowEvent[] {
+  const sorted = [...events].sort((a, b) => a.timestamp - b.timestamp)
+  const kept: WorkflowEvent[] = []
+  for (const event of sorted) {
+    if (event.eventType !== 'controlActivation' && isIgnoredApp(event.applicationId)) continue
+    if (event.eventType === 'shortcut' && event.comboKeys) {
+      const role = shortcutRole(event.comboKeys)
+      if (role === 'undo') {
+        const last = kept[kept.length - 1]
+        if (
+          last &&
+          (last.eventType === 'shortcut' || last.eventType === 'click') &&
+          last.applicationId === event.applicationId &&
+          event.timestamp - last.timestamp <= UNDO_WINDOW_MS
+        ) {
+          kept.pop()
+        }
+        continue
+      }
+      if (isNoiseShortcut(event.comboKeys)) continue
+    }
+    kept.push(event)
+  }
+  return kept
+}
+
+export function detectPatterns(rawEvents: WorkflowEvent[]): DetectedPattern[] {
+  const events = withoutNoise(rawEvents)
   const longMultiStepWorkflows = detectMultiStepWorkflows(events)
   // An in-app click pair (Cut -> Delete) is the 2-step case of the same
   // shape; it's dropped in favor of any longer chain that already contains it.
@@ -160,7 +199,15 @@ function isSubsumedByMultiStepWorkflow(pair: DetectedPattern, multiStepWorkflows
   const pairSignature = pair.steps.map(stepSignature)
   return multiStepWorkflows.some((workflow) => {
     if (workflow.kind !== 'multiStepWorkflow' || workflow.steps.length <= pair.steps.length) return false
-    return isContiguousSubarray(pairSignature, workflow.steps.map(stepSignature))
+    const workflowSignatures = workflow.steps.map(stepSignature)
+    // Contained in order, or made of the workflow's own steps out of order:
+    // the last step of one round followed by the first of the next ("Copy →
+    // Edit" around "Edit → Select all → Copy") is the same loop, not a second
+    // workflow.
+    return (
+      isContiguousSubarray(pairSignature, workflowSignatures) ||
+      pairSignature.every((signature) => workflowSignatures.includes(signature))
+    )
   })
 }
 
@@ -185,6 +232,7 @@ function detectRepeatedShortcuts(events: WorkflowEvent[]): DetectedPattern[] {
 
   for (const event of events) {
     if (event.eventType !== 'shortcut' || !event.comboKeys) continue
+    if (isTrivialShortcut(event.comboKeys)) continue
     const key = `${event.applicationId ?? 'unknown'}::${event.comboKeys.join('+')}`
     const existing = groups.get(key)
     if (existing) {
@@ -275,6 +323,14 @@ function detectRepeatedSequences(events: WorkflowEvent[]): DetectedPattern[] {
     // detectRepeatedShortcuts' job, and double-counting it here used to
     // produce a nonsensical "Ctrl+T -> Ctrl+T" two-step macro suggestion.
     if (first.comboKeys.join('+') === second.comboKeys.join('+')) continue
+    if (
+      !chainMakesSense([
+        { type: 'shortcut', applicationId: first.applicationId, comboKeys: first.comboKeys },
+        { type: 'shortcut', applicationId: second.applicationId, comboKeys: second.comboKeys }
+      ])
+    ) {
+      continue
+    }
 
     const sequence = [first.comboKeys.join('+'), second.comboKeys.join('+')]
     const key = `${first.applicationId ?? 'unknown'}::${sequence.join('->')}`
@@ -372,15 +428,13 @@ export function describeStep(step: WorkflowStep): string {
  * a genuine switch) shouldn't count as a second one.
  */
 function buildWorkflowSteps(events: WorkflowEvent[]): WorkflowStepEvent[] {
-  // Ambient apps (a music player) are dropped entirely: glancing at Spotify
-  // between two real steps isn't part of the workflow, so Editor → Spotify →
-  // Terminal is the same Editor → Terminal workflow as without the detour.
-  const relevant = events
-    .filter(
-      (event) => event.eventType === 'shortcut' || event.eventType === 'appSwitch' || event.eventType === 'click'
-    )
-    .filter((event) => !isAmbientApp(event.applicationId))
-    .sort((a, b) => a.timestamp - b.timestamp)
+  // Ambient apps (a music player) and system windows are dropped entirely
+  // (withoutNoise): glancing at Spotify between two real steps isn't part of
+  // the workflow, so Editor → Spotify → Terminal is the same Editor →
+  // Terminal workflow as without the detour.
+  const relevant = withoutNoise(events).filter(
+    (event) => event.eventType === 'shortcut' || event.eventType === 'appSwitch' || event.eventType === 'click'
+  )
 
   const steps: WorkflowStepEvent[] = []
   relevant.forEach((event, index) => {
@@ -459,6 +513,7 @@ function detectCrossAppWorkflows(events: WorkflowEvent[]): DetectedPattern[] {
     const second = steps[i + 1]
     if (second.timestamp - first.timestamp > WORKFLOW_STEP_WINDOW_MS) continue
     if (first.step.type !== 'appSwitch' && second.step.type !== 'appSwitch') continue
+    if (!chainMakesSense([first.step, second.step])) continue
 
     const signature = `${stepSignature(first.step)}->${stepSignature(second.step)}`
     const existing = groups.get(signature)
@@ -586,6 +641,7 @@ function detectInAppClickPairs(events: WorkflowEvent[]): DetectedPattern[] {
     const secondSignature = stepSignature(second.step)
     // Two identical clicks in a row are a repeated click, not a workflow.
     if (firstSignature === secondSignature) continue
+    if (!chainMakesSense([first.step, second.step])) continue
 
     const key = `${firstSignature}->${secondSignature}`
     const delayMs = second.timestamp - first.timestamp
@@ -719,6 +775,7 @@ function buildWorkflowWindows(steps: WorkflowStepEvent[]): WorkflowWindow[] {
       // even inside a single app.
       const hasAppSwitch = slice.some((s) => s.step.type === 'appSwitch' || s.step.type === 'click')
       if (!hasAppSwitch && distinctCount < 3) continue
+      if (!chainMakesSense(slice.map((s) => s.step))) continue
 
       windows.push({
         steps: slice.map((s) => s.step),
@@ -874,8 +931,23 @@ export function detectMultiStepWorkflows(events: WorkflowEvent[]): DetectedPatte
     if (!subsumed) kept.push(candidate)
   }
 
+  // A loop done several times in a row shows up once per starting point:
+  // "Edit → Select all → Copy", "Select all → Copy → Edit", "Copy → Edit →
+  // Select all". Same steps, so the same workflow — keep the rotation seen
+  // most often, which is where the user actually starts it.
+  const stepSet = (candidate: (typeof candidates)[number]): string =>
+    [...candidate.representative.signatures].sort().join('|')
+  const byCount = [...kept].sort((a, b) => b.count - a.count)
+  const seenSets = new Set<string>()
+  const rotationsRemoved = byCount.filter((candidate) => {
+    const set = stepSet(candidate)
+    if (seenSets.has(set)) return false
+    seenSets.add(set)
+    return true
+  })
+
   const patterns: DetectedPattern[] = []
-  for (const candidate of kept) {
+  for (const candidate of rotationsRemoved) {
     const { representative, count, consistency } = candidate
     const applicationIds = [...new Set(representative.steps.map((step) => step.applicationId))]
     const contextApplicationId = representative.steps[0]?.applicationId ?? null

@@ -66,6 +66,7 @@ export const IPC_CHANNELS = {
   HOLO_TRACKPAD_EVENT: 'flow:holo-trackpad-event',
   HOLO_TOUCH_CHECK_START: 'flow:holo-touch-check-start',
   HOLO_TOUCH_CHECK_STOP: 'flow:holo-touch-check-stop',
+  HOLO_TOUCH_CHECK_LAST: 'flow:holo-touch-check-last',
 
   /**
    * Noma Notice — the small glass surface that appears bottom-centre of the

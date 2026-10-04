@@ -30,19 +30,34 @@ import type { HoloTrackpadEvent, HoloTrackpadZone, HoloTrackpadZoneCount } from 
  * frames and key timestamps.
  */
 
-/** First contact within this fraction of the pad's width from a side. */
+/*
+ * Set from the user's own touch check (2026-10-03, ASUS Precision Touchpad,
+ * 46 swipe-ins and 42 ordinary touches; re-score with the touch check's
+ * replay, touchTrace.ts). Sliding-in fingers were first seen 0-2.4% from the
+ * edge (median 0.4% left, 0.7% right); swipes travelled 7-30% of the width
+ * and covered the first 8% in 28-117 ms. With these values 44 of 46 swipes fire on the right
+ * side; ordinary use fired once, on a quick inward flick from the very edge
+ * that no threshold here can tell from a swipe-in.
+ */
+
+/** First contact within this fraction of the pad's width from a side. Real
+ *  swipe-ins were first seen within 2.4%; the margin covers other pads. */
 export const EDGE_START = 0.06
-/** How far inward (fraction of the pad's width) the finger must travel. */
-export const MIN_TRAVEL = 0.15
-/** ...within this long of first appearing. A deliberate flick takes
- *  ~100-200 ms; dragging the pointer from the edge is far slower. */
-export const MAX_SWIPE_MS = 350
+/** How far inward (fraction of the pad's width) the finger must travel.
+ *  Quick right-side flicks travelled as little as 7-9%; 15% missed them. */
+export const MIN_TRAVEL = 0.08
+/** ...within this long of first appearing. Real swipes covered it in
+ *  28-117 ms; dragging the pointer from the edge is far slower, and with a
+ *  travel this short, speed is what tells the two apart. */
+export const MAX_SWIPE_MS = 150
 /** Vertical travel may be at most this times the horizontal travel. */
 export const MAX_SLOPE = 0.9
 /** No key presses for this long before the finger arrives. */
 export const TYPING_QUIET_MS = 600
-/** After firing, ignore new swipes for this long. */
-export const COOLDOWN_MS = 600
+/** After firing, ignore new swipes for this long: just enough that one
+ *  flick can't fire twice. At 600 ms it swallowed every second swipe of
+ *  someone swiping about twice a second (9 of 19 caught; 18 of 19 at 250). */
+export const COOLDOWN_MS = 250
 
 export interface TouchContact {
   id: number
@@ -72,9 +87,9 @@ export function zoneFor(side: 'left' | 'right', y: number, zones: HoloTrackpadZo
 }
 
 /** The side a first contact at `x` came in from, if it's at an edge. */
-export function edgeAt(x: number): 'left' | 'right' | null {
-  if (x <= EDGE_START) return 'left'
-  if (x >= 1 - EDGE_START) return 'right'
+export function edgeAt(x: number, edgeStart = EDGE_START): 'left' | 'right' | null {
+  if (x <= edgeStart) return 'left'
+  if (x >= 1 - edgeStart) return 'right'
   return null
 }
 
@@ -90,7 +105,34 @@ interface Swipe {
 
 type MissReason = Extract<HoloTrackpadEvent, { type: 'miss' }>['reason']
 
+/** Every threshold above, overridable per detector so a touch check can be
+ *  replayed against different values (scripts, tests). The app uses the
+ *  defaults. */
+export interface GestureTuning {
+  edgeStart: number
+  minTravel: number
+  maxSwipeMs: number
+  maxSlope: number
+  typingQuietMs: number
+  cooldownMs: number
+}
+
+export const DEFAULT_TUNING: GestureTuning = {
+  edgeStart: EDGE_START,
+  minTravel: MIN_TRAVEL,
+  maxSwipeMs: MAX_SWIPE_MS,
+  maxSlope: MAX_SLOPE,
+  typingQuietMs: TYPING_QUIET_MS,
+  cooldownMs: COOLDOWN_MS
+}
+
 export class TrackpadGestureDetector {
+  private readonly tuning: GestureTuning
+
+  constructor(tuning: Partial<GestureTuning> = {}) {
+    this.tuning = { ...DEFAULT_TUNING, ...tuning }
+  }
+
   private swipe: Swipe | null = null
   /** Per device: contact IDs down in the last frame, so only a finger
    *  arriving now can start a swipe. */
@@ -120,13 +162,13 @@ export class TrackpadGestureDetector {
     if (!this.swipe) {
       for (const contact of active) {
         if (wasDown.has(contact.id) || this.judged.has(key(contact.id))) continue
-        const side = edgeAt(contact.x)
+        const side = edgeAt(contact.x, this.tuning.edgeStart)
         if (!side) continue
         const miss = (reason: MissReason): void => {
           this.judged.add(key(contact.id))
           events.push({ type: 'miss', zone: zoneFor(side, contact.y, this.zones), at: now, reason })
         }
-        if (now - this.lastKeyAt < TYPING_QUIET_MS) miss('typing')
+        if (now - this.lastKeyAt < this.tuning.typingQuietMs) miss('typing')
         else if (now < this.cooldownUntil) this.judged.add(key(contact.id))
         else {
           this.swipe = {
@@ -162,11 +204,11 @@ export class TrackpadGestureDetector {
       else {
         const inward = swipe.side === 'left' ? contact.x - swipe.x : swipe.x - contact.x
         const vertical = Math.abs(contact.y - swipe.y)
-        if (now - swipe.startAt > MAX_SWIPE_MS) miss('too-slow')
-        else if (inward >= MIN_TRAVEL) {
-          if (vertical > inward * MAX_SLOPE) miss('not-sideways')
+        if (now - swipe.startAt > this.tuning.maxSwipeMs) miss('too-slow')
+        else if (inward >= this.tuning.minTravel) {
+          if (vertical > inward * this.tuning.maxSlope) miss('not-sideways')
           else {
-            this.cooldownUntil = now + COOLDOWN_MS
+            this.cooldownUntil = now + this.tuning.cooldownMs
             this.lastFired = { device: frame.device, id: swipe.id }
             end({ type: 'fire', zone: swipe.zone, at: now })
           }

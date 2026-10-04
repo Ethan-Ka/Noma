@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   COOLDOWN_MS,
   EDGE_START,
-  MAX_SWIPE_MS,
   MIN_TRAVEL,
   TrackpadGestureDetector,
   TYPING_QUIET_MS,
@@ -92,7 +91,9 @@ describe('TrackpadGestureDetector', () => {
 
   it('a slow drag in from the edge is pointer use, not a swipe', () => {
     const detector = new TrackpadGestureDetector()
-    const events = play(detector, path(0.01, 0.5, 0.4, 0.5, MAX_SWIPE_MS * 3))
+    // 40% of the pad in 1.2 s: the first 8% takes ~250 ms, well past the
+    // limit, where every real swipe in the touch check took under 120 ms.
+    const events = play(detector, path(0.01, 0.5, 0.4, 0.5, 1200))
     expect(events).toEqual([expect.objectContaining({ type: 'miss', reason: 'too-slow' })])
   })
 
@@ -135,8 +136,14 @@ describe('TrackpadGestureDetector', () => {
     const detector = new TrackpadGestureDetector()
     // Keeps sliding well past the threshold: still one fire.
     expect(types(play(detector, path(0.01, 0.5, 0.9, 0.5, 300)))).toEqual(['fire'])
-    expect(play(detector, path(0.99, 0.5, 0.6, 0.5, 150, 10_320))).toEqual([])
-    expect(types(play(detector, path(0.99, 0.5, 0.6, 0.5, 150, 10_320 + COOLDOWN_MS)))).toEqual(['fire'])
+
+    const quick = new TrackpadGestureDetector()
+    // Fires ~25 ms in, lifts at ~100 ms.
+    expect(types(play(quick, path(0.01, 0.5, 0.4, 0.5, 100)))).toEqual(['fire'])
+    // A second flick still inside the cooldown is ignored...
+    expect(play(quick, path(0.99, 0.5, 0.6, 0.5, 100, 10_120))).toEqual([])
+    // ...and one after it fires.
+    expect(types(play(quick, path(0.99, 0.5, 0.6, 0.5, 100, 10_100 + COOLDOWN_MS)))).toEqual(['fire'])
   })
 
   it('remembers which touch fired, for the pointer to be put back', () => {

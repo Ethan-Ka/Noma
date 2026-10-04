@@ -78,6 +78,9 @@ interface HoloStoreState {
   /** The touch check in progress: which step, and when it ends. */
   touchCheck: { step: number; endsAt: number } | null
   touchCheckResult: { summary: HoloTouchCheckSummary; savedTo: string } | null
+  /** When the last touch check was saved, or null if it never has been. Once
+   *  set, the Holo page shows the check as a small "run again" line. */
+  touchCheckDoneAt: number | null
 
   refresh: () => Promise<void>
   setInputSource: (source: InputSource) => Promise<void>
@@ -104,9 +107,14 @@ export const useHoloStore = create<HoloStoreState>((set, get) => ({
   trackpadZones: readStored<HoloTrackpadZoneCount>(ZONES_KEY, 4),
   touchCheck: null,
   touchCheckResult: null,
+  touchCheckDoneAt: null,
 
   refresh: async () => {
-    set({ inputSource: await window.flow.getInputSource() })
+    const [inputSource, touchCheckDoneAt] = await Promise.all([
+      window.flow.getInputSource(),
+      window.flow.getHoloTouchCheckLast().catch(() => null)
+    ])
+    set({ inputSource, touchCheckDoneAt })
   },
 
   setInputSource: async (source) => {
@@ -160,7 +168,9 @@ export const useHoloStore = create<HoloStoreState>((set, get) => ({
       if (index >= phases.length) {
         touchCheckTimer = null
         set({ touchCheck: null })
-        void window.flow.stopHoloTouchCheck(phases).then((result) => set({ touchCheckResult: result }))
+        void window.flow
+          .stopHoloTouchCheck(phases)
+          .then((result) => set(result ? { touchCheckResult: result, touchCheckDoneAt: Date.now() } : {}))
         return
       }
       set({ touchCheck: { step: index, endsAt: phases[index].endAt } })

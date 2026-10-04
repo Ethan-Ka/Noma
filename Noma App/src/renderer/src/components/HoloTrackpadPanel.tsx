@@ -189,9 +189,12 @@ function ZoneStrip({
  * The touch check: under a minute of guided swiping and ordinary use,
  * recorded so the swipe-in rules can be set from what this trackpad actually
  * reports. Nothing fires meanwhile.
+ *
+ * Asked for once. After that it shrinks to one line, kept for running again
+ * (a new laptop, or swipe-ins that stop feeling right) rather than nagging.
  */
 function TouchCheckCard() {
-  const { touchCheck, touchCheckResult, startTouchCheck, cancelTouchCheck } = useHoloStore()
+  const { touchCheck, touchCheckResult, touchCheckDoneAt, startTouchCheck, cancelTouchCheck } = useHoloStore()
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
     if (!touchCheck) return
@@ -221,6 +224,35 @@ function TouchCheckCard() {
     )
   }
 
+  if (touchCheckDoneAt) {
+    return (
+      <div className="mb-5 text-xs text-holo-muted">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span>
+            Touch check done{' '}
+            {new Date(touchCheckDoneAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}.
+          </span>
+          <button
+            type="button"
+            onClick={() => void startTouchCheck()}
+            className="text-[11px] underline decoration-dotted underline-offset-2 hover:text-holo-text"
+          >
+            Run again
+          </button>
+          <button
+            type="button"
+            onClick={() => void window.flow.openHoloRecordings()}
+            className="text-[11px] underline decoration-dotted underline-offset-2 hover:text-holo-text"
+          >
+            Open folder
+          </button>
+          <span className="text-[11px]">Run it again on a new laptop, or if swipe-ins stop feeling right.</span>
+        </div>
+        {touchCheckResult && <TouchCheckResult summary={touchCheckResult.summary} />}
+      </div>
+    )
+  }
+
   return (
     <div className="mb-5 rounded-lg border border-holo-border px-4 py-3 text-xs text-holo-muted">
       <div className="mb-2 text-holo-text">Touch check</div>
@@ -235,7 +267,7 @@ function TouchCheckCard() {
           onClick={() => void startTouchCheck()}
           className="rounded-full border border-accent/50 bg-accent/10 px-3 py-1 text-[11px] text-accent hover:bg-accent/20"
         >
-          {touchCheckResult ? 'Run again' : 'Start touch check'}
+          Start touch check
         </button>
         <button
           type="button"
@@ -245,7 +277,6 @@ function TouchCheckCard() {
           Open folder
         </button>
       </div>
-      {touchCheckResult && <TouchCheckResult summary={touchCheckResult.summary} />}
     </div>
   )
 }

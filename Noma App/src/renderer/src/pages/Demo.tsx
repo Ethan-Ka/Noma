@@ -260,7 +260,7 @@ export function Demo() {
               onClick={() => void handleSimulateWorkflow()}
               className="rounded-md border border-accent-muted bg-accent/10 px-4 py-2 text-sm font-medium text-accent transition-transform duration-150 hover:bg-accent/20 active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100"
             >
-              {isWorking ? 'Simulating…' : 'Simulate repeated workflow (Copy → Paste)'}
+              {isWorking ? 'Simulating…' : 'Simulate repeated workflow (Bookmark → Close tab)'}
             </button>
             <p className="mt-2 text-[11px] text-neutral-600">
               This inserts backdated workflow metadata through the same pipeline real capture
@@ -297,7 +297,7 @@ export function Demo() {
           <>
             <p className="mb-1 text-sm font-medium text-neutral-200">That really updated Chrome's controls.</p>
             <p className="mb-4 text-sm text-neutral-400">
-              Whichever control you just picked is the real Copy → Paste macro now, the same write
+              Whichever control you just picked is the real Bookmark → Close tab macro now, the same write
               path a person accepting a suggestion in the Suggestions panel uses. Noma never picks
               the slot; you did.
             </p>

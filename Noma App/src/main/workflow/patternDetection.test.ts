@@ -86,19 +86,19 @@ describe('detectPatterns — repeated sequences', () => {
     const events: WorkflowEvent[] = []
     for (let i = 0; i < 3; i++) {
       const base = i * 100_000
-      events.push(shortcutEvent(['Control', 'C'], base))
-      events.push(shortcutEvent(['Control', 'V'], base + 2_000))
+      events.push(shortcutEvent(['Control', 'K'], base))
+      events.push(shortcutEvent(['Control', 'S'], base + 2_000))
     }
     const patterns = detectPatterns(events)
     const sequence = patterns.find((p) => p.kind === 'repeatedSequence')
     expect(sequence).toMatchObject({ count: 3 })
-    expect(sequence?.description).toContain('Control+C → Control+V')
+    expect(sequence?.description).toContain('Control+K → Control+S')
   })
 
   it('does not link two shortcuts that are far apart in time', () => {
     const events = [
-      shortcutEvent(['Control', 'C'], 0),
-      shortcutEvent(['Control', 'V'], 60_000) // 60s later, outside the window
+      shortcutEvent(['Control', 'K'], 0),
+      shortcutEvent(['Control', 'S'], 60_000) // 60s later, outside the window
     ]
     expect(detectPatterns(events).some((p) => p.kind === 'repeatedSequence')).toBe(false)
   })
@@ -109,22 +109,22 @@ describe('detectPatterns — repeated sequences', () => {
     const events: WorkflowEvent[] = []
     for (let i = 0; i < 3; i++) {
       const base = i * 100_000
-      events.push(shortcutEvent(['Control', 'C'], base))
-      events.push(shortcutEvent(['Control', 'C'], base + 500))
-      events.push(shortcutEvent(['Control', 'V'], base + 1_000))
+      events.push(shortcutEvent(['Control', 'K'], base))
+      events.push(shortcutEvent(['Control', 'K'], base + 500))
+      events.push(shortcutEvent(['Control', 'S'], base + 1_000))
     }
     const patterns = detectPatterns(events).filter((p) => p.kind === 'repeatedSequence')
     expect(patterns).toHaveLength(1)
     expect(patterns[0]).toMatchObject({ count: 3 })
-    expect(patterns[0].description).toContain('Control+C → Control+V')
+    expect(patterns[0].description).toContain('Control+K → Control+S')
   })
 
   it('does not link two shortcuts from different applications', () => {
     const events: WorkflowEvent[] = []
     for (let i = 0; i < 3; i++) {
       const base = i * 100_000
-      events.push(shortcutEvent(['Control', 'C'], base, 'code'))
-      events.push(shortcutEvent(['Control', 'V'], base + 2_000, 'chrome'))
+      events.push(shortcutEvent(['Control', 'K'], base, 'code'))
+      events.push(shortcutEvent(['Control', 'S'], base + 2_000, 'chrome'))
     }
     expect(detectPatterns(events).some((p) => p.kind === 'repeatedSequence')).toBe(false)
   })
@@ -185,12 +185,12 @@ describe('detectPatterns — spam vs. a real workflow', () => {
     expect(detectPatterns(events)).toEqual([])
   })
 
-  it('still reports a Copy/Paste sequence repeated naturally across real work', () => {
+  it('still reports a two-step sequence repeated naturally across real work', () => {
     const events: WorkflowEvent[] = []
     for (let i = 0; i < 3; i++) {
       const base = i * 100_000
-      events.push(shortcutEvent(['Control', 'C'], base))
-      events.push(shortcutEvent(['Control', 'V'], base + 2_000))
+      events.push(shortcutEvent(['Control', 'K'], base))
+      events.push(shortcutEvent(['Control', 'S'], base + 2_000))
     }
     const patterns = detectPatterns(events)
     expect(patterns.some((p) => p.kind === 'repeatedSequence' && p.count === 3)).toBe(true)
@@ -224,22 +224,22 @@ describe('detectPatterns — cross-app workflows', () => {
     const events: WorkflowEvent[] = []
     for (let i = 0; i < 3; i++) {
       const base = i * 100_000
-      events.push(appSwitchEvent('claude', base))
-      events.push(shortcutEvent(['Control', 'V'], base + 1_000, 'claude'))
+      events.push(appSwitchEvent('chrome', base))
+      events.push(shortcutEvent(['Control', 'Shift', 'T'], base + 1_000, 'chrome'))
     }
     const workflow = detectPatterns(events).find((p) => p.kind === 'crossAppWorkflow')
     expect(workflow).toMatchObject({ count: 3 })
-    // Control+V is common enough to name by what it does — see
+    // A shortcut Noma knows in that app is named by what it does — see
     // shortcutDisplayLabel in patternDetection.ts.
-    expect(workflow?.description).toContain('Paste')
+    expect(workflow?.description).toContain('Reopen closed tab')
   })
 
   it('does not treat a same-app shortcut pair as a cross-app workflow (that stays repeatedSequence)', () => {
     const events: WorkflowEvent[] = []
     for (let i = 0; i < 3; i++) {
       const base = i * 100_000
-      events.push(shortcutEvent(['Control', 'C'], base))
-      events.push(shortcutEvent(['Control', 'V'], base + 2_000))
+      events.push(shortcutEvent(['Control', 'K'], base))
+      events.push(shortcutEvent(['Control', 'S'], base + 2_000))
     }
     const patterns = detectPatterns(events)
     expect(patterns.some((p) => p.kind === 'crossAppWorkflow')).toBe(false)

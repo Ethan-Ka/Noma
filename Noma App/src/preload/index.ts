@@ -156,6 +156,7 @@ const flowApi: FlowApi = {
   openHoloRecordings: () => ipcRenderer.invoke(IPC_CHANNELS.HOLO_OPEN_RECORDINGS),
   setHoloTrackpad: (enabled, zones) => ipcRenderer.invoke(IPC_CHANNELS.HOLO_SET_TRACKPAD, enabled, zones),
   startHoloTouchCheck: () => ipcRenderer.invoke(IPC_CHANNELS.HOLO_TOUCH_CHECK_START),
+  getHoloTouchCheckLast: () => ipcRenderer.invoke(IPC_CHANNELS.HOLO_TOUCH_CHECK_LAST),
   stopHoloTouchCheck: (phases) => ipcRenderer.invoke(IPC_CHANNELS.HOLO_TOUCH_CHECK_STOP, phases),
   onHoloTrackpadEvent: (callback) => {
     const listener = (_event: IpcRendererEvent, event: HoloTrackpadEvent): void => callback(event)

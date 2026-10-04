@@ -1,6 +1,6 @@
 import { app, shell, BrowserWindow, ipcMain, Tray, Menu, nativeImage, Notification, systemPreferences } from 'electron'
-import { join } from 'path'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { dirname, join } from 'path'
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs'
 import { optimizer, is } from '@electron-toolkit/utils'
 
 /**
@@ -44,7 +44,7 @@ import { CaptureService } from './workflow/captureService'
 import { ClickCaptureService } from './workflow/clickCaptureService'
 import { createClickInspector } from './workflow/uiaInspector'
 import { TrackpadGestureService } from './holo/trackpadGestureService'
-import { openRecordingsFolder } from './holo/recordingStore'
+import { latestTouchCheckAt, openRecordingsFolder } from './holo/recordingStore'
 import { insertWorkflowEvent } from './database/repositories/workflowEventsRepository'
 import { getClickCaptureEnabled, getWorkflowMonitoringEnabled } from './database/repositories/settingsRepository'
 import { getSuggestionHistoryForKind, getPendingSuggestions } from './database/repositories/suggestionsRepository'
@@ -219,15 +219,18 @@ function createMainWindow(): void {
     }
   })
 
-  // The taskbar groups windows by app ID and can show the icon registered
-  // for that ID instead of the window's own; naming the icon here as well
-  // keeps the button on Noma's even before Windows has read the shortcut
-  // (see registerAppIdentity).
+  // The taskbar button's icon. Windows only honours a window's own relaunch
+  // icon when the window also has a relaunch command (and display name);
+  // without one it silently ignores the icon and looks the app ID up in the
+  // Start Menu instead, which in development raced with the shortcut being
+  // written and often came back with electron.exe's icon. With all three
+  // set, the button is Noma's no matter what the shortcut lookup finds.
   if (process.platform === 'win32') {
     mainWindow.setAppDetails({
       appId: APP_USER_MODEL_ID,
       appIconPath: iconIco,
       appIconIndex: 0,
+      relaunchCommand: relaunchCommand(),
       relaunchDisplayName: 'Noma'
     })
   }
@@ -360,34 +363,99 @@ function requestMacAccessibility(): void {
  */
 const APP_USER_MODEL_ID = is.dev ? 'com.noma.app.dev' : 'com.noma.app'
 
-/**
- * Windows takes an app's name and icon from the Start Menu shortcut that
- * carries its ID. The installer creates that shortcut for a real install; in
- * development nothing does, so this keeps one up to date ("Noma (dev)", the
- * Noma icon, pointing at this checkout). Rewritten on every dev launch so it
- * follows the checkout if it moves. Never touches anything else.
- */
-function registerAppIdentity(): void {
-  if (process.platform === 'win32' && is.dev) {
-    const shortcut = join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs', 'Noma (dev).lnk')
-    try {
-      shell.writeShortcutLink(shortcut, existsSync(shortcut) ? 'replace' : 'create', {
-        target: process.execPath,
-        args: `"${app.getAppPath()}"`,
-        cwd: app.getAppPath(),
-        description: 'Noma (development build)',
-        icon: iconIco,
-        iconIndex: 0,
-        appUserModelId: APP_USER_MODEL_ID
-      })
-    } catch (error) {
-      console.warn('[app] could not write the dev Start Menu shortcut:', error)
-    }
-  }
-  app.setAppUserModelId(APP_USER_MODEL_ID)
+/** How Windows would start this app again (pinning, the taskbar's own
+ *  relaunch): the installed exe, or in development electron.exe on this
+ *  checkout. */
+function relaunchCommand(): string {
+  return is.dev ? `"${process.execPath}" "${app.getAppPath()}"` : `"${process.execPath}"`
 }
 
+/**
+ * Noma's notification ID on Windows. Electron otherwise invents a random one
+ * every run, and writes it into its Start Menu shortcut (below), so the
+ * shortcut changed on every launch. Fixed, it is written once.
+ */
+const TOAST_ACTIVATOR_CLSID = '{626CBF99-529D-4081-8378-0FC2340DD9A4}'
+
+/**
+ * Windows takes an app's name and icon from the Start Menu shortcut that
+ * carries its app ID. Electron manages that shortcut itself, for
+ * notifications: one file named after the running program (Noma.lnk when
+ * installed, Electron.lnk when run from source), which it rewrites whenever
+ * its target, working folder, app ID or notification ID differ, and always
+ * without an icon, so Windows falls back to the exe's. Installed, that's
+ * Noma.exe's own icon, so all is well. From source it's electron.exe's, and
+ * that's the icon the taskbar kept switching back to.
+ *
+ * So in development Noma writes Electron's shortcut itself, with exactly the
+ * values Electron checks plus the Noma icon. Electron then finds it valid and
+ * leaves it alone. Written only when something differs.
+ */
+function registerAppIdentity(): void {
+  app.setToastActivatorCLSID(TOAST_ACTIVATOR_CLSID)
+  app.setAppUserModelId(APP_USER_MODEL_ID)
+  if (process.platform !== 'win32' || !is.dev) return
+
+  const programs = join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs')
+  const shortcut = join(programs, 'Electron.lnk')
+  const wanted: Electron.ShortcutDetails = {
+    target: process.execPath,
+    args: `"${app.getAppPath()}"`,
+    // What Electron checks the working folder against: the exe's own.
+    cwd: dirname(process.execPath),
+    description: 'Noma (development build)',
+    icon: iconIco,
+    iconIndex: 0,
+    appUserModelId: APP_USER_MODEL_ID,
+    toastActivatorClsid: TOAST_ACTIVATOR_CLSID
+  }
+  try {
+    if (!shortcutMatches(shortcut, wanted)) {
+      shell.writeShortcutLink(shortcut, existsSync(shortcut) ? 'replace' : 'create', wanted)
+    }
+    // An earlier version kept a separate "Noma (dev)" shortcut with the same
+    // app ID. Two shortcuts claiming one ID leave Windows to pick either, so
+    // it goes.
+    const old = join(programs, 'Noma (dev).lnk')
+    if (existsSync(old)) unlinkSync(old)
+  } catch (error) {
+    console.warn('[app] could not write the dev Start Menu shortcut:', error)
+  }
+}
+
+/** True when the shortcut already exists with exactly these details. */
+function shortcutMatches(path: string, wanted: Electron.ShortcutDetails): boolean {
+  if (!existsSync(path)) return false
+  try {
+    const current = shell.readShortcutLink(path)
+    const same = (a: string | undefined, b: string | undefined): boolean =>
+      (a ?? '').replace(/[{}]/g, '').toLowerCase() === (b ?? '').replace(/[{}]/g, '').toLowerCase()
+    return (
+      same(current.target, wanted.target) &&
+      same(current.args, wanted.args) &&
+      same(current.cwd, wanted.cwd) &&
+      same(current.icon, wanted.icon) &&
+      same(current.appUserModelId, wanted.appUserModelId) &&
+      same(current.toastActivatorClsid, wanted.toastActivatorClsid)
+    )
+  } catch {
+    return false
+  }
+}
+
+/**
+ * One Noma at a time (per profile: the lock is per userData folder, so the
+ * test profile still runs beside the real one). A second copy would add a
+ * second tray icon, a second set of input hooks and a second trackpad
+ * listener pressing every control twice; launching Noma again just brings
+ * the running one forward instead.
+ */
+const isPrimaryInstance = app.requestSingleInstanceLock()
+if (!isPrimaryInstance) app.quit()
+else app.on('second-instance', () => showMainWindow())
+
 app.whenReady().then(() => {
+  if (!isPrimaryInstance) return
   registerAppIdentity()
   // In development the Dock shows Electron's icon; a packaged build uses the
   // bundle's own.
@@ -406,6 +474,7 @@ app.whenReady().then(() => {
     return null
   })
   ipcMain.handle(IPC_CHANNELS.HOLO_TOUCH_CHECK_START, () => trackpadGestureService.startTrace())
+  ipcMain.handle(IPC_CHANNELS.HOLO_TOUCH_CHECK_LAST, () => latestTouchCheckAt())
   ipcMain.handle(
     IPC_CHANNELS.HOLO_TOUCH_CHECK_STOP,
     (_event, phases: Array<{ kind: 'left' | 'right' | 'normal'; startAt: number; endAt: number }>) =>

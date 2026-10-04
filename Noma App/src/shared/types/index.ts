@@ -790,7 +790,7 @@ export interface FlowApi {
    *  until cleared) to one of the two seeded demo applications, or null to
    *  hand control back to real detection. */
   setDemoApplication(applicationId: 'code' | 'chrome' | null): Promise<void>
-  /** Inserts a deterministic, backdated Copy -> Paste workflow, tuned to
+  /** Inserts a deterministic, backdated Bookmark -> Close tab workflow, tuned to
    *  produce exactly one `repeatedSequence` suggestion once pattern
    *  detection re-runs. Not real captured keystrokes — see the doc comment
    *  in demoService.ts for the exact numbers and why. */
@@ -878,6 +878,8 @@ export interface FlowApi {
    *  fires) until stopped, then saves them on this computer and returns a
    *  summary. `phases` are the guided steps, in Date.now() time. */
   startHoloTouchCheck(): Promise<HoloTrackpadStatus | null>
+  /** When the last touch check was saved (ms), or null if never. */
+  getHoloTouchCheckLast(): Promise<number | null>
   stopHoloTouchCheck(
     phases: Array<{ kind: 'left' | 'right' | 'normal'; startAt: number; endAt: number }>
   ): Promise<{ summary: HoloTouchCheckSummary; savedTo: string } | null>

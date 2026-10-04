@@ -8,6 +8,7 @@ import {
 } from '../database/repositories/suggestionsRepository'
 import { loadQualityModel } from '../database/repositories/qualityModelRepository'
 import { startOfTodayMs } from '../workflow/timeWindows'
+import { storedSuggestionMakesSense } from '../workflow/workflowSense'
 import {
   extractFeatures,
   isWorkflowKind,
@@ -53,6 +54,12 @@ export class SuggestionEngine {
     const known: KnownSuggestion[] = []
     const confidenceById = new Map<string, number>()
     for (const stored of getStoredFingerprints()) {
+      // Made before a rule in workflowSense.ts existed and never acted on:
+      // it wouldn't be suggested today, so it shouldn't still be waiting.
+      if (stored.status === 'pending' && !storedSuggestionMakesSense(stored.id)) {
+        deletePendingSuggestion(stored.id)
+        continue
+      }
       let fingerprint = stored.fingerprint
       if (!fingerprint) {
         // Row from before fingerprints existed: backfill it if its pattern
