@@ -25,9 +25,13 @@ export function DailyActivityChart({ data }: { data: DailyActivityCount[] }) {
           const heightPercent = Math.max(4, (day.count / max) * 100)
           const isHovered = hoveredIndex === index
           return (
+            // Full height of the row, with the bar pinned to its bottom: the
+            // bar's height is a percentage, and a percentage of a wrapper
+            // that is only as tall as its contents is zero, which left every
+            // bar invisible.
             <div
               key={day.date}
-              className="group relative flex-1"
+              className="group relative flex h-full flex-1 items-end"
               onPointerEnter={() => setHoveredIndex(index)}
               onPointerLeave={() => setHoveredIndex(null)}
             >
@@ -41,7 +45,7 @@ export function DailyActivityChart({ data }: { data: DailyActivityCount[] }) {
               )}
               <div
                 className={`w-full rounded-t-[3px] transition-colors ${
-                  day.count === 0 ? 'bg-black/[0.06]' : isHovered ? 'bg-accent' : 'bg-accent/70'
+                  day.count === 0 ? 'bg-white/[0.08]' : isHovered ? 'bg-accent' : 'bg-accent/70'
                 }`}
                 style={{ height: `${heightPercent}%` }}
               />

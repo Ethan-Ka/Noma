@@ -164,12 +164,14 @@ export function SparkleIcon({ className }: IconProps) {
 
 /** Holo — a tap's ripple, since there's no hardware to draw: concentric
  *  rings expanding from a point, echoing a desk-tap's own physical effect. */
-export function HoloIcon({ className }: IconProps) {
+/** Glide: a fingertip that has just slid onto the trackpad from beside it,
+ *  speed lines behind it. (Not an arrow into a box: that reads as "sign in".) */
+export function GlideIcon({ className }: IconProps) {
   return (
     <svg {...BASE_PROPS} className={className}>
-      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
-      <circle cx="12" cy="12" r="5" />
-      <circle cx="12" cy="12" r="9" strokeOpacity="0.5" />
+      <rect x="7" y="6" width="15" height="12" rx="2.5" />
+      <circle cx="12" cy="12" r="2" fill="currentColor" stroke="none" />
+      <path d="M2 9.5h5.5M3.5 12h5M2 14.5h5.5" strokeOpacity="0.6" />
     </svg>
   )
 }
