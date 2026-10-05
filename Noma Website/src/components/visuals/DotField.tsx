@@ -36,7 +36,7 @@ const SCROLL_PARALLAX = 0.35
 /** Wave phase added per pixel scrolled, so scrolling rolls the wave on. */
 const SCROLL_PHASE = 0.0016
 /** The mark around the cursor: its width in dots, and how bright its dots get. */
-const LOGO_COLS = 14
+const LOGO_COLS = 10
 const LOGO_ALPHA = 0.55
 /** How quickly a dot eases into / out of the mark (per second). Lower is
  *  a longer, more fluid trail. */
