@@ -43,6 +43,7 @@ import { createOSAdapter } from './os/createOSAdapter'
 import { isMac } from './platform'
 import { runSmokeTest } from './smokeTest'
 import { captureNotice } from './captureNotice'
+import { captureApp } from './captureApp'
 import { installUpdateNow, startAutoUpdates } from './updater'
 import { ApplicationContextService } from './applications/contextService'
 import { getDefaultHardwareDevice } from './hardware/virtualDevice'
@@ -96,6 +97,7 @@ const hardwareDevice = getDefaultHardwareDevice()
  *  switch is stored in settings and it presses controls from here, so it
  *  works with Noma's window closed to the tray. */
 const glide = new GlideController({
+  runningMarkerPath: join(app.getPath('userData'), 'glide-running'),
   getWindow: () => mainWindow,
   getContext: () => contextService.getContext(),
   isNomaFocused: () => Boolean(mainWindow?.isVisible() && mainWindow.isFocused()),
@@ -718,6 +720,17 @@ app.whenReady().then(() => {
       show: (suggestion) => workflowNotifier.simulate(suggestion, suggestion.occurrenceCount ?? 0)
     })
   }
+  const appCaptureFolder = process.env.NOMA_CAPTURE_APP
+  if (appCaptureFolder && TEST_USER_DATA_DIR && mainWindow) {
+    void captureApp({
+      folder: appCaptureFolder,
+      window: mainWindow,
+      makeSuggestion: async () => {
+        simulateDemoMultiStepWorkflow()
+        await refreshSuggestions()
+      }
+    })
+  }
   const smokeReport = process.env.NOMA_SMOKE_TEST
   if (smokeReport && TEST_USER_DATA_DIR && mainWindow) {
     runSmokeTest({
@@ -745,6 +758,13 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   isQuitting = true
+})
+
+// Quitting on macOS (Cmd+Q, the tray's Quit, an update) skips
+// window-all-closed below, so Glide is also stopped here: a clean quit must
+// clear Glide's crash-guard marker (see GlideController.resume).
+app.on('will-quit', () => {
+  glide.shutDown()
 })
 
 app.on('window-all-closed', () => {

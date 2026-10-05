@@ -1,4 +1,7 @@
 import Database from 'better-sqlite3'
+import { existsSync, mkdtempSync, writeFileSync } from 'fs'
+import { tmpdir } from 'os'
+import { join } from 'path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ApplicationContext, HoloTrackpadEvent } from '@shared/types'
 import { __setDatabaseForTesting, runMigrations } from '../database/db'
@@ -50,8 +53,9 @@ const chrome: ApplicationContext = {
   }
 }
 
-function makeController(overrides: { focused?: boolean } = {}) {
+function makeController(overrides: { focused?: boolean; runningMarkerPath?: string } = {}) {
   const host = {
+    runningMarkerPath: overrides.runningMarkerPath,
     getWindow: vi.fn(() => ({}) as never),
     getContext: vi.fn(() => chrome),
     isNomaFocused: vi.fn(() => overrides.focused ?? false),
@@ -145,5 +149,52 @@ describe.runIf(onWindows)('GlideController', () => {
     fake.emit?.({ type: 'miss', zone: 'topRight', at: 5, reason: 'typing' })
     expect(host.press).not.toHaveBeenCalled()
     expect(host.emitActivity).toHaveBeenCalledWith({ type: 'miss', zone: 'topRight', at: 5, reason: 'typing' })
+  })
+})
+
+describe.runIf(onWindows || process.platform === 'darwin')('crash guard', () => {
+  const markerPath = () => join(mkdtempSync(join(tmpdir(), 'noma-glide-')), 'glide-running')
+
+  it('marks Glide as running while it is on, and clears the mark when it is turned off', () => {
+    const marker = markerPath()
+    const { controller } = makeController({ runningMarkerPath: marker })
+    controller.setEnabled(true)
+    expect(existsSync(marker)).toBe(true)
+    controller.setEnabled(false)
+    expect(existsSync(marker)).toBe(false)
+  })
+
+  it('clears the mark on a clean shutdown, so the next launch turns Glide back on', () => {
+    const marker = markerPath()
+    const first = makeController({ runningMarkerPath: marker }).controller
+    first.setEnabled(true)
+    first.shutDown()
+    expect(existsSync(marker)).toBe(false)
+    const next = makeController({ runningMarkerPath: marker }).controller
+    next.resume()
+    expect(next.getState()).toMatchObject({ enabled: true, error: null })
+  })
+
+  it('keeps Glide off after Noma crashed while it was running, and says why', () => {
+    const marker = markerPath()
+    setGlideEnabled(true)
+    writeFileSync(marker, 'crashed session')
+    const { controller } = makeController({ runningMarkerPath: marker })
+    fake.startCalls = 0
+    controller.resume()
+    expect(fake.startCalls).toBe(0)
+    expect(getGlideEnabled()).toBe(false)
+    expect(controller.getState().error).toMatch(/closed unexpectedly/)
+    expect(existsSync(marker)).toBe(false)
+    // Only the next launch after the crash is affected: turning it back on works.
+    controller.setEnabled(true)
+    expect(controller.getState()).toMatchObject({ enabled: true, error: null })
+  })
+
+  it('does not leave the mark behind when there is no touchpad to start', () => {
+    const marker = markerPath()
+    fake.touchpads = 0
+    makeController({ runningMarkerPath: marker }).controller.setEnabled(true)
+    expect(existsSync(marker)).toBe(false)
   })
 })

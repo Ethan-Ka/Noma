@@ -1,4 +1,5 @@
 import type { BrowserWindow } from 'electron'
+import { existsSync, rmSync, writeFileSync } from 'fs'
 import type {
   ApplicationContext,
   Control,
@@ -25,6 +26,8 @@ const NO_TOUCHPAD_MESSAGE = isMac
   ? 'No trackpad found. Glide needs a MacBook’s built-in trackpad or a Magic Trackpad; a mouse can’t report where a finger is.'
   : 'No precision touchpad found. Glide reads raw finger positions, which only Windows precision touchpads report. Check Settings > Bluetooth & devices > Touchpad: if it doesn’t say “Your PC has a precision touchpad”, Glide can’t work on this laptop.'
 const NO_WINDOW_MESSAGE = 'Glide couldn’t start because Noma’s window isn’t ready. Try again in a moment.'
+const CRASHED_MESSAGE =
+  'Glide was switched off because Noma closed unexpectedly while it was running. Turn it back on to try again, and if it happens again, please send us a bug report.'
 
 /** What the controller needs from the rest of main. */
 export interface GlideHost {
@@ -35,6 +38,9 @@ export interface GlideHost {
   isActionRunning: () => boolean
   /** Presses a control exactly as a key on the keyboard would. */
   press: (control: Control) => void
+  /** Crash guard (see GlideController.resume): a file that exists only
+   *  while Glide is running. Optional so tests can leave it out. */
+  runningMarkerPath?: string
   emitState: (state: GlideState) => void
   emitActivity: (activity: GlideActivity) => void
 }
@@ -70,8 +76,23 @@ export class GlideController {
     }
   }
 
-  /** At launch, once the main window exists: back on if it was on. */
+  /**
+   * At launch, once the main window exists: back on if it was on, unless
+   * Noma crashed while Glide was running last time. Glide reads the
+   * trackpad through native code that can take the whole app down (Mac
+   * testing, 2026-10-05), and turning it straight back on at launch would
+   * crash Noma every time it opened. The running marker is written when
+   * Glide starts and removed on every clean stop or quit, so finding it
+   * here means the last session ended while Glide was on.
+   */
   resume(): void {
+    if (this.host.runningMarkerPath && existsSync(this.host.runningMarkerPath)) {
+      this.clearRunningMarker()
+      setGlideEnabled(false)
+      this.error = CRASHED_MESSAGE
+      this.publish()
+      return
+    }
     if (getGlideEnabled()) this.setEnabled(true)
   }
 
@@ -81,6 +102,7 @@ export class GlideController {
     if (!enabled) {
       setGlideEnabled(false)
       this.gestures.stop()
+      this.clearRunningMarker()
       this.error = null
       return this.publish()
     }
@@ -99,6 +121,7 @@ export class GlideController {
    *  shutdown, so no hook outlives the window it was registered on. */
   shutDown(): void {
     this.gestures.stop()
+    this.clearRunningMarker()
     if (this.touchCheckRunning) this.gestures.stopTrace([])
     this.touchCheckRunning = false
   }
@@ -124,15 +147,37 @@ export class GlideController {
       this.error = NO_WINDOW_MESSAGE
       return null
     }
+    // Written before the native touchpad code starts, so a crash while
+    // starting is caught at the next launch too.
+    this.writeRunningMarker()
     const status = this.gestures.start(getGlideZoneCount())
     this.touchpads = status?.touchpads ?? 0
     if (!status || status.touchpads === 0) {
       this.gestures.stop()
+      this.clearRunningMarker()
       this.error = NO_TOUCHPAD_MESSAGE
       return status
     }
     this.error = null
     return status
+  }
+
+  private writeRunningMarker(): void {
+    if (!this.host.runningMarkerPath) return
+    try {
+      writeFileSync(this.host.runningMarkerPath, new Date().toISOString())
+    } catch (error) {
+      console.warn('[glide] could not write the running marker:', error)
+    }
+  }
+
+  private clearRunningMarker(): void {
+    if (!this.host.runningMarkerPath) return
+    try {
+      rmSync(this.host.runningMarkerPath, { force: true })
+    } catch (error) {
+      console.warn('[glide] could not remove the running marker:', error)
+    }
   }
 
   private publish(): GlideState {
