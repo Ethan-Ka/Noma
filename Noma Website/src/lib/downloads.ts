@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
 
 /**
- * Where the beta's installers live: the newest GitHub release of the app,
- * published by the app repo's release workflow. Every link is a direct file
- * download (the visitor never lands on GitHub). File names carry the version
- * (Noma-Setup-0.1.2.exe), so the newest files are looked up from the
- * release itself; until that answer arrives, or if GitHub can't be reached
- * or rate-limits the visitor, the links point straight at KNOWN_RELEASE's
- * files, which always exist. Bump it now and then so the fallback isn't old.
+ * Where the beta's installers live: the newest GitHub release of the app.
+ * Every release also gets copies of its installers under stable, versionless
+ * names (.github/workflows/noma-app-release-aliases.yml), so these links use
+ * GitHub's permanent "latest release" address and always download the
+ * current version directly: no website change or redeploy per release, no
+ * API call, no rate limit. The visitor never lands on GitHub.
+ *
+ * The only thing looked up live is the version number shown beside the
+ * buttons; if GitHub can't be reached it is simply left out.
  */
 export const RELEASES_PAGE = 'https://github.com/awnsh/Noma/releases/latest'
-const KNOWN_RELEASE = '0.1.2'
-const DOWNLOAD_BASE = `https://github.com/awnsh/Noma/releases/download/v${KNOWN_RELEASE}`
+const LATEST = 'https://github.com/awnsh/Noma/releases/latest/download'
 const LATEST_RELEASE_API = 'https://api.github.com/repos/awnsh/Noma/releases/latest'
 
 export interface Downloads {
@@ -21,40 +22,24 @@ export interface Downloads {
   macIntel: string
 }
 
-const FALLBACK: Downloads = {
-  version: KNOWN_RELEASE,
-  windows: `${DOWNLOAD_BASE}/Noma-Setup-${KNOWN_RELEASE}.exe`,
-  macAppleSilicon: `${DOWNLOAD_BASE}/Noma-${KNOWN_RELEASE}-arm64.dmg`,
-  macIntel: `${DOWNLOAD_BASE}/Noma-${KNOWN_RELEASE}-x64.dmg`,
-}
-
-interface ReleaseAsset {
-  name: string
-  browser_download_url: string
-}
-
-/** Picks each installer out of a release's files. Exported for tests. */
-export function pickDownloads(tag: string, assets: ReleaseAsset[]): Downloads {
-  const find = (test: (name: string) => boolean) => assets.find((asset) => test(asset.name))?.browser_download_url
-  const windows = find((name) => /^Noma-Setup-.*\.exe$/.test(name))
-  const macAppleSilicon = find((name) => /-arm64\.dmg$/.test(name))
-  const macIntel = find((name) => /-x64\.dmg$/.test(name))
-  // A release still uploading (or missing a platform) keeps the known files.
-  if (!windows || !macAppleSilicon || !macIntel) return FALLBACK
-  return { version: tag.replace(/^v/, ''), windows, macAppleSilicon, macIntel }
+const LINKS: Downloads = {
+  version: null,
+  windows: `${LATEST}/Noma-Setup.exe`,
+  macAppleSilicon: `${LATEST}/Noma-arm64.dmg`,
+  macIntel: `${LATEST}/Noma-x64.dmg`,
 }
 
 export function useLatestDownloads(): Downloads {
-  const [downloads, setDownloads] = useState<Downloads>(FALLBACK)
+  const [downloads, setDownloads] = useState<Downloads>(LINKS)
   useEffect(() => {
     const controller = new AbortController()
     fetch(LATEST_RELEASE_API, { signal: controller.signal, headers: { Accept: 'application/vnd.github+json' } })
       .then((response) => (response.ok ? response.json() : null))
-      .then((release: { tag_name?: string; assets?: ReleaseAsset[] } | null) => {
-        if (release?.tag_name && release.assets) setDownloads(pickDownloads(release.tag_name, release.assets))
+      .then((release: { tag_name?: string } | null) => {
+        if (release?.tag_name) setDownloads({ ...LINKS, version: release.tag_name.replace(/^v/, '') })
       })
       .catch(() => {
-        // Offline, rate-limited or aborted: the release page links still work.
+        // Offline, rate-limited or aborted: the links work regardless.
       })
     return () => controller.abort()
   }, [])
