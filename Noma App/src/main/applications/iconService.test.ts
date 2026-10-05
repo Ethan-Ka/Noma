@@ -87,6 +87,10 @@ describe.skipIf(process.platform === 'darwin')('getApplicationIcon', () => {
 
 describe.runIf(process.platform === 'darwin')('getApplicationIcon on macOS', () => {
   it('reads a real app icon without Electron, as a PNG', async () => {
+    const { readMacAppIconResult } = await import('./macAppIcon')
+    const detail = await readMacAppIconResult('/System/Applications/Calculator.app')
+    // Shows osascript's own error in the CI output if the script fails.
+    expect(detail.error).toBeUndefined()
     const result = await getApplicationIcon('/System/Applications/Calculator.app')
     expect(result).toMatch(/^data:image\/png;base64,iVBORw0KGgo/)
     expect(getFileIcon).not.toHaveBeenCalled()
