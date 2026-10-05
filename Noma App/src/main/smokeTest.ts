@@ -1,7 +1,7 @@
 import { app, type BrowserWindow } from 'electron'
 import { writeFileSync } from 'fs'
 import type { ApplicationContext, GlideState } from '@shared/types'
-import { frontmostPid, isAccessibilityTrusted, pointerPosition, processNameForPid } from './actions/macos'
+import { frontWindowOwnerPid, frontmostPid, isAccessibilityTrusted, pointerPosition, processNameForPid } from './actions/macos'
 import { macTrackpadStatus } from './holo/macTrackpad'
 import { getApplicationIcon } from './applications/iconService'
 import { isMac } from './platform'
@@ -52,6 +52,9 @@ export function runSmokeTest(options: {
       report.mac = {
         accessibilityTrusted: isAccessibilityTrusted(),
         frontmostPid: pid,
+        // The window-server fallback for focus checks (macos.ts); a wrong
+        // signature here would crash, which is the point of calling it.
+        frontWindowOwnerPid: frontWindowOwnerPid(),
         frontmostProcess: pid === null ? null : processNameForPid(pid),
         pointer: pointerPosition(),
         multitouch: macTrackpadStatus(),

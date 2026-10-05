@@ -244,6 +244,95 @@ export function frontmostPid(): number | null {
   }
 }
 
+interface WindowListApi {
+  CGWindowListCopyWindowInfo: NativeFunction
+  CFArrayGetCount: NativeFunction
+  CFArrayGetValueAtIndex: NativeFunction
+  CFDictionaryGetValue: NativeFunction
+  CFNumberGetValue: NativeFunction
+  CFRelease: NativeFunction
+  layerKey: Pointer
+  ownerPidKey: Pointer
+}
+
+let windowListApi: WindowListApi | null | undefined
+
+/** Loaded separately from the main API so that, if any of these symbols
+ *  were ever missing, only this fallback is lost. */
+function loadWindowList(): WindowListApi | null {
+  if (windowListApi !== undefined) return windowListApi
+  if (!isMac) return (windowListApi = null)
+  try {
+    const cf = koffi.load('/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation')
+    const cg = koffi.load('/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics')
+    windowListApi = {
+      CGWindowListCopyWindowInfo: cg.func('void *CGWindowListCopyWindowInfo(uint32_t option, uint32_t relativeToWindow)'),
+      CFArrayGetCount: cf.func('intptr_t CFArrayGetCount(void *theArray)'),
+      CFArrayGetValueAtIndex: cf.func('void *CFArrayGetValueAtIndex(void *theArray, intptr_t idx)'),
+      CFDictionaryGetValue: cf.func('void *CFDictionaryGetValue(void *theDict, void *key)'),
+      CFNumberGetValue: cf.func('bool CFNumberGetValue(void *number, int32_t theType, _Out_ int32_t *valuePtr)'),
+      CFRelease: cf.func('void CFRelease(void *cf)'),
+      layerKey: koffi.decode(cg.symbol('kCGWindowLayer'), 'void *') as Pointer,
+      ownerPidKey: koffi.decode(cg.symbol('kCGWindowOwnerPID'), 'void *') as Pointer
+    }
+  } catch {
+    windowListApi = null
+  }
+  return windowListApi
+}
+
+const kCGWindowListOptionOnScreenOnly = 1
+const kCGWindowListExcludeDesktopElements = 16
+const kCFNumberSInt32Type = 3
+
+/**
+ * The pid owning the frontmost ordinary window, from the window server
+ * (CoreGraphics). A second opinion for frontmostPid(): that one asks the
+ * Accessibility API, which Chromium-based apps such as Spotify often don't
+ * answer in time (Mac testing, 2026-10-05: every Spotify press refused as
+ * "could not confirm focus" while Chrome worked). This needs no permission
+ * (only window titles would) and works the same for every app. Layer 0 is
+ * ordinary app windows; menus, the Dock and always-on-top panels (Noma's
+ * own notice) sit on higher layers and are skipped.
+ */
+export function frontWindowOwnerPid(): number | null {
+  const api = loadWindowList()
+  if (!api) return null
+  try {
+    const list = api.CGWindowListCopyWindowInfo(
+      kCGWindowListOptionOnScreenOnly | kCGWindowListExcludeDesktopElements,
+      0
+    ) as Pointer
+    if (isNull(list)) return null
+    try {
+      const count = Number(api.CFArrayGetCount(list))
+      const read = (dict: Pointer, key: Pointer): number | null => {
+        const value = api.CFDictionaryGetValue(dict, key) as Pointer
+        if (isNull(value)) return null
+        const out = [0]
+        return api.CFNumberGetValue(value, kCFNumberSInt32Type, out) ? out[0] : null
+      }
+      for (let index = 0; index < count; index++) {
+        const window = api.CFArrayGetValueAtIndex(list, index) as Pointer
+        if (isNull(window) || read(window, api.layerKey) !== 0) continue
+        const pid = read(window, api.ownerPidKey)
+        if (pid && pid > 0) return pid
+      }
+      return null
+    } finally {
+      api.CFRelease(list)
+    }
+  } catch {
+    return null
+  }
+}
+
+/** Whether `pid` is the app in front, by either the Accessibility API or
+ *  the window server. Both are macOS's own answer; either is enough. */
+export function isAppFrontmost(pid: number): boolean {
+  return frontmostPid() === pid || frontWindowOwnerPid() === pid
+}
+
 /** Asks the app to come to the front (AXFrontmost). Whether it actually
  *  did is for the caller to verify with frontmostPid(). */
 export function requestActivation(pid: number): boolean {

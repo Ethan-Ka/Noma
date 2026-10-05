@@ -33,6 +33,7 @@ import {
   elementAtPoint,
   focusedWindowRect,
   frontmostPid,
+  frontWindowOwnerPid,
   postMouseEvent
 } from './macos'
 import { isMac } from '../platform'
@@ -76,7 +77,7 @@ const FIND_RETRY_MS = 200
  */
 export async function executeClick(target: string, applicationId?: string): Promise<ExecutionResult> {
   // On macOS the "handle" is the frontmost app's pid (see macAdapter.ts).
-  const hwnd = isMac ? (frontmostPid() ?? 0) : GetForegroundWindow()
+  const hwnd = isMac ? (frontmostPid() ?? frontWindowOwnerPid() ?? 0) : GetForegroundWindow()
   const owner = processForWindow(hwnd)
 
   if (applicationId) {

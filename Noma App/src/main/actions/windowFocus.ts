@@ -1,5 +1,6 @@
 import { GetForegroundWindow, IsWindow, SetForegroundWindow } from './win32'
-import { frontmostPid, requestActivation } from './macos'
+import { execFile } from 'child_process'
+import { isAppFrontmost, requestActivation } from './macos'
 import { isMac } from '../platform'
 
 /**
@@ -47,12 +48,27 @@ const MAC_ACTIVATION_POLL_MS = 30
  */
 async function focusAppAndVerify(pid: number): Promise<boolean> {
   if (pid <= 0) return false
-  if (frontmostPid() === pid) return true
-  if (!requestActivation(pid)) return false
-  const deadline = Date.now() + MAC_ACTIVATION_WAIT_MS
+  if (isAppFrontmost(pid)) return true
+  // AXFrontmost needs the app to answer the Accessibility API, which some
+  // (Chromium-based) apps don't; NSRunningApplication asks the system
+  // instead. Either way, nothing is sent until the app is confirmed in front.
+  let waitMs = MAC_ACTIVATION_WAIT_MS
+  if (!requestActivation(pid)) {
+    activateWithWorkspace(pid)
+    waitMs += MAC_WORKSPACE_EXTRA_WAIT_MS
+  }
+  const deadline = Date.now() + waitMs
   while (Date.now() < deadline) {
     await new Promise((resolve) => setTimeout(resolve, MAC_ACTIVATION_POLL_MS))
-    if (frontmostPid() === pid) return true
+    if (isAppFrontmost(pid)) return true
   }
   return false
+}
+
+/** osascript startup on top of the usual activation wait. */
+const MAC_WORKSPACE_EXTRA_WAIT_MS = 600
+
+function activateWithWorkspace(pid: number): void {
+  const script = `ObjC.import('AppKit'); function run(argv) { const app = $.NSRunningApplication.runningApplicationWithProcessIdentifier(Number(argv[0])); if (!app.isNil()) app.activateWithOptions(3); }`
+  execFile('osascript', ['-l', 'JavaScript', '-e', script, String(pid)], { timeout: 3000 }, () => {})
 }
