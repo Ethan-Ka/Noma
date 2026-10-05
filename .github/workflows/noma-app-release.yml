@@ -33,7 +33,11 @@ jobs:
       # for this runner's CPU only.
       - run: npm ci --ignore-scripts
       - run: npm run typecheck
-      - run: npm test
+      # One retry: v0.1.5's release died on a Windows runner hiccup (no test
+      # named, same commit green in CI). A real failure fails twice.
+      - name: Tests
+        shell: bash
+        run: npm test || { echo "::warning::Tests failed once; retrying to rule out a runner hiccup"; npm test; }
 
   # Created once up front, so the two packaging jobs upload into the same
   # release instead of racing to create it.

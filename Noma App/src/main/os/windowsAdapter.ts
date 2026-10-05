@@ -15,7 +15,7 @@ interface RawForegroundWindowEvent {
  * Polls the Windows foreground window via a single long-lived PowerShell
  * helper process (Win32 P/Invoke: GetForegroundWindow /
  * GetWindowThreadProcessId), which prints one JSON line whenever the
- * foreground process changes.
+ * foreground process, or the foreground window within it, changes.
  *
  * Why PowerShell instead of a native Node addon: a real native module
  * (the originally-planned approach — see docs/architecture.md) needs a
@@ -83,13 +83,16 @@ function Get-ExecutablePathFallback([uint32]$procId) {
 
 $flowProcessId = ${process.pid}
 $lastProcessId = -1
+$lastHwnd = [IntPtr]::Zero
 while ($true) {
   try {
     $hwnd = [FlowWin32]::GetForegroundWindow()
     if ($hwnd -ne [IntPtr]::Zero) {
       $procId = 0
       [FlowWin32]::GetWindowThreadProcessId($hwnd, [ref]$procId) | Out-Null
-      if ($procId -ne 0 -and $procId -ne $flowProcessId -and $procId -ne $lastProcessId) {
+      # A new app, or another window of the same app (a second Chrome
+      # window): actions must go to the window actually in front.
+      if ($procId -ne 0 -and $procId -ne $flowProcessId -and ($procId -ne $lastProcessId -or $hwnd -ne $lastHwnd)) {
         try {
           $proc = Get-Process -Id $procId -ErrorAction Stop
           $sb = New-Object System.Text.StringBuilder 256
@@ -105,6 +108,7 @@ while ($true) {
           }
           Write-Output ($result | ConvertTo-Json -Compress)
           $lastProcessId = $procId
+          $lastHwnd = $hwnd
         } catch {
           # Process exited between calls, or access denied (elevated
           # process). Skip this tick and try again next poll.
@@ -169,6 +173,22 @@ export class WindowsOSAdapter implements OSAdapter {
     this.listeners.clear()
   }
 
+  /**
+   * One line from the poller. A different window of the same app (the
+   * second of two Chrome windows) only moves the target window: it isn't an
+   * app switch, so listeners (context, workflow history) aren't told.
+   * Before this, a second Chrome window was never reported at all and every
+   * action went to whichever Chrome window had been in front first.
+   */
+  handleForegroundEvent(raw: RawForegroundWindowEvent): void {
+    const application = toApplication(raw)
+    const sameApp = this.current?.id === application.id
+    this.current = application
+    this.lastKnownHwnd = raw.hwnd
+    if (sameApp) return
+    for (const listener of this.listeners) listener(application)
+  }
+
   private ensureWatcherStarted(): void {
     if (this.child) return
 
@@ -183,11 +203,7 @@ export class WindowsOSAdapter implements OSAdapter {
         const trimmed = line.trim()
         if (!trimmed) return
         try {
-          const raw = JSON.parse(trimmed) as RawForegroundWindowEvent
-          const application = toApplication(raw)
-          this.current = application
-          this.lastKnownHwnd = raw.hwnd
-          for (const listener of this.listeners) listener(application)
+          this.handleForegroundEvent(JSON.parse(trimmed) as RawForegroundWindowEvent)
         } catch {
           // Malformed/partial line — ignore, next line will resync.
         }
