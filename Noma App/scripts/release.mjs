@@ -17,7 +17,10 @@ if (!['patch', 'minor', 'major'].includes(bump)) {
 }
 
 const git = process.env.GIT ?? 'git'
-const run = (command, args) => execFileSync(command, args, { stdio: 'inherit', shell: process.platform === 'win32' })
+// npm is a .cmd on Windows and needs a shell; git doesn't, and must not get
+// one, or the shell splits a commit message like "Noma v0.1.1" in two.
+const run = (command, args) =>
+  execFileSync(command, args, { stdio: 'inherit', shell: command === 'npm' && process.platform === 'win32' })
 
 const status = execFileSync(git, ['status', '--porcelain'], { encoding: 'utf8' })
 if (status.trim()) {
