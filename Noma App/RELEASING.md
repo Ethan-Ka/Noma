@@ -20,6 +20,12 @@ Pushing the `vX.Y.Z` tag starts **Noma App release** in GitHub Actions:
 3. The Windows installer and the macOS builds (Apple silicon and Intel),
    uploaded to that release.
 
+4. Copies of the three installers under stable names (`Noma-Setup.exe`,
+   `Noma-arm64.dmg`, `Noma-x64.dmg`), added by **Noma App release aliases**
+   right after. The website's download buttons link to
+   `releases/latest/download/<those names>`, so the site hands out the new
+   version as soon as the release finishes: no website edit or redeploy.
+
 Installed copies check that release every 4 hours and at launch:
 
 - **Windows** downloads in the background and installs when Noma quits, or
