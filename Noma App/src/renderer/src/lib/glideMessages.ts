@@ -41,7 +41,7 @@ export function glideActivityMessage(activity: GlideActivity, zoneCount: HoloTra
 /** Glide's status in a few words, for the page header and Home. */
 export function glideStatusLine(state: GlideState | null): { tone: 'on' | 'off' | 'problem'; text: string } {
   if (!state) return { tone: 'off', text: 'Checking…' }
-  if (!state.platformSupported) return { tone: 'problem', text: 'Not available on this computer (Windows only for now)' }
+  if (!state.platformSupported) return { tone: 'problem', text: 'Not available on this computer (needs Windows or macOS)' }
   if (state.error) return { tone: 'problem', text: state.error }
   if (!state.enabled) return { tone: 'off', text: 'Off' }
   const pads = state.touchpads === 1 ? 'your trackpad' : `${state.touchpads ?? 0} touchpads`

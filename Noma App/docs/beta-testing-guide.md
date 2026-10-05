@@ -4,22 +4,43 @@ Thanks for trying Noma. This takes about five minutes to set up.
 
 ## What you need
 
-- **Windows 10 or 11 laptop with a precision touchpad.** Check: Settings >
-  Bluetooth & devices > Touchpad. If it says "Your PC has a precision
-  touchpad", Glide can work. If not, Glide can't run on your laptop (Noma
-  will tell you); Flow and the rest still work.
-- Tested so far on **one** laptop: ASUS ROG Zephyrus G14 (ASUS Precision
-  Touchpad). Every other model is untested, which is exactly what this beta
-  is for. Please tell us your laptop model.
-- macOS: Glide is not available. Not part of this beta.
+- **A Windows 10 or 11 laptop with a precision touchpad**, or **a Mac with
+  a built-in trackpad or a Magic Trackpad**.
+  - Windows check: Settings > Bluetooth & devices > Touchpad. If it says
+    "Your PC has a precision touchpad", Glide can work. If not, Glide can't
+    run on your laptop (Noma will tell you); Flow and the rest still work.
+- Glide has been tuned on **one** laptop so far: ASUS ROG Zephyrus G14.
+  Every other model, and every Mac, is new territory, which is exactly what
+  this beta is for. Please tell us your laptop model.
+- On a Mac, if swipes feel too sensitive or never fire, run the touch check
+  on the Glide page and send us the file it saves.
 
 ## Install
+
+**Windows**
 
 1. Download `Noma-Setup-0.1.x.exe` from the link you were sent.
 2. Run it. It installs for your user only (no admin prompt). Windows
    SmartScreen may warn because the installer isn't code-signed yet: choose
    "More info" > "Run anyway".
 3. Noma opens and walks you through four short screens.
+
+**Mac**
+
+1. Download `Noma-0.1.x-arm64.dmg` (Apple silicon, M1 and later) or
+   `Noma-0.1.x-x64.dmg` (Intel Mac). Not sure? Apple menu > About This Mac:
+   "Chip: Apple M…" means arm64.
+2. Open the .dmg and drag Noma into Applications. Open it from there.
+3. macOS blocks it the first time because the beta isn't signed by Apple
+   yet: open System Settings > Privacy & Security, scroll down, click
+   **Open Anyway**. (If macOS instead says Noma "is damaged", run
+   `xattr -dr com.apple.quarantine /Applications/Noma.app` once in Terminal.)
+4. When Noma asks, allow **Accessibility** (and **Input Monitoring** if
+   asked) in System Settings, then quit Noma from the menu bar icon and open
+   it again. Without these, Noma can tell which app you're in but can't
+   press shortcuts for you.
+5. Noma walks you through four short screens. Its icon lives in the menu
+   bar at the top of the screen, not the Dock.
 
 ## What to try
 
@@ -32,10 +53,11 @@ Thanks for trying Noma. This takes about five minutes to set up.
    shortcut. Try it in an app you use a lot ("Set up" any app Noma has seen).
 3. **Flow.** Turn it on, then work normally. When you repeat the same
    shortcut sequence about three times (for example Ctrl+D then Ctrl+W in
-   Chrome), a suggestion appears. Click "Review steps", check what it will
+   Chrome, or ⌘D then ⌘W on a Mac), a suggestion appears. Click "Review steps", check what it will
    do, and save it to a zone. Then swipe that zone.
 4. **Turn it off.** Glide can be switched off from the Glide page, Settings,
-   or the tray icon (right-click the Noma icon by the clock).
+   or the tray icon (right-click the Noma icon by the clock on Windows;
+   click it in the menu bar on a Mac).
 
 ## Known limitations
 

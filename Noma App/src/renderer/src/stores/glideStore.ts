@@ -95,7 +95,7 @@ export const useGlideStore = create<GlideStoreState>((set, get) => ({
     const status = await window.flow.startHoloTouchCheck().catch(() => null)
     if (!status || status.touchpads === 0) {
       if (status) void window.flow.stopHoloTouchCheck([])
-      set({ touchCheckError: 'No precision touchpad to check.' })
+      set({ touchCheckError: 'No trackpad to check.' })
       return
     }
     const phases: Array<{ kind: 'left' | 'right' | 'normal'; startAt: number; endAt: number }> = []

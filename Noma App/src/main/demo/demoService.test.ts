@@ -12,6 +12,9 @@ import { getApplicationById } from '../database/repositories/applicationsReposit
 import type { Suggestion } from '@shared/types'
 import { DEMO_MACRO_TRIGGER, LEARNED_MACRO_TRIGGER } from '@shared/constants'
 
+/** The seed's Chrome FIND is Ctrl+F on Windows and Cmd+F on macOS. */
+const PRIMARY_MODIFIER = process.platform === 'darwin' ? 'Meta' : 'Control'
+
 /** Mirrors database/seed.ts's SEED_APPLICATIONS for 'code' and 'chrome' —
  *  demoService.resetDemoData relies on getSeedDefaultControl, which reads
  *  those exact rows, so the test DB's starting controls must match. */
@@ -190,7 +193,7 @@ describe('resetDemoData', () => {
     expect(getDatabase().prepare('SELECT * FROM macros WHERE id = ?').get(macro.id)).toBeUndefined()
     expect(getProfileForApplicationId('chrome')!.controls.find((c) => c.slot === 4)?.action).toEqual({
       type: 'shortcut',
-      keys: ['Control', 'F']
+      keys: [PRIMARY_MODIFIER, 'F']
     })
   })
 

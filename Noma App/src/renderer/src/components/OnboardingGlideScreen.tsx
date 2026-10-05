@@ -75,7 +75,7 @@ export function OnboardingGlideScreen({ onContinue }: OnboardingGlideScreenProps
       {unsupported && (
         <p className="mt-6 max-w-md rounded-lg border border-error/30 bg-error-muted px-4 py-3 text-left text-sm text-neutral-100">
           {state?.error ??
-            'Glide needs Windows and a precision touchpad, so it isn’t available on this computer. Flow and the rest of Noma still work.'}
+            'Glide needs a Windows precision touchpad or a Mac trackpad, so it isn’t available on this computer. Flow and the rest of Noma still work.'}
         </p>
       )}
 

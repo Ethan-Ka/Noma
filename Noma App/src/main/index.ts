@@ -37,6 +37,7 @@ import { initDatabase } from './database/db'
 import { registerIpcHandlers } from './ipc/handlers'
 import { createOSAdapter } from './os/createOSAdapter'
 import { isMac } from './platform'
+import { runSmokeTest } from './smokeTest'
 import { installUpdateNow, startAutoUpdates } from './updater'
 import { ApplicationContextService } from './applications/contextService'
 import { getDefaultHardwareDevice } from './hardware/virtualDevice'
@@ -695,6 +696,15 @@ app.whenReady().then(() => {
   createTray()
   // Needs the main window: Glide reads the touchpad through its message loop.
   glide.resume()
+  const smokeReport = process.env.NOMA_SMOKE_TEST
+  if (smokeReport && TEST_USER_DATA_DIR && mainWindow) {
+    runSmokeTest({
+      reportPath: smokeReport,
+      window: mainWindow,
+      getContext: () => contextService.getContext(),
+      enableGlide: () => glide.setEnabled(true)
+    })
+  }
   startAutoUpdates((version) => {
     readyUpdateVersion = version
     updateTrayMenu()

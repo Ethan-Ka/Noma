@@ -52,6 +52,11 @@ interface MacApi {
   AXValueGetValue: NativeFunction
   CGEventCreateMouseEvent: NativeFunction
   CGEventPost: NativeFunction
+  CGEventCreate: NativeFunction
+  CGEventGetLocation: NativeFunction
+  CGWarpMouseCursorPosition: NativeFunction
+  CGAssociateMouseAndMouseCursorPosition: NativeFunction
+  CGEventSourceButtonState: NativeFunction
   proc_pidpath: NativeFunction
 }
 
@@ -105,6 +110,11 @@ function load(): MacApi | null {
       AXValueGetValue: ax.func('bool AXValueGetValue(void *value, uint32_t theType, void *valuePtr)'),
       CGEventCreateMouseEvent: cg.func('void *CGEventCreateMouseEvent(void *source, uint32_t mouseType, NomaCGPoint mouseCursorPosition, uint32_t mouseButton)'),
       CGEventPost: cg.func('void CGEventPost(uint32_t tap, void *event)'),
+      CGEventCreate: cg.func('void *CGEventCreate(void *source)'),
+      CGEventGetLocation: cg.func('NomaCGPoint CGEventGetLocation(void *event)'),
+      CGWarpMouseCursorPosition: cg.func('int32_t CGWarpMouseCursorPosition(NomaCGPoint newCursorPosition)'),
+      CGAssociateMouseAndMouseCursorPosition: cg.func('int32_t CGAssociateMouseAndMouseCursorPosition(uint32_t connected)'),
+      CGEventSourceButtonState: cg.func('bool CGEventSourceButtonState(int32_t stateID, uint32_t button)'),
       proc_pidpath: libSystem.func('int proc_pidpath(int pid, void *buffer, uint32_t buffersize)')
     }
   } catch {
@@ -328,6 +338,49 @@ export function postMouseEvent(type: number, x: number, y: number): boolean {
     mac.CGEventPost(kCGHIDEventTap, event)
     release(mac, event)
     return true
+  } catch {
+    return false
+  }
+}
+
+const kCGEventSourceStateCombinedSessionState = 0
+
+/** Where the pointer is now, in global display points. No permission needed. */
+export function pointerPosition(): { x: number; y: number } | null {
+  const mac = load()
+  if (!mac) return null
+  try {
+    const event = mac.CGEventCreate(null) as Pointer
+    if (isNull(event)) return null
+    const point = mac.CGEventGetLocation(event) as { x: number; y: number }
+    release(mac, event)
+    return { x: point.x, y: point.y }
+  } catch {
+    return null
+  }
+}
+
+/** Moves the pointer without posting a mouse event (Glide putting it back
+ *  after a swipe-in). Re-associating straight after the warp skips the
+ *  quarter-second freeze macOS otherwise applies to the mouse after one. */
+export function warpPointer(x: number, y: number): boolean {
+  const mac = load()
+  if (!mac) return false
+  try {
+    const ok = mac.CGWarpMouseCursorPosition({ x, y }) === 0
+    mac.CGAssociateMouseAndMouseCursorPosition(1)
+    return ok
+  } catch {
+    return false
+  }
+}
+
+/** The left button (or the trackpad itself) is pressed down right now. */
+export function isLeftButtonDown(): boolean {
+  const mac = load()
+  if (!mac) return false
+  try {
+    return mac.CGEventSourceButtonState(kCGEventSourceStateCombinedSessionState, kCGMouseButtonLeft) === true
   } catch {
     return false
   }

@@ -84,7 +84,7 @@ export function Workflows() {
         flowEnabled && (
           <EmptyState
             title="Nothing noticed yet."
-            hint="Keep working normally. Once you've repeated the same shortcut sequence about three times, it shows up here for you to review. Shortcuts that hold Ctrl, Alt or Win count; plain typing never does."
+            hint={`Keep working normally. Once you've repeated the same shortcut sequence about three times, it shows up here for you to review. Shortcuts that hold ${COMMAND_MODIFIERS_COPY} count; plain typing never does.`}
           />
         )
       ) : (

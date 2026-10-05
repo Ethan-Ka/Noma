@@ -50,7 +50,9 @@ heard of Noma and give it a few minutes to prove itself.
 
 - Foreground-app detection; four actions per app (starter actions for
   Chrome, VS Code and Spotify; any other app can be set up in one click).
-- Glide on Windows precision touchpads: raw HID reports, a pure tested
+- Glide on Windows precision touchpads (raw HID reports) and Mac trackpads
+  (MultitouchSupport, macTrackpad.ts; launch-checked in CI, not yet tried
+  with a finger on a real Mac): a pure tested
   recognizer, pointer put back after a swipe, typing/palm/two-finger/click
   rejection, owned by the main process.
 - Real execution of shortcuts, saved workflows, app focus, named-button
@@ -68,8 +70,9 @@ heard of Noma and give it a few minutes to prove itself.
   when. Never typed text, screenshots, clipboard, or passwords. No network
   calls except the update check against GitHub Releases.
 - Glide is verified on one laptop (ASUS ROG Zephyrus G14). Do not claim
-  broad touchpad compatibility. macOS: Glide unavailable; the rest of the
-  macOS port is untested on real hardware.
+  broad touchpad compatibility. macOS: the packaged app is launch-checked on
+  CI's Mac runner, but no one has used it on a real Mac yet, and Glide's
+  thresholds were tuned on a Windows touchpad.
 - No physical device exists for users; never fake a hardware connection.
 - Visual identity: near-black graphite, Sora / Inter / JetBrains Mono, blue
   accent `#4c7eff`, violet only to mark a Flow suggestion, gold only for real

@@ -246,8 +246,8 @@ export function Glide() {
       <p className="max-w-2xl text-xs leading-relaxed text-neutral-600">
         Glide reads where your fingers are on the trackpad, in memory only, to recognise a swipe-in. Nothing is recorded
         except during a touch check you start, and that stays on this computer. It also notices <em>when</em> a key is
-        pressed (never which one), so a hand coming off the keyboard isn&apos;t mistaken for a swipe. Needs Windows and a
-        precision touchpad; tested so far on one laptop (ASUS ROG Zephyrus G14).
+        pressed (never which one), so a hand coming off the keyboard isn&apos;t mistaken for a swipe. Needs a Windows
+        precision touchpad or a Mac trackpad; tested so far on one Windows laptop (ASUS ROG Zephyrus G14).
       </p>
 
       {editingSlot !== null && app && profile && (

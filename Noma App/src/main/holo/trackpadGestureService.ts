@@ -4,7 +4,10 @@ import { join } from 'path'
 import type { HoloTouchCheckSummary, HoloTrackpadEvent, HoloTrackpadStatus, HoloTrackpadZoneCount } from '@shared/types'
 import { uIOhook } from 'uiohook-napi'
 import { GetCursorPos, HID_USAGE_DIGITIZER_TOUCH_PAD, HID_USAGE_PAGE_DIGITIZER, SetCursorPos } from '../actions/win32'
+import { isLeftButtonDown, pointerPosition, warpPointer } from '../actions/macos'
+import { isMac, isWindows } from '../platform'
 import { acquireHook, releaseHook } from '../workflow/sharedHook'
+import { subscribeMacTrackpad } from './macTrackpad'
 import { subscribeDigitizerInput } from './rawDigitizerInput'
 import { recordingsFolder } from './recordingStore'
 import { listRawDevices } from './rawDevices'
@@ -18,7 +21,8 @@ const RESTORE_WINDOW_MS = 800
 
 /**
  * Runs Holo's trackpad swipe-ins (see trackpadGesture.ts for the gesture and
- * why): reads finger positions from the precision touchpad, watches the
+ * why): reads finger positions from the touchpad (a Windows precision
+ * touchpad's raw reports, or a Mac trackpad through macTrackpad.ts), watches the
  * keyboard for "the user is typing" (timestamps only), reports swipe-ins to
  * the renderer (which presses the zone's control exactly as a key on the
  * physical keyboard would), and puts the pointer back where it was before
@@ -82,7 +86,8 @@ export class TrackpadGestureService {
   }
 
   private ensureRunning(): HoloTrackpadStatus | null {
-    if (process.platform !== 'win32') return null
+    if (isMac) return this.ensureRunningMac()
+    if (!isWindows) return null
     const touchpads = listRawDevices().filter(
       (device) => device.usagePage === HID_USAGE_PAGE_DIGITIZER && device.usage === HID_USAGE_DIGITIZER_TOUCH_PAD
     ).length
@@ -95,6 +100,25 @@ export class TrackpadGestureService {
     uIOhook.on('keydown', this.handleKey)
     acquireHook()
     return { touchpads }
+  }
+
+  private macTouchpads = 0
+
+  private ensureRunningMac(): HoloTrackpadStatus {
+    if (this.unsubscribe) return { touchpads: this.macTouchpads }
+    const subscription = subscribeMacTrackpad((frame) => {
+      try {
+        this.handleFrame({ ...frame, clicked: isLeftButtonDown() }, Date.now())
+      } catch (error) {
+        console.warn('[holo] could not handle a trackpad frame:', error)
+      }
+    })
+    if (!subscription) return { touchpads: 0 }
+    this.macTouchpads = subscription.touchpads
+    this.unsubscribe = subscription.unsubscribe
+    uIOhook.on('keydown', this.handleKey)
+    acquireHook()
+    return { touchpads: subscription.touchpads }
   }
 
   private shutDown(): void {
@@ -111,17 +135,19 @@ export class TrackpadGestureService {
   private readonly handleInput = (hRawInput: number): void => {
     try {
       const now = Date.now()
-      for (const frame of readTouchpadFrames(hRawInput)) {
-        if (this.trace) {
-          this.trace.frames.push({ ...frame, t: now })
-          continue
-        }
-        this.notePointer(frame, now)
-        this.send(this.detector.frame(frame, now), now)
-      }
+      for (const frame of readTouchpadFrames(hRawInput)) this.handleFrame(frame, now)
     } catch (error) {
       console.warn('[holo] could not read a touchpad report:', error)
     }
+  }
+
+  private handleFrame(frame: TouchFrame, now: number): void {
+    if (this.trace) {
+      this.trace.frames.push({ ...frame, t: now })
+      return
+    }
+    this.notePointer(frame, now)
+    this.send(this.detector.frame(frame, now), now)
   }
 
   private readonly handleKey = (): void => {
@@ -152,13 +178,13 @@ export class TrackpadGestureService {
       if (!contact.tip) continue
       down.add(key)
       if (!this.pointerAt.has(key) && edgeAt(contact.x)) {
-        const point: { x?: number; y?: number } = {}
-        if (GetCursorPos(point)) this.pointerAt.set(key, { x: point.x ?? 0, y: point.y ?? 0 })
+        const point = readPointer()
+        if (point) this.pointerAt.set(key, point)
       }
     }
     const restore = this.restore
     if (restore && (!down.has(restore.key) || now > restore.until)) {
-      if (now <= restore.until) SetCursorPos(restore.x, restore.y)
+      if (now <= restore.until) movePointer(restore.x, restore.y)
       this.restore = null
     }
     for (const key of [...this.pointerAt.keys()]) {
@@ -172,7 +198,18 @@ export class TrackpadGestureService {
     const key = `${fired.device}:${fired.id}`
     const point = this.pointerAt.get(key)
     if (!point) return
-    SetCursorPos(point.x, point.y)
+    movePointer(point.x, point.y)
     this.restore = { key, ...point, until: now + RESTORE_WINDOW_MS }
   }
+}
+
+function readPointer(): { x: number; y: number } | null {
+  if (isMac) return pointerPosition()
+  const point: { x?: number; y?: number } = {}
+  return GetCursorPos(point) ? { x: point.x ?? 0, y: point.y ?? 0 } : null
+}
+
+function movePointer(x: number, y: number): void {
+  if (isMac) warpPointer(x, y)
+  else SetCursorPos(x, y)
 }

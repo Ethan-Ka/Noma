@@ -15,13 +15,15 @@ import {
   setGlideEnabled,
   setGlideZoneCount
 } from '../database/repositories/settingsRepository'
+import { isMac, isWindows } from '../platform'
 import { TrackpadGestureService } from './trackpadGestureService'
 import { resolveGlidePress } from './glidePress'
 import type { CheckPhase } from './touchTrace'
 
-const NOT_WINDOWS_MESSAGE = 'Glide needs Windows and a precision touchpad. It isn’t available on this computer yet.'
-const NO_TOUCHPAD_MESSAGE =
-  'No precision touchpad found. Glide reads raw finger positions, which only Windows precision touchpads report. Check Settings > Bluetooth & devices > Touchpad: if it doesn’t say “Your PC has a precision touchpad”, Glide can’t work on this laptop.'
+const UNSUPPORTED_MESSAGE = 'Glide needs a Windows laptop or a Mac with a trackpad. It isn’t available on this computer.'
+const NO_TOUCHPAD_MESSAGE = isMac
+  ? 'No trackpad found. Glide needs a MacBook’s built-in trackpad or a Magic Trackpad; a mouse can’t report where a finger is.'
+  : 'No precision touchpad found. Glide reads raw finger positions, which only Windows precision touchpads report. Check Settings > Bluetooth & devices > Touchpad: if it doesn’t say “Your PC has a precision touchpad”, Glide can’t work on this laptop.'
 const NO_WINDOW_MESSAGE = 'Glide couldn’t start because Noma’s window isn’t ready. Try again in a moment.'
 
 /** What the controller needs from the rest of main. */
@@ -62,7 +64,7 @@ export class GlideController {
     return {
       enabled: getGlideEnabled(),
       zoneCount: getGlideZoneCount(),
-      platformSupported: process.platform === 'win32',
+      platformSupported: isWindows || isMac,
       touchpads: this.touchpads,
       error: this.error
     }
@@ -114,8 +116,8 @@ export class GlideController {
   }
 
   private start(): HoloTrackpadStatus | null {
-    if (process.platform !== 'win32') {
-      this.error = NOT_WINDOWS_MESSAGE
+    if (!isWindows && !isMac) {
+      this.error = UNSUPPORTED_MESSAGE
       return null
     }
     if (!this.host.getWindow()) {

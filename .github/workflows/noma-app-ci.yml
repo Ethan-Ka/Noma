@@ -33,9 +33,37 @@ jobs:
       - run: npm test
       - run: npm run build
       # An unpacked app (no installer, nothing published): proves packaging
-      # still works on this OS.
+      # still works on this OS. Ad-hoc signed on macOS, like the release
+      # build pilot users get.
       - name: Package (unpacked)
         shell: bash
-        run: npx electron-builder --dir --publish never -c.mac.identity=null
+        run: npx electron-builder --dir --publish never -c.mac.identity=-
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
+      # Launches the packaged app on a throwaway profile and lets it check
+      # itself (src/main/smokeTest.ts): window renders, the app watcher
+      # answers, the native macOS calls and Glide's trackpad reader load
+      # without crashing. Typecheck and tests can't catch a wrong native
+      # signature; only a real launch on the real OS does.
+      - name: Launch check
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            APP="$(ls -d dist/mac*/Noma.app | head -1)/Contents/MacOS/Noma"
+          else
+            APP="dist/win-unpacked/Noma.exe"
+          fi
+          export NOMA_TEST_USER_DATA_DIR="$RUNNER_TEMP/noma-smoke-profile"
+          export NOMA_SMOKE_TEST="$RUNNER_TEMP/noma-smoke.json"
+          "$APP" > "$RUNNER_TEMP/noma-smoke.log" 2>&1 &
+          PID=$!
+          for _ in $(seq 120); do kill -0 "$PID" 2>/dev/null || break; sleep 1; done
+          if kill -0 "$PID" 2>/dev/null; then echo "Still running after 120 s"; kill "$PID"; fi
+          set +e
+          wait "$PID"
+          STATUS=$?
+          set -e
+          cat "$RUNNER_TEMP/noma-smoke.log" || true
+          echo "--- report ---"
+          cat "$NOMA_SMOKE_TEST" || { echo "No report: Noma crashed or hung on launch (exit $STATUS)"; exit 1; }
+          exit $STATUS

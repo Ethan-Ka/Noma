@@ -90,12 +90,15 @@ npm run dist:mac     # on a Mac   -> dist/Noma-X.Y.Z-arm64.dmg / -x64.dmg
 | Focus / close a window | SetForegroundWindow / WM_CLOSE | AXFrontmost / the window's close button |
 | Named click capture and replay | UI Automation | Accessibility API |
 | Volume controls | media virtual keys | AppleScript volume commands |
-| Holo touch gate (ignore trackpad touches) | raw HID digitizer input | not available yet: key/click activity is still ignored, trackpad touches that don't click aren't |
+| Glide (trackpad swipe-ins) | raw HID precision-touchpad reports | MultitouchSupport (built-in trackpad, Magic Trackpad) |
 
 ## First run on a real Mac (before sending the Mac build out)
 
-The macOS code is typechecked and built by CI, but it was written without a
-Mac to try it on. Go through this once on a Mac (ideally both an Apple
+CI's Mac runner typechecks, tests, packages and **launches** the app
+(`src/main/smokeTest.ts`: the window renders, the app watcher answers, the
+native calls and Glide's trackpad reader load without crashing). What it
+can't do is use a trackpad or grant Accessibility, so those still need a
+person. Go through this once on a Mac (ideally both an Apple
 silicon one and an Intel one):
 
 - [ ] Noma opens and the tray (menu bar) icon appears.
@@ -108,4 +111,9 @@ silicon one and an Intel one):
 - [ ] Workflow monitoring on: ⌘-shortcuts show up in Activity.
 - [ ] Click capture on: clicking a named button in an app records its name.
       A learned workflow with that click replays it.
-- [ ] Holo: says it needs a Windows precision touchpad (swipe-ins are Windows-only for now).
+- [ ] Glide: turn it on (Glide page). It says "On, watching your trackpad".
+      Rest a fingertip on the palm rest beside the trackpad and flick it on:
+      the activity list shows the zone, and in Chrome the zone's action runs.
+      The pointer jumps back to where it was. Ordinary pointing, scrolling
+      and typing never fire it. If it misfires or never fires, run the touch
+      check and keep the file it saves (thresholds are from a Windows pad).
