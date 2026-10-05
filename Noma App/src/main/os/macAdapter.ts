@@ -141,7 +141,7 @@ export function toMacApplication(raw: RawFrontmostApp): Application {
     // The executable name, matching what processNameForPid (macos.ts)
     // reports for a pid — click replay compares the two.
     processName: executable,
-    // The .app bundle: app.getFileIcon returns the app's real icon for it.
+    // The .app bundle: iconService reads the app's real icon from it (macAppIcon.ts).
     executablePath: raw.bundlePath ?? undefined
   }
 }

@@ -3,6 +3,7 @@ import { writeFileSync } from 'fs'
 import type { ApplicationContext, GlideState } from '@shared/types'
 import { frontmostPid, isAccessibilityTrusted, pointerPosition, processNameForPid } from './actions/macos'
 import { macTrackpadStatus } from './holo/macTrackpad'
+import { getApplicationIcon } from './applications/iconService'
 import { isMac } from './platform'
 
 /**
@@ -53,13 +54,18 @@ export function runSmokeTest(options: {
         frontmostPid: pid,
         frontmostProcess: pid === null ? null : processNameForPid(pid),
         pointer: pointerPosition(),
-        multitouch: macTrackpadStatus()
+        multitouch: macTrackpadStatus(),
+        // An app icon, read the way the Glide page and Flow do: this is
+        // what crashed the app on macOS 26 when it used app.getFileIcon.
+        icon: (await getApplicationIcon('/System/Applications/Calculator.app'))?.slice(0, 40) ?? null
       }
     }
     clearTimeout(timeout)
-    const mac = report.mac as { pointer: unknown; multitouch: { error: string | null } } | undefined
+    const mac = report.mac as
+      | { pointer: unknown; multitouch: { error: string | null }; icon: string | null }
+      | undefined
     // The pointer needs no permission, so null means macos.ts failed to load.
-    const nativeOk = !mac || (mac.pointer !== null && mac.multitouch.error === null)
+    const nativeOk = !mac || (mac.pointer !== null && mac.multitouch.error === null && mac.icon !== null)
     finish(report.rootRendered === true && nativeOk)
   }
 

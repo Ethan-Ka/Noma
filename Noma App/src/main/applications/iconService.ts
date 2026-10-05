@@ -1,5 +1,7 @@
 import { app } from 'electron'
 import { normalize } from 'path'
+import { isMac } from '../platform'
+import { readMacAppIcon } from './macAppIcon'
 
 /**
  * Real OS-icon extraction — the actual backbone of the "arbitrary installed
@@ -50,8 +52,14 @@ export async function getApplicationIcon(executablePath: string | null | undefin
       // 'large' (32x32 on Windows) — legible at every size this app
       // actually renders an AppIcon at (16-22px inline, scaled up to ~35px
       // in a 'tile' variant); CSS scales it down, never up.
-      const image = await app.getFileIcon(executablePath, { size: 'large' })
-      const dataUrl = image.isEmpty() ? null : image.toDataURL()
+      // Never app.getFileIcon on macOS: it crashes the app there (see
+      // macAppIcon.ts).
+      let dataUrl: string | null
+      if (isMac) dataUrl = await readMacAppIcon(executablePath)
+      else {
+        const image = await app.getFileIcon(executablePath, { size: 'large' })
+        dataUrl = image.isEmpty() ? null : image.toDataURL()
+      }
       iconCache.set(key, dataUrl)
       return dataUrl
     } catch {

@@ -26,7 +26,9 @@ beforeEach(() => {
   __clearApplicationIconCacheForTesting()
 })
 
-describe('getApplicationIcon', () => {
+// These cover the Electron path (Windows). macOS never calls getFileIcon;
+// its own test is below and runs on CI's Mac runner.
+describe.skipIf(process.platform === 'darwin')('getApplicationIcon', () => {
   it('returns null without calling the OS for a null/undefined path', async () => {
     expect(await getApplicationIcon(null)).toBeNull()
     expect(await getApplicationIcon(undefined)).toBeNull()
@@ -81,4 +83,16 @@ describe('getApplicationIcon', () => {
     expect(await second).toBe('data:image/png;base64,CCCC')
     expect(getFileIcon).toHaveBeenCalledTimes(1)
   })
+})
+
+describe.runIf(process.platform === 'darwin')('getApplicationIcon on macOS', () => {
+  it('reads a real app icon without Electron, as a PNG', async () => {
+    const result = await getApplicationIcon('/System/Applications/Calculator.app')
+    expect(result).toMatch(/^data:image\/png;base64,iVBORw0KGgo/)
+    expect(getFileIcon).not.toHaveBeenCalled()
+  }, 20_000)
+
+  it('returns null for a path that does not exist', async () => {
+    expect(await getApplicationIcon('/Applications/Not A Real App 123.app')).toBeNull()
+  }, 20_000)
 })
