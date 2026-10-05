@@ -65,5 +65,14 @@ jobs:
           set -e
           cat "$RUNNER_TEMP/noma-smoke.log" || true
           echo "--- report ---"
-          cat "$NOMA_SMOKE_TEST" || { echo "No report: Noma crashed or hung on launch (exit $STATUS)"; exit 1; }
-          exit $STATUS
+          cat "$NOMA_SMOKE_TEST" || true
+          # Annotations are readable without signing in (logs aren't), so
+          # the result shows on the run's summary page either way.
+          annotate() { node -e 'const t = require("fs").readFileSync(0, "utf8").slice(-3500); process.stdout.write(t.replace(/%/g, "%25").replace(/\r/g, "").replace(/\n/g, "%0A"))'; }
+          if [ -f "$NOMA_SMOKE_TEST" ]; then
+            echo "::notice title=Launch check report ($RUNNER_OS)::$(annotate < "$NOMA_SMOKE_TEST")"
+          fi
+          if [ "$STATUS" != "0" ] || [ ! -f "$NOMA_SMOKE_TEST" ]; then
+            echo "::error title=Launch check failed ($RUNNER_OS, exit $STATUS)::$(tail -n 60 "$RUNNER_TEMP/noma-smoke.log" | annotate)"
+            exit 1
+          fi
