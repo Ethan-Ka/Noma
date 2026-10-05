@@ -59,8 +59,7 @@ export default function Hero() {
             transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             className="mx-auto mt-6 max-w-xl text-balance text-base leading-relaxed text-base-300 sm:text-lg"
           >
-            Noma sees which application you are in and changes your controls to match. Then it learns the
-            sequences you repeat.
+            Controls that change with the app you&apos;re in, and learn what you repeat.
           </motion.p>
 
           <motion.div

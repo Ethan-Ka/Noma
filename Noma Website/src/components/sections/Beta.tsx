@@ -27,8 +27,7 @@ export default function Beta() {
         </Reveal>
         <Reveal delay={0.08}>
           <p className="mx-auto mt-6 max-w-lg text-balance text-base leading-relaxed text-base-300">
-            The adaptive interface runs on the computer you already own. Try it there first. The device can
-            come later, once the thing driving it is worth putting on a desk.
+            It runs on the computer you already own.
           </p>
         </Reveal>
 
@@ -53,9 +52,7 @@ export default function Beta() {
 
         <Reveal delay={0.26}>
           <div className="mx-auto mt-12 max-w-md border-t border-base-800 pt-8">
-            <p className="mb-4 text-sm text-base-400">
-              Early and experimental. Leave your email for release notes and what changes next.
-            </p>
+            <p className="mb-4 text-sm text-base-400">Get an email when something changes.</p>
             <WaitlistForm submitLabel="Get updates" />
           </div>
         </Reveal>

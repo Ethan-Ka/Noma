@@ -23,8 +23,7 @@ export default function Notice() {
         </Reveal>
         <Reveal delay={0.08}>
           <p className="max-w-md text-base leading-relaxed text-base-300">
-            A small card in the corner of the screen. It does not take focus, it does not interrupt what you were
-            typing, and it leaves on its own after a few seconds. If it is worth keeping, one click adds it.
+            A small card in the corner. One click to keep it, or it leaves on its own.
           </p>
         </Reveal>
       </div>

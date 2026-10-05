@@ -22,24 +22,6 @@ import { appProfiles } from '../../data/appProfiles'
  * modular story out of it.
  */
 
-const FACTS = [
-  {
-    term: 'What it is',
-    detail:
-      'A small surface with a display and four keys, sitting beside the keyboard. Its labels are whatever Noma currently believes you need.',
-  },
-  {
-    term: 'Why it is not a macro pad',
-    detail:
-      'Nothing on it is assigned. It changes because Flow noticed something, which is the same reason the software changes.',
-  },
-  {
-    term: 'Where it is',
-    detail:
-      'The host-to-device protocol is written and implemented, and firmware exists against it. No board has been built yet. That is the next step, not a shipping date.',
-  },
-]
-
 /** The same cycle the on-screen surface runs, so the board is visibly
  *  following the software rather than demonstrating itself. */
 const CYCLE = ['vscode', 'claude', 'premiere']
@@ -74,40 +56,24 @@ export default function Device() {
         </div>
       </Reveal>
 
-      <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-16">
-        <div>
-          <Reveal>
-            <h2 className="max-w-md text-balance font-display text-3xl font-semibold leading-[1.08] tracking-[-0.035em] text-base-50 sm:text-4xl">
-              And something to put it on.
-            </h2>
-          </Reveal>
-          <Reveal delay={0.08}>
-            <p className="mt-6 max-w-md text-base leading-relaxed text-base-300">
-              The adaptive interface works on the screen today. It is better as a physical thing you can
-              reach for without looking: a surface whose keys are already the right ones, because the
-              software told it what they are.
-            </p>
-          </Reveal>
-
-          <Reveal delay={0.14}>
-            <div className="mt-8 inline-flex items-center gap-2.5 rounded-full border border-base-700 px-4 py-2">
-              <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-base-400" />
-              <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-base-300">
-                In development · not for sale
-              </span>
-            </div>
-          </Reveal>
-        </div>
-
-        <Reveal delay={0.06}>
-          <dl className="divide-y divide-base-800 border-y border-base-800">
-            {FACTS.map((fact) => (
-              <div key={fact.term} className="py-6">
-                <dt className="font-mono text-[11px] uppercase tracking-[0.16em] text-base-500">{fact.term}</dt>
-                <dd className="mt-3 text-base leading-relaxed text-base-200">{fact.detail}</dd>
-              </div>
-            ))}
-          </dl>
+      <div className="mx-auto max-w-xl text-center">
+        <Reveal>
+          <h2 className="text-balance font-display text-3xl font-semibold leading-[1.08] tracking-[-0.035em] text-base-50 sm:text-4xl">
+            And something to put it on.
+          </h2>
+        </Reveal>
+        <Reveal delay={0.08}>
+          <p className="mt-6 text-balance text-base leading-relaxed text-base-300">
+            Keys that change with the software. No board has been built yet.
+          </p>
+        </Reveal>
+        <Reveal delay={0.14}>
+          <div className="mt-8 inline-flex items-center gap-2.5 rounded-full border border-base-700 px-4 py-2">
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-base-400" />
+            <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-base-300">
+              In development · not for sale
+            </span>
+          </div>
         </Reveal>
       </div>
     </Section>

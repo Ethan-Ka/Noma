@@ -23,8 +23,7 @@ export default function Product() {
         </Reveal>
         <Reveal delay={0.08}>
           <p className="mt-6 text-base leading-relaxed text-base-300">
-            One window. What you are in, what your controls are, and what Noma has noticed. Switch the
-            application below and watch the rest of it follow.
+            One window. Switch the app and watch it follow.
           </p>
         </Reveal>
       </div>

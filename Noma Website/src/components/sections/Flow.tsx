@@ -54,8 +54,7 @@ export default function Flow() {
         </Reveal>
         <Reveal delay={0.08}>
           <p className="mt-6 text-base leading-relaxed text-base-300">
-            Flow watches which shortcut you press, in which application, in what order. Never what you type.
-            That is the entire record, and it turns out to be enough to recognise how you work.
+            Which shortcut, in which app, in what order. Never what you type.
           </p>
         </Reveal>
       </div>
@@ -101,9 +100,7 @@ export default function Flow() {
 
             <div className="border-t border-base-800 px-5 py-4">
               <p className="text-xs leading-relaxed text-base-400">
-                <span className="text-accent">Two runs marked.</span> The same four steps, twice, forty minutes
-                apart, with unrelated work in between. That gap is what makes it a habit rather than a burst.
-                Two more and Noma will say something.
+                <span className="text-accent">Same four steps, twice.</span> Two more and Noma speaks up.
               </p>
             </div>
           </div>
@@ -120,10 +117,6 @@ export default function Flow() {
                 </li>
               ))}
             </ul>
-            <p className="mt-6 border-t border-base-800 pt-5 text-xs leading-relaxed text-base-400">
-              Keystrokes without a modifier are never captured at all, so typing a password cannot produce a
-              record even in principle.
-            </p>
           </div>
         </Reveal>
       </div>
