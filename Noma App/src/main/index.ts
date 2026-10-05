@@ -428,9 +428,12 @@ const TOAST_ACTIVATOR_CLSID = '{626CBF99-529D-4081-8378-0FC2340DD9A4}'
  * leaves it alone. Written only when something differs.
  */
 function registerAppIdentity(): void {
+  // Windows-only Electron APIs: on macOS setToastActivatorCLSID doesn't
+  // exist, and calling it threw before Noma's window or tray was created.
+  if (process.platform !== 'win32') return
   app.setToastActivatorCLSID(TOAST_ACTIVATOR_CLSID)
   app.setAppUserModelId(APP_USER_MODEL_ID)
-  if (process.platform !== 'win32' || !is.dev) return
+  if (!is.dev) return
 
   const programs = join(app.getPath('appData'), 'Microsoft', 'Windows', 'Start Menu', 'Programs')
   const shortcut = join(programs, 'Electron.lnk')
