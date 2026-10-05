@@ -162,6 +162,6 @@
 
   /* Faint directional wash used behind the hero — a vignette, not a colorful blob. */
   .hero-glow {
-    background-image: radial-gradient(ellipse 50% 42% at 50% 0%, color-mix(in oklab, var(--color-accent) 9%, transparent), transparent 70%);
+    background-image: radial-gradient(ellipse 50% 42% at 50% 0%, color-mix(in oklab, var(--color-accent) 4%, transparent), transparent 70%);
   }
 }

@@ -1,6 +1,7 @@
 import nomaMark from '../../assets/noma-mark.png'
 import nomaWordmark from '../../assets/noma-wordmark.png'
 import SiteLink from './SiteLink'
+import DotWordmark from '../visuals/DotWordmark'
 
 const columns: { title: string; links: { label: string; href: string }[] }[] = [
   {
@@ -72,14 +73,13 @@ export default function Footer() {
           rendered noticeably wider than this wrapper to have any height
           left to crop at all — `clamp()` keeps that relationship at every
           viewport size instead of hand-tuning per breakpoint. */}
-      <div aria-hidden="true" className="relative select-none overflow-hidden" style={{ height: 'clamp(65px, 10vw, 155px)' }}>
-        <img
-          src={nomaWordmark}
-          alt=""
+      {/* 2026-10-05: now drawn in Noma Blue dots (DotWordmark), about a
+          quarter smaller, at the user's request. */}
+      <div aria-hidden="true" className="relative select-none overflow-hidden" style={{ height: 'clamp(50px, 7.5vw, 116px)' }}>
+        <DotWordmark
           className="absolute left-1/2 top-0 -translate-x-1/2"
           style={{
-            width: 'clamp(390px, 100vw, 1330px)',
-            opacity: 0.05,
+            width: 'clamp(300px, 75vw, 1000px)',
             maskImage: 'linear-gradient(to bottom, transparent, black 45%)',
             WebkitMaskImage: 'linear-gradient(to bottom, transparent, black 45%)'
           }}

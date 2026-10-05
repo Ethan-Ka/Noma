@@ -27,6 +27,10 @@ if (TEST_USER_DATA_DIR) {
   app.setPath('userData', TEST_USER_DATA_DIR)
   // eslint-disable-next-line no-console
   console.log(`[TEST MODE] userData redirected to: ${TEST_USER_DATA_DIR}`)
+  // The website's notice capture (captureNotice.ts) reads a transparent
+  // window back as an image, which GPU compositing refuses on Windows
+  // (UnknownVizError); software rendering draws the same pixels.
+  if (process.env.NOMA_CAPTURE_NOTICE) app.disableHardwareAcceleration()
 }
 import icon from '../../resources/icon.png?asset'
 import iconIco from '../../resources/icon.ico?asset'
@@ -38,6 +42,7 @@ import { registerIpcHandlers } from './ipc/handlers'
 import { createOSAdapter } from './os/createOSAdapter'
 import { isMac } from './platform'
 import { runSmokeTest } from './smokeTest'
+import { captureNotice } from './captureNotice'
 import { installUpdateNow, startAutoUpdates } from './updater'
 import { ApplicationContextService } from './applications/contextService'
 import { getDefaultHardwareDevice } from './hardware/virtualDevice'
@@ -699,6 +704,20 @@ app.whenReady().then(() => {
   createTray()
   // Needs the main window: Glide reads the touchpad through its message loop.
   glide.resume()
+  const captureFolder = process.env.NOMA_CAPTURE_NOTICE
+  if (captureFolder && TEST_USER_DATA_DIR) {
+    void captureNotice({
+      folder: captureFolder,
+      makeSuggestion: async () => {
+        simulateDemoMultiStepWorkflow()
+        await refreshSuggestions()
+        return getPendingSuggestions()
+          .filter((suggestion) => suggestion.chainApplicationNames)
+          .sort((a, b) => (b.occurrenceCount ?? 0) - (a.occurrenceCount ?? 0) || b.confidence - a.confidence)[0]
+      },
+      show: (suggestion) => workflowNotifier.simulate(suggestion, suggestion.occurrenceCount ?? 0)
+    })
+  }
   const smokeReport = process.env.NOMA_SMOKE_TEST
   if (smokeReport && TEST_USER_DATA_DIR && mainWindow) {
     runSmokeTest({

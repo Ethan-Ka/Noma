@@ -132,6 +132,11 @@ function createNoticeWindow(): BrowserWindow {
   return window
 }
 
+/** The notice's window, if one exists (the website capture, captureNotice.ts). */
+export function getWorkflowNoticeWindow(): BrowserWindow | null {
+  return noticeWindow
+}
+
 /** Shows (creating on first use) the notice for one workflow. */
 export function showWorkflowNotice(notice: WorkflowNotice): void {
   currentNotice = notice

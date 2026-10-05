@@ -296,7 +296,7 @@ export default function KeyboardVisual({
 
   return (
     <div ref={floatRef} className={`relative ${className}`}>
-      {glow && <div aria-hidden className="absolute inset-0 -z-10 rounded-[40%] bg-accent/20 blur-[100px]" />}
+      {glow && <div aria-hidden className="absolute inset-0 -z-10 rounded-[40%] bg-accent/[0.06] blur-[120px]" />}
       <motion.div
         style={{ transformPerspective: 1400, rotateX: 8 }}
         animate={shouldFloat ? { y: [0, -8, 0] } : undefined}

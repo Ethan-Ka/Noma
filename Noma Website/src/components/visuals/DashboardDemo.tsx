@@ -115,7 +115,7 @@ export default function DashboardDemo() {
                 <button
                   type="button"
                   onClick={() => setStatus('picking')}
-                  className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-base-950 shadow-[0_2px_8px_-2px_rgba(76,126,255,0.35)] transition-colors duration-150 hover:bg-accent-bright active:opacity-90"
+                  className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-base-950 transition-colors duration-150 hover:bg-accent-bright active:opacity-90"
                 >
                   Create action
                 </button>

@@ -7,7 +7,6 @@ import Product from '../components/sections/Product'
 import Holo from '../components/sections/Holo'
 import Device from '../components/sections/Device'
 import Beta from '../components/sections/Beta'
-import Closing from '../components/sections/Closing'
 
 /**
  * 2026-09-24 rebuild. The page is now one argument in order, not a tour of
@@ -22,7 +21,6 @@ import Closing from '../components/sections/Closing'
  *   Holo        the pillar that needs nothing but the laptop
  *   Device      the pillar that is still being built, said plainly
  *   Beta        the ask
- *   Closing     the sentence to leave with
  *
  * Ten sections, down from twelve. `StaticMachine` and `Detection` were cut as
  * duplicates — each made a point its neighbour already made, with a weaker
@@ -50,7 +48,6 @@ export default function Home() {
       <Holo />
       <Device />
       <Beta />
-      <Closing />
     </>
   )
 }

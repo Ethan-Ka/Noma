@@ -32,7 +32,7 @@ export default function VirtualControlTile({ slot, label, caption, onPress }: Vi
       type="button"
       onClick={handleClick}
       className={`flex aspect-[4/3] flex-col justify-between rounded-2xl border border-base-600 bg-base-850 p-4 text-left transition-all duration-150 hover:border-base-500 active:scale-95 ${DEMO_KEYCAP} ${
-        isPressed ? 'border-accent/60 shadow-[0_4px_16px_-6px_rgba(76,126,255,0.45)]' : ''
+        isPressed ? 'border-accent/60 shadow-[0_4px_12px_-6px_rgba(76,126,255,0.2)]' : ''
       }`}
     >
       <span className="font-mono text-[10px] uppercase tracking-widest text-base-500">Control {slot}</span>

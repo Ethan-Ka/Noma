@@ -44,12 +44,10 @@ export default function App() {
   if (reduceMotion) return page
 
   return (
-    // `anchors` defaults to false — without it, every in-page `<a href="#...">`
-    // (nav links, Hero's CTA, Footer's links) falls straight through to the
-    // browser's native instant jump, completely bypassing Lenis, which only
-    // smooths wheel/touch/programmatic scrolling on its own. The offset keeps
-    // a scrolled-to heading clear of the fixed top nav bar.
-    <ReactLenis root options={{ lerp: 0.11, duration: 1.1, wheelMultiplier: 1, anchors: { offset: -80 } }}>
+    // In-page `#` links are smoothed by SiteLink itself (see its comment for
+    // why Lenis's own `anchors` option wasn't enough: the router snapped the
+    // page back with an instant jump).
+    <ReactLenis root options={{ lerp: 0.11, duration: 1.1, wheelMultiplier: 1 }}>
       {page}
     </ReactLenis>
   )

@@ -1,4 +1,10 @@
 /**
+ * 2026-10-05: the buttons (GLASS_ACCENT, toggles) were toned down at the
+ * user's request ("slight glass, not overpowering", the glow read as
+ * tacky): no white sheen, no colored outer glow. GLASS, the top nav bar,
+ * was then restored to its full look by request: "the only thing that
+ * looked good in the glass". Keep the buttons quiet; leave GLASS alone.
+ *
  * Shared "liquid glass" material, reused across the site's chrome: the
  * floating pill nav and every real button (CTAs, toggle pills). Brought
  * back by explicit user request even within the 2026 brand-identity pass,
@@ -23,17 +29,17 @@ export const GLASS =
  * breaking from the glass material everything else on the bar uses.
  */
 export const GLASS_ACCENT =
-  'border border-accent/40 bg-accent/25 bg-gradient-to-b from-white/[0.18] to-transparent text-base-50 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.25),inset_0_-1px_0_0_rgba(0,0,0,0.1),0_10px_28px_-10px_rgba(76,126,255,0.55)] backdrop-blur-xl backdrop-saturate-150 transition-colors hover:bg-accent/35 hover:border-accent/60'
+  'border border-accent/30 bg-accent/[0.14] text-base-50 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.07)] backdrop-blur-md transition-colors hover:border-accent/45 hover:bg-accent/[0.2]'
 
 /** The inactive state of a glass toggle pill (`KeyboardCloseup`'s preset
  *  buttons, the Context section's tabs) — the same neutral glass as
  *  `GLASS`, just lighter (`backdrop-blur-lg`, no saturation boost) since
  *  these are small repeated controls, not the one nav bar on the page. */
 export const GLASS_TOGGLE =
-  'border border-white/10 bg-base-950/40 bg-gradient-to-b from-white/[0.06] to-transparent text-base-400 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08)] backdrop-blur-lg transition-all duration-150 hover:text-base-100 hover:border-white/20 active:scale-95'
+  'border border-white/[0.08] bg-base-950/40 text-base-400 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] backdrop-blur-lg transition-all duration-150 hover:text-base-100 hover:border-white/20 active:scale-95'
 
 /** The active state of the same toggle pill — accent-tinted glass, dimmer
  *  than `GLASS_ACCENT` since several of these can be visible at once and
  *  only one should read as "selected," not "the page's main CTA." */
 export const GLASS_TOGGLE_ACTIVE =
-  'border border-accent/50 bg-accent/[0.18] bg-gradient-to-b from-white/[0.12] to-transparent text-accent-bright shadow-[inset_0_1px_0_0_rgba(255,255,255,0.16),0_6px_18px_-8px_rgba(76,126,255,0.4)] backdrop-blur-lg transition-all duration-150 active:scale-95'
+  'border border-accent/35 bg-accent/[0.12] text-accent-bright shadow-[inset_0_1px_0_0_rgba(255,255,255,0.07)] backdrop-blur-lg transition-all duration-150 active:scale-95'

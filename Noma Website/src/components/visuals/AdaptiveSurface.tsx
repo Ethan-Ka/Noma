@@ -101,7 +101,7 @@ export default function AdaptiveSurface({ appId, size = 'lg', className = '' }: 
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-40"
         animate={{
-          background: `radial-gradient(ellipse 70% 100% at 50% 0%, ${app.color}1f, transparent 72%)`,
+          background: `radial-gradient(ellipse 70% 100% at 50% 0%, ${app.color}14, transparent 72%)`,
         }}
         transition={{ duration: 0.6, ease }}
       />

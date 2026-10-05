@@ -1,19 +1,20 @@
 import Section from '../layout/Section'
 import Reveal from '../ui/Reveal'
 import WaitlistForm from '../ui/WaitlistForm'
+import DownloadButtons from '../ui/DownloadButtons'
 
 /**
  * The ask.
  *
  * Software-first is stated as a decision rather than apologised for, because
  * it is one: the intelligence is the product, and shipping it without asking
- * anyone to buy a device first is how the idea gets tested at all. The form
- * is the existing waitlist — there is no installer to link to yet, and
- * pointing a download button at nothing would undo every honest sentence
- * above it.
+ * anyone to buy a device first is how the idea gets tested at all. The
+ * downloads are the real beta builds (the app repo's latest GitHub release,
+ * looked up live in lib/downloads.ts); the waitlist stays below them for
+ * people who want release notes by email.
  */
 
-const FACTS = ['Free during the beta', 'Windows', 'Glide included']
+const FACTS = ['Free during the beta']
 
 export default function Beta() {
   return (
@@ -45,15 +46,18 @@ export default function Beta() {
         </Reveal>
 
         <Reveal delay={0.2}>
-          <div className="mx-auto mt-10 max-w-md">
-            <WaitlistForm submitLabel="Get Noma Beta" />
+          <div className="mt-10">
+            <DownloadButtons />
           </div>
         </Reveal>
 
         <Reveal delay={0.26}>
-          <p className="mt-5 text-sm text-base-500">
-            Early and experimental. You will get the build and the notes that come with it.
-          </p>
+          <div className="mx-auto mt-12 max-w-md border-t border-base-800 pt-8">
+            <p className="mb-4 text-sm text-base-400">
+              Early and experimental. Leave your email for release notes and what changes next.
+            </p>
+            <WaitlistForm submitLabel="Get updates" />
+          </div>
         </Reveal>
       </div>
     </Section>

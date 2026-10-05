@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from 'framer-motion'
 import AdaptiveSurface from '../visuals/AdaptiveSurface'
 import SiteLink from '../layout/SiteLink'
 import { GLASS_ACCENT } from '../../lib/glass'
+import DotField from '../visuals/DotField'
 
 /**
  * The claim, and the proof of it, in one screen.
@@ -34,6 +35,7 @@ export default function Hero() {
 
   return (
     <section id="top" className="relative overflow-hidden">
+      <DotField className="absolute inset-0 h-full w-full" />
       <div aria-hidden className="hero-glow pointer-events-none absolute inset-x-0 top-0 h-[70vh]" />
 
       <div className="relative mx-auto max-w-6xl px-6 pb-24 pt-36 sm:px-8 sm:pt-44 md:pb-32">
@@ -46,7 +48,9 @@ export default function Hero() {
           >
             Your computer,
             <br />
-            adapting to you.
+            {/* Two-tone: the second line steps back a shade, so the eye
+                reads the subject first and the promise second. */}
+            <span className="text-base-400">adapting to you.</span>
           </motion.h1>
 
           <motion.p
