@@ -9,6 +9,10 @@ import { getProfileForApplicationId } from '../database/repositories/profileRepo
 import { createProfileForApplication } from './profileCreation'
 import { removeLearnedWorkflow } from './workflowRemoval'
 
+/** Seeded starter actions and key names follow the OS: Ctrl/Win on
+ *  Windows, Cmd on macOS. */
+const isMacRun = process.platform === 'darwin'
+
 // The preview pulls in the executor, which loads the native input hook.
 vi.mock('uiohook-napi', async (importOriginal) => {
   const actual = await importOriginal<typeof import('uiohook-napi')>()
@@ -42,7 +46,7 @@ describe('removeLearnedWorkflow', () => {
     expect(removeLearnedWorkflow(id)).toEqual({ applicationIds: ['chrome'] })
     expect(getMacroById(id)).toBeNull()
     const slot1 = getProfileForApplicationId('chrome')!.controls.find((c) => c.slot === 1)
-    expect(slot1).toMatchObject({ label: 'NEW TAB', action: { type: 'shortcut', keys: ['Control', 'T'] } })
+    expect(slot1).toMatchObject({ label: 'NEW TAB', action: { type: 'shortcut', keys: [isMacRun ? 'Meta' : 'Control', 'T'] } })
   })
 
   it('empties the zone in an app with no starter actions, never leaving a dangling workflow', () => {
@@ -77,7 +81,7 @@ describe('previewSuggestion', () => {
       })
     )!
     expect(preview.steps.map((step) => step.description)).toEqual([
-      'Screenshot (Win+Shift+S)',
+      `Screenshot (${isMacRun ? 'Cmd' : 'Win'}+Shift+S)`,
       'Switch to Claude Code (it has to be open already)',
       'Paste (Ctrl+V)',
       'Press Enter, to send what was just pasted'
