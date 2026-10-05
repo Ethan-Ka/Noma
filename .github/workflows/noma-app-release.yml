@@ -67,7 +67,8 @@ jobs:
       - name: Add Intel koffi binary
         if: runner.os == 'macOS'
         run: |
-          KOFFI_VERSION=$(node -p "require('koffi/package.json').version")
+          # koffi's "exports" hide package.json from require(), so read the file.
+          KOFFI_VERSION=$(node -p "JSON.parse(require('fs').readFileSync('node_modules/koffi/package.json', 'utf8')).version")
           npm install --no-save --force --ignore-scripts "@koromix/koffi-darwin-x64@$KOFFI_VERSION" "@koromix/koffi-darwin-arm64@$KOFFI_VERSION"
       - run: npm run build
 

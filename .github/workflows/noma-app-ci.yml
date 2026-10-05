@@ -29,6 +29,15 @@ jobs:
           cache: npm
           cache-dependency-path: Noma App/package-lock.json
       - run: npm ci --ignore-scripts
+      # Same step the release runs for the Intel Mac build, checked here so
+      # it can't first break during a release.
+      - name: Add Intel koffi binary
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          KOFFI_VERSION=$(node -p "JSON.parse(require('fs').readFileSync('node_modules/koffi/package.json', 'utf8')).version")
+          npm install --no-save --force --ignore-scripts "@koromix/koffi-darwin-x64@$KOFFI_VERSION" "@koromix/koffi-darwin-arm64@$KOFFI_VERSION"
+          ls node_modules/@koromix
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
