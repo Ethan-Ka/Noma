@@ -8,6 +8,7 @@ import Home from './pages/Home'
 import Contact from './pages/Contact'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
+import Device from './pages/Device'
 
 /**
  * The router/layout shell: `Navigation` and `Footer` are shared chrome
@@ -35,6 +36,7 @@ export default function App() {
           <Route path="/contact" element={<Contact />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
+          <Route path="/device" element={<Device />} />
         </Routes>
       </main>
       <Footer />

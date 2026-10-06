@@ -12,7 +12,7 @@ const links = [
   { label: 'How it works', href: '#context' },
   { label: 'Flow', href: '#flow' },
   { label: 'Glide', href: '#glide' },
-  { label: 'Device', href: '#device' },
+  { label: 'Device', href: '/device' },
 ]
 
 /**
