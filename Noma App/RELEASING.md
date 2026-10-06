@@ -11,6 +11,10 @@ OS-specific parts live behind `src/main/platform.ts` (Windows: `win32.ts`,
 npm run release            # 0.1.0 -> 0.1.1   (or: npm run release -- minor)
 ```
 
+First add the new version's notes to `src/shared/releaseNotes.ts` and commit
+them: installed copies show them once after updating ("What's new"), and the
+script refuses to tag a version that has none.
+
 Then push, with GitHub Desktop's **Push origin** or `git push --follow-tags`.
 
 Pushing the `vX.Y.Z` tag starts **Noma App release** in GitHub Actions:

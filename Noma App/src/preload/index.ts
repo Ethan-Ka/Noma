@@ -194,6 +194,8 @@ const flowApi: FlowApi = {
   checkForUpdates: () => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_CHECK),
   installUpdate: () => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_INSTALL),
   openUpdateDownload: () => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_OPEN_DOWNLOAD),
+  getWhatsNew: () => ipcRenderer.invoke(IPC_CHANNELS.WHATS_NEW_GET),
+  dismissWhatsNew: () => ipcRenderer.invoke(IPC_CHANNELS.WHATS_NEW_DISMISS),
   onUpdateStatus: (callback) => {
     const listener = (_event: IpcRendererEvent, value: UpdateStatus): void => callback(value)
     ipcRenderer.on(IPC_CHANNELS.UPDATE_STATUS_CHANGED, listener)

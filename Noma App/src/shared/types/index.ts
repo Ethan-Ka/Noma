@@ -436,6 +436,13 @@ export type UpdatePhase =
   /** The last check the user asked for failed (usually offline). */
   | 'error'
 
+/** Shown once after Noma updates: the notes for every version since the
+ *  one the user last saw (shared/releaseNotes.ts), newest first. */
+export interface WhatsNew {
+  version: string
+  releases: Array<{ version: string; notes: string[] }>
+}
+
 export interface UpdateStatus {
   phase: UpdatePhase
   currentVersion: string
@@ -981,6 +988,11 @@ export interface FlowApi {
   /** Opens the download page, for a copy that can't update itself. */
   openUpdateDownload(): Promise<void>
   onUpdateStatus(callback: (status: UpdateStatus) => void): () => void
+  /** What changed since the last version this user saw, when this launch
+   *  follows an update; null otherwise (including a fresh install). */
+  getWhatsNew(): Promise<WhatsNew | null>
+  /** Closes the note for good: it won't show again until the next update. */
+  dismissWhatsNew(): Promise<void>
   /** The trackpad touch check: records finger positions (dry run, nothing
    *  fires) until stopped, then saves them on this computer and returns a
    *  summary. `phases` are the guided steps, in Date.now() time. */

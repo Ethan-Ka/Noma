@@ -1,0 +1,45 @@
+/**
+ * What changed in each version, shown once after Noma updates to it
+ * (main/whatsNew.ts, renderer WhatsNewModal). Newest first. Written for the
+ * people using Noma: what they'll notice, not how it was built.
+ *
+ * `npm run release` refuses to tag a version that has no entry here, so add
+ * the next version's notes before releasing.
+ */
+export const RELEASE_NOTES: Record<string, string[]> = {
+  '0.1.9': [
+    'After an update, Noma now shows what changed, like this note.'
+  ],
+  '0.1.8': [
+    'Settings has a new Updates section: check for a new version any time, and restart to install it once it has downloaded.'
+  ]
+}
+
+/** -1, 0 or 1, comparing dotted version numbers like 0.1.8. */
+export function compareVersions(a: string, b: string): number {
+  const left = a.split('.').map(Number)
+  const right = b.split('.').map(Number)
+  for (let i = 0; i < Math.max(left.length, right.length); i++) {
+    const difference = (left[i] ?? 0) - (right[i] ?? 0)
+    if (difference !== 0) return difference > 0 ? 1 : -1
+  }
+  return 0
+}
+
+/**
+ * The notes to show someone who last saw `lastSeen` and now runs `current`,
+ * newest first. With no `lastSeen` (they updated from a build older than
+ * these notes), the latest `fallbackCount` entries up to `current`.
+ */
+export function notesSince(
+  lastSeen: string | null,
+  current: string,
+  fallbackCount = 2
+): Array<{ version: string; notes: string[] }> {
+  const entries = Object.entries(RELEASE_NOTES)
+    .filter(([version]) => compareVersions(version, current) <= 0)
+    .filter(([version]) => lastSeen === null || compareVersions(version, lastSeen) > 0)
+    .sort(([a], [b]) => compareVersions(b, a))
+    .map(([version, notes]) => ({ version, notes }))
+  return lastSeen === null ? entries.slice(0, fallbackCount) : entries
+}

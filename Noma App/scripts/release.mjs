@@ -28,6 +28,18 @@ if (status.trim()) {
   process.exit(1)
 }
 
+// Installed copies show the new version's notes after they update
+// (src/shared/releaseNotes.ts), so a release must come with them.
+const current = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version
+const [major, minor, patch] = current.split('.').map(Number)
+const next =
+  bump === 'major' ? `${major + 1}.0.0` : bump === 'minor' ? `${major}.${minor + 1}.0` : `${major}.${minor}.${patch + 1}`
+const notes = readFileSync(new URL('../src/shared/releaseNotes.ts', import.meta.url), 'utf8')
+if (!notes.includes(`'${next}':`)) {
+  console.error(`Add what's new in ${next} to src/shared/releaseNotes.ts (and commit it) before releasing.`)
+  process.exit(1)
+}
+
 run('npm', ['version', bump, '--no-git-tag-version'])
 const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'))
 const tag = `v${version}`

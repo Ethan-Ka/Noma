@@ -91,6 +91,9 @@ export const IPC_CHANNELS = {
   UPDATE_INSTALL: 'flow:update-install',
   UPDATE_OPEN_DOWNLOAD: 'flow:update-open-download',
   UPDATE_STATUS_CHANGED: 'flow:update-status-changed',
+  /** The "What's new" note shown once after an update (main/whatsNew.ts). */
+  WHATS_NEW_GET: 'flow:whats-new-get',
+  WHATS_NEW_DISMISS: 'flow:whats-new-dismiss',
 
   /**
    * Noma Notice — the small glass surface that appears bottom-centre of the

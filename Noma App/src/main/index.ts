@@ -52,6 +52,7 @@ import {
   openDownloadPage,
   startAutoUpdates
 } from './updater'
+import { getWhatsNew, initWhatsNew, markWhatsNewSeen } from './whatsNew'
 import { ApplicationContextService } from './applications/contextService'
 import { getDefaultHardwareDevice } from './hardware/virtualDevice'
 import { DeviceTransportServer } from './hardware/deviceTransportServer'
@@ -525,6 +526,7 @@ app.whenReady().then(() => {
   })
 
   initDatabase()
+  initWhatsNew()
   ipcMain.handle(IPC_CHANNELS.HOLO_OPEN_RECORDINGS, () => openRecordingsFolder())
   ipcMain.handle(IPC_CHANNELS.GLIDE_GET_STATE, () => glide.getState())
   ipcMain.handle(IPC_CHANNELS.GLIDE_SET_ENABLED, (_event, enabled: boolean) => glide.setEnabled(enabled === true))
@@ -544,6 +546,8 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC_CHANNELS.UPDATE_CHECK, () => checkForUpdatesNow())
   ipcMain.handle(IPC_CHANNELS.UPDATE_INSTALL, () => installUpdateNow())
   ipcMain.handle(IPC_CHANNELS.UPDATE_OPEN_DOWNLOAD, () => openDownloadPage())
+  ipcMain.handle(IPC_CHANNELS.WHATS_NEW_GET, () => getWhatsNew())
+  ipcMain.handle(IPC_CHANNELS.WHATS_NEW_DISMISS, () => markWhatsNewSeen())
   onUpdateStatus((status) => {
     mainWindow?.webContents.send(IPC_CHANNELS.UPDATE_STATUS_CHANGED, status)
   })

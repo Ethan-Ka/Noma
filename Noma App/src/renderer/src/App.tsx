@@ -14,6 +14,7 @@ import { Profiles } from './pages/Profiles'
 import { Settings } from './pages/Settings'
 import { Developer } from './pages/Developer'
 import { Onboarding } from './pages/Onboarding'
+import { WhatsNewModal } from './components/WhatsNewModal'
 import { useUiStore } from './stores/uiStore'
 import { useOnboardingStore } from './stores/onboardingStore'
 // Imported for their side effect: both subscribe to main's pushes at load,
@@ -70,6 +71,7 @@ function App() {
       {activePage === 'usage-stats' && <UsageStats />}
       {activePage === 'profiles' && <Profiles />}
       {activePage === 'developer' && <Developer />}
+      <WhatsNewModal />
     </AppShell>
   )
 }
