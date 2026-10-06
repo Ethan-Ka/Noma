@@ -42,7 +42,7 @@ export default function Footer() {
             <img src={nomaMark} alt="" className="h-6 w-auto" />
             <img src={nomaWordmark} alt="Noma" className="h-3.5 w-auto" />
           </div>
-          <p className="max-w-[26ch] text-sm text-base-500">A keyboard that understands what you&rsquo;re doing.</p>
+          <p className="max-w-[26ch] text-sm text-base-500">Your computer, adapting to you.</p>
         </div>
 
         {columns.map((col) => (

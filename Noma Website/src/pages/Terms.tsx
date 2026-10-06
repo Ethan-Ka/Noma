@@ -1,13 +1,15 @@
 import Reveal from '../components/ui/Reveal'
 import LegalSection from '../components/ui/LegalSection'
+import SiteLink from '../components/layout/SiteLink'
 
-// Standard, honest starter terms for a pre-launch waitlist site, scoped
-// to what actually exists today (a marketing site and an email waitlist,
-// no product sold yet, no accounts). Deliberately doesn't invent a
-// specific legal entity name, address, or governing jurisdiction, since
-// none of those are known here; a real lawyer should fill those in
-// (and review the rest) before this is treated as binding.
-const LAST_UPDATED = 'September 17, 2026'
+// Rewritten 2026-10-06 for the downloadable beta: the old version said the
+// product didn't exist yet. Still deliberately names no legal entity,
+// address or governing law, since none is known here; a lawyer should fill
+// those in (and review the rest) before Noma leaves beta.
+const LAST_UPDATED = 'October 6, 2026'
+
+const EMAIL = 'hello@nomashift.com'
+const LINK = 'text-accent-bright transition-colors hover:text-accent'
 
 export default function Terms() {
   return (
@@ -20,73 +22,105 @@ export default function Terms() {
           </h1>
           <p className="mt-4 text-sm text-base-500">Last updated {LAST_UPDATED}</p>
           <p className="mt-6 max-w-lg text-balance text-base leading-relaxed text-base-400">
-            These terms cover this website and the waitlist. Noma the product doesn&rsquo;t exist yet, so
-            there&rsquo;s nothing here about warranties, shipping, or support for hardware that hasn&rsquo;t
-            been built. Those terms will arrive when the product does.
+            These terms cover the Noma app, this website, and our email list. By downloading Noma or using this
+            site, you agree to them.
           </p>
         </Reveal>
 
         <Reveal delay={0.06} className="mt-14">
-          <LegalSection title="Using this site">
+          <LegalSection title="Noma is in beta">
             <p>
-              By using this website you agree to these terms. If you don&rsquo;t agree, the only ask is that
-              you not use the site, which is fine, no hard feelings.
+              The app is free while it&rsquo;s in beta. It&rsquo;s early software: it will have bugs, features may
+              change or be removed, and the final version isn&rsquo;t out yet. We may stop offering the beta at any
+              time.
             </p>
           </LegalSection>
 
-          <LegalSection title="The waitlist">
+          <LegalSection title="Using the app">
             <p>
-              Joining the waitlist reserves you a spot to hear from us first. It isn&rsquo;t a purchase, a
-              pre-order, or a guarantee of a specific price, ship date, or that Noma ships at all. We&rsquo;ll
-              be honest with you about progress rather than promise dates we can&rsquo;t keep.
+              You may install Noma on computers you own or are allowed to use, and use it for your own work.
+              Please don&rsquo;t sell it, or share modified copies of it as Noma.
+            </p>
+          </LegalSection>
+
+          <LegalSection title="Actions run in other apps">
+            <p>
+              Noma presses shortcuts and clicks buttons in other apps for you. In a beta, an action can sometimes
+              land in the wrong place or do something you didn&rsquo;t expect. Check what an action does before
+              relying on it, keep your own backups, and don&rsquo;t use Noma for anything where a mistaken key
+              press or click could cause serious harm.
+            </p>
+          </LegalSection>
+
+          <LegalSection title="Updates">
+            <p>
+              Noma checks for new versions and updates itself. On Windows, an update installs when Noma quits, or
+              straight away from the tray menu. Using an older version may stop working as we change things.
+            </p>
+          </LegalSection>
+
+          <LegalSection title="Your data">
+            <p>
+              What Noma learns about how you work stays on your computer and belongs to you. The{' '}
+              <SiteLink href="/privacy" className={LINK}>
+                Privacy Policy
+              </SiteLink>{' '}
+              explains exactly what it records and how to delete it.
+            </p>
+          </LegalSection>
+
+          <LegalSection title="Noma Device">
+            <p>
+              The Noma Device is in development and not for sale. Signing up for updates isn&rsquo;t a purchase or
+              a pre-order, and doesn&rsquo;t guarantee a price, a date, or that it ships.
             </p>
           </LegalSection>
 
           <LegalSection title="What belongs to us">
             <p>
-              The Noma name, logo, and the content of this site (copy, design, illustrations) belong to Noma.
-              You&rsquo;re welcome to link to this site and talk about what we&rsquo;re building; please
-              don&rsquo;t copy the site itself or use our marks to imply an affiliation that doesn&rsquo;t
-              exist.
+              The Noma name, logo, app and the content of this site belong to Noma. You&rsquo;re welcome to link to
+              the site and talk about Noma; please don&rsquo;t use our name or logo in a way that suggests
+              we&rsquo;re connected to something we aren&rsquo;t.
             </p>
           </LegalSection>
 
           <LegalSection title="What you agree not to do">
             <ul className="list-disc space-y-2 pl-5">
-              <li>Attempt to disrupt, scrape at scale, or reverse-engineer this site.</li>
-              <li>Submit false information to the waitlist form on someone else&rsquo;s behalf without consent.</li>
-              <li>Use the site for anything illegal or that infringes someone else&rsquo;s rights.</li>
+              <li>Use Noma to record or control someone else&rsquo;s computer without their permission.</li>
+              <li>Try to disrupt or overload this site, or scrape it at scale.</li>
+              <li>Sign someone else up for our emails without their consent.</li>
+              <li>Use Noma or this site for anything illegal or that infringes someone else&rsquo;s rights.</li>
             </ul>
           </LegalSection>
 
           <LegalSection title="No warranty">
             <p>
-              This site is provided as-is, the usual way for an early, pre-launch site: we try to keep it
-              accurate and working, but we&rsquo;re not promising it&rsquo;s error-free or available every
-              second.
+              Noma and this site are provided as they are, without warranties of any kind. We work to keep them
+              accurate, safe and working, but we can&rsquo;t promise they&rsquo;re free of errors or always
+              available.
             </p>
           </LegalSection>
 
           <LegalSection title="Limitation of liability">
             <p>
-              To the extent the law allows, Noma isn&rsquo;t liable for indirect or incidental damages arising
-              from your use of this site. Nothing here limits liability where the law doesn&rsquo;t allow it
-              to be limited.
+              To the extent the law allows, Noma isn&rsquo;t liable for indirect, incidental or consequential
+              damages, or for lost data or work, arising from your use of the app or this site. Nothing here
+              limits liability where the law doesn&rsquo;t allow it to be limited.
             </p>
           </LegalSection>
 
           <LegalSection title="Changes">
             <p>
-              We may update these terms as the site and product evolve. We&rsquo;ll update the date at the top
-              whenever we do, and material changes will be reflected here before they take effect.
+              We&rsquo;ll update these terms as Noma changes, especially when it leaves beta, and change the date at
+              the top when we do. Continuing to use Noma after a change means you accept the new terms.
             </p>
           </LegalSection>
 
           <LegalSection title="Contact">
             <p>
               Questions about these terms: write to{' '}
-              <a href="mailto:hello@nomashift.com" className="text-accent-bright transition-colors hover:text-accent">
-                hello@nomashift.com
+              <a href={`mailto:${EMAIL}`} className={LINK}>
+                {EMAIL}
               </a>
               .
             </p>
