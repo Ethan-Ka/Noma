@@ -54,7 +54,11 @@ export default function Contact() {
 
         <Reveal delay={0.16}>
           <p className="mt-10 text-sm text-base-500">
-            Looking to join the waitlist instead?{' '}
+            Found a bug in the app?{' '}
+            <SiteLink href="/feedback" className="text-accent-bright transition-colors hover:text-accent">
+              Report an issue
+            </SiteLink>
+            . Looking to join the waitlist instead?{' '}
             <SiteLink href="#waitlist" className="text-accent-bright transition-colors hover:text-accent">
               Sign up here
             </SiteLink>

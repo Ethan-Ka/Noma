@@ -6,7 +6,7 @@ import LegalSection from '../components/ui/LegalSection'
 // (capture filter, click-target rules, Glide, updater, diagnostics), and
 // every claim about the site against this repo (no cookies, storage or
 // analytics; GitHub for downloads and the version label; Formspree for the
-// email form; Cloudflare hosting). Not legal advice: worth a lawyer's
+// email form and the /feedback issue form; Cloudflare hosting). Not legal advice: worth a lawyer's
 // review before Noma leaves beta.
 const LAST_UPDATED = 'October 6, 2026'
 
@@ -121,7 +121,7 @@ export default function Privacy() {
             </p>
           </LegalSection>
 
-          <LegalSection title="Our email list">
+          <LegalSection title="Our email list and issue reports">
             <p>
               If you sign up for updates, we keep your email address and use it only to tell you about Noma: new
               versions, the device, and when things change. Sign-ups are handled by{' '}
@@ -129,6 +129,12 @@ export default function Privacy() {
                 Formspree
               </a>
               . We never sell or share your address. We keep it until you ask us to remove it.
+            </p>
+            <p>
+              If you report an issue on our feedback page, we get only what you write and pick there: what happened,
+              your computer type and Noma version if you give them, and your email if you leave one so we can reply.
+              Nothing else about your browser or computer is attached. Reports are also handled by Formspree. We use
+              them only to fix Noma, and a report&rsquo;s email address isn&rsquo;t added to the update list.
             </p>
           </LegalSection>
 
