@@ -34,7 +34,7 @@ if (TEST_USER_DATA_DIR) {
 }
 import icon from '../../resources/icon.png?asset'
 import iconIco from '../../resources/icon.ico?asset'
-import { IPC_CHANNELS, ISSUE_PAGE_URL } from '@shared/constants'
+import { APP_DISPLAY_NAME, IPC_CHANNELS, ISSUE_PAGE_URL } from '@shared/constants'
 import { buildDiagnosticsReport } from './diagnostics'
 import type { HoloTrackpadZoneCount } from '@shared/types'
 import { initDatabase } from './database/db'
@@ -218,7 +218,7 @@ function createMainWindow(): void {
     show: false,
     autoHideMenuBar: true,
     backgroundColor: '#08080a',
-    title: TEST_USER_DATA_DIR ? 'Noma — TEST PROFILE' : 'Noma',
+    title: TEST_USER_DATA_DIR ? `${APP_DISPLAY_NAME} — TEST PROFILE` : APP_DISPLAY_NAME,
     // Windows/Linux taskbar + window icon. macOS instead uses the app
     // bundle's icon (set at packaging time), which doesn't exist yet — see
     // "Prepare for STM32"/packaging notes; this only affects the
@@ -263,13 +263,11 @@ function createMainWindow(): void {
 
   // The renderer's own <title>Noma</title> would otherwise overwrite the
   // constructor's `title` option the instant the page loads — this is the
-  // one place that's allowed to win, so "TEST PROFILE" actually stays
-  // visible for the whole session rather than flashing briefly on launch.
-  if (TEST_USER_DATA_DIR) {
-    mainWindow.on('page-title-updated', (event) => {
-      event.preventDefault()
-    })
-  }
+  // one place that's allowed to win, so "Noma Beta" (and "TEST PROFILE")
+  // actually stay visible rather than flashing briefly on launch.
+  mainWindow.on('page-title-updated', (event) => {
+    event.preventDefault()
+  })
 
   // Noma is meant to run in the background (see PRODUCT.md's "infrastructure
   // that is always present," and Flow/Holo both keep working with no window
@@ -333,7 +331,11 @@ function showMainWindow(): void {
 function createTray(): void {
   const trayIcon = nativeImage.createFromPath(icon).resize({ width: 16, height: 16 })
   tray = new Tray(trayIcon)
-  tray.setToolTip(TEST_USER_DATA_DIR ? 'Noma (TEST PROFILE), running in the background' : 'Noma, running in the background')
+  tray.setToolTip(
+    TEST_USER_DATA_DIR
+      ? `${APP_DISPLAY_NAME} (TEST PROFILE), running in the background`
+      : `${APP_DISPLAY_NAME}, running in the background`
+  )
   updateTrayMenu()
   tray.on('click', () => {
     if (mainWindow?.isVisible()) mainWindow.hide()
@@ -353,6 +355,9 @@ function updateTrayMenu(): void {
   const running = getActionRunState()
   tray.setContextMenu(
     Menu.buildFromTemplate([
+      // Version line first, so the tray also says this is a beta build.
+      { label: `${APP_DISPLAY_NAME} ${app.getVersion()}`, enabled: false },
+      { type: 'separator' },
       { label: 'Open Noma', click: () => showMainWindow() },
       { type: 'separator' },
       ...(glideState.platformSupported

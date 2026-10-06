@@ -1,5 +1,15 @@
 import type { PatternKind } from '../types'
 
+/**
+ * Every build people download is a beta until this flips. It drives the
+ * "Beta" badge in the sidebar and on the welcome screen, the window title,
+ * and the tray, so people are reminded the final version isn't out yet.
+ * Set to false for the first production release.
+ */
+export const IS_BETA = true
+/** "Noma Beta" while IS_BETA, plain "Noma" after. */
+export const APP_DISPLAY_NAME = IS_BETA ? 'Noma Beta' : 'Noma'
+
 export const IPC_CHANNELS = {
   GET_FLOW_STATUS: 'flow:get-flow-status',
   GET_ACTIVE_CONTEXT: 'flow:get-active-context',

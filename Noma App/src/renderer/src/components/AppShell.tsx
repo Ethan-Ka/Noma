@@ -4,6 +4,7 @@ import { useApplicationsStore } from '../stores/applicationsStore'
 import { useActionRunStore } from '../stores/actionRunStore'
 import logo from '../assets/logo.png'
 import wordmark from '../assets/noma-wordmark.png'
+import { BetaBadge } from './BetaBadge'
 import {
   HomeIcon,
   DemoIcon,
@@ -121,9 +122,10 @@ export function AppShell({ children }: { children: ReactNode }) {
       </div>
 
       <aside className="relative z-10 flex w-56 shrink-0 flex-col border-r border-base-700 bg-white/[0.03] px-4 py-6 backdrop-blur-2xl">
-        <div className="mb-8 flex items-center gap-2 px-1">
-          <img src={logo} alt="" className="h-7 w-10" />
-          <img src={wordmark} alt="Noma" className="h-4 w-auto" />
+        <div className="mb-8 flex items-center gap-1.5 px-1">
+          <img src={logo} alt="" className="h-6 w-[34px]" />
+          <img src={wordmark} alt="Noma" className="h-[14px] w-auto" />
+          <BetaBadge className="ml-1" />
         </div>
 
         <nav aria-label="Main" className="flex min-h-0 flex-1 flex-col">

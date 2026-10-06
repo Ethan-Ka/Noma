@@ -5,6 +5,7 @@ import { arch, release } from 'os'
 import type { GlideState } from '@shared/types'
 import { getDatabase } from './database/db'
 import { getClickCaptureEnabled, getWorkflowMonitoringEnabled } from './database/repositories/settingsRepository'
+import { APP_DISPLAY_NAME } from '@shared/constants'
 
 /** How many recent control presses the report lists. */
 const RECENT_ACTIONS = 15
@@ -54,7 +55,7 @@ export function buildDiagnosticsReport(glide: GlideState, touchCheckAt: number |
   const lines = [
     'Noma diagnostics (nothing here is sent automatically; read it before you paste it)',
     '',
-    `Noma ${app.getVersion()}${app.isPackaged ? '' : ' (development build)'} · Electron ${process.versions.electron}`,
+    `${APP_DISPLAY_NAME} ${app.getVersion()}${app.isPackaged ? '' : ' (development build)'} · Electron ${process.versions.electron}`,
     `System: ${process.platform} ${release()} ${arch()}`,
     '',
     `Glide: ${glide.enabled ? 'on' : 'off'}, ${glide.zoneCount} zones, ${
