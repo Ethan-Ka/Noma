@@ -1,5 +1,6 @@
 import Section from '../layout/Section'
 import SectionIntro from '../ui/SectionIntro'
+import Em from '../ui/Em'
 import Reveal from '../ui/Reveal'
 import HoloDemo from '../visuals/HoloDemo'
 
@@ -14,7 +15,7 @@ export default function Holo() {
         <SectionIntro
           compact
           title="The right controls."
-          quiet="Right where you need them."
+          second={<>Right <Em>where you need them.</Em></>}
           line="Glide puts your four controls at the edges of the trackpad you already have. Swipe in from the palm rest. No extra hardware."
         />
         <Reveal delay={0.06}>

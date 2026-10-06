@@ -262,7 +262,7 @@ function Keycast({ frame }: { frame: Frame }) {
             <span className="text-[12px] text-white/70">{step.label}</span>
           </motion.div>
         ) : (
-          <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-[12px] text-white/45">
+          <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-[12px] text-white/60">
             {frame.notice ? 'Noma noticed' : 'Working…'}
           </motion.span>
         )}

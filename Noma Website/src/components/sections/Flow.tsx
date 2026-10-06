@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import Section from '../layout/Section'
 import SectionIntro from '../ui/SectionIntro'
+import Em from '../ui/Em'
 import Reveal from '../ui/Reveal'
 import AdaptiveSurface from '../visuals/AdaptiveSurface'
 import FlowSuggestion from '../visuals/FlowSuggestion'
@@ -20,7 +21,7 @@ export default function Flow() {
   return (
     <Section id="flow">
       <SectionIntro
-        title="Stop repeating yourself."
+        title={<>Stop <Em>repeating</Em> yourself.</>}
         line="Noma notices what you do again and again across your apps, and offers to turn it into one press. Try it."
       />
 
@@ -30,7 +31,7 @@ export default function Flow() {
         </Reveal>
 
         <Reveal delay={0.08}>
-          <p className="mb-4 font-mono text-[11px] uppercase tracking-[0.18em] text-base-500">Your controls in VS Code</p>
+          <p className="mb-3 text-sm text-base-400">Your controls in VS Code</p>
           <AdaptiveSurface appId="vscode" size="md" controls={controls} highlight={slot} />
           <p className="mt-4 text-sm leading-relaxed text-base-400">
             {slot === null

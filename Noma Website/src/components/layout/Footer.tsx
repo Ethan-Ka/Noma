@@ -26,6 +26,7 @@ const columns: { title: string; links: { label: string; href: string }[] }[] = [
     links: [
       { label: 'GitHub', href: '#' },
       { label: 'Privacy', href: '/privacy' },
+      { label: 'Uninstall', href: '/uninstall' },
       { label: 'Terms', href: '/terms' },
     ],
   },
@@ -50,7 +51,7 @@ export default function Footer() {
 
         {columns.map((col) => (
           <div key={col.title}>
-            <p className="font-mono text-[11px] uppercase tracking-[0.15em] text-base-500">{col.title}</p>
+            <p className="text-sm font-medium text-base-400">{col.title}</p>
             <ul className="mt-4 flex flex-col gap-2.5">
               {col.links.map((l) => (
                 <li key={l.label}>
@@ -65,7 +66,7 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-base-800 px-6 py-6 sm:px-8">
-        <p className="font-mono text-[11px] text-base-600">&copy; {new Date().getFullYear()} Noma</p>
+        <p className="font-mono text-[11px] text-base-500">&copy; {new Date().getFullYear()} Noma</p>
       </div>
 
       {/* The oversized, faded closing wordmark — the "big startup footer"

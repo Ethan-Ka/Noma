@@ -16,7 +16,7 @@ export default function Section({ id, children, className = '', bordered = true 
          the heading rather than behind the bar covering it. */
       className={`relative scroll-mt-28 ${bordered ? 'border-t border-base-800' : ''} ${className}`}
     >
-      <div className="mx-auto max-w-6xl px-6 py-24 sm:px-8 md:py-32">{children}</div>
+      <div className="mx-auto max-w-6xl px-6 py-16 sm:px-8 sm:py-20 md:py-24">{children}</div>
     </section>
   )
 }

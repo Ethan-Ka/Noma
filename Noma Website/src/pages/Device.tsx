@@ -5,6 +5,7 @@ import SiteLink from '../components/layout/SiteLink'
 import WaitlistForm from '../components/ui/WaitlistForm'
 import KeyboardVisual from '../components/visuals/KeyboardVisual'
 import { appProfiles } from '../data/appProfiles'
+import Em from '../components/ui/Em'
 
 /**
  * The hardware's own page (2026-10-06: moved off the homepage at the user's
@@ -42,19 +43,17 @@ export default function Device() {
       <div className="mx-auto max-w-6xl px-6 sm:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <Reveal>
-            <p className="font-mono text-xs uppercase tracking-[0.2em] text-base-500">Noma Device</p>
-            <h1 className="mt-3 text-balance font-display text-[clamp(2.2rem,6vw,4rem)] font-semibold leading-[1.04] tracking-[-0.04em] text-base-50">
+            <p className="text-sm font-medium text-base-400">Noma Device</p>
+            <h1 className="mt-3 text-balance font-display text-[clamp(2.2rem,6vw,4rem)] font-medium leading-[1.04] tracking-[-0.02em] text-base-50">
               Your controls,
               <br />
-              <span className="text-base-400">as keys.</span>
+              as <Em>keys.</Em>
             </h1>
           </Reveal>
           <Reveal delay={0.08}>
             <div className="mt-7 inline-flex items-center gap-2.5 rounded-full border border-base-700 px-4 py-2">
               <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />
-              <span className="font-mono text-[11px] uppercase tracking-[0.16em] text-base-300">
-                Coming soon · not for sale yet
-              </span>
+              <span className="text-sm text-base-300">Coming soon, not for sale yet</span>
             </div>
           </Reveal>
         </div>

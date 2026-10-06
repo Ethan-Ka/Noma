@@ -6,6 +6,7 @@
 @import "@fontsource/inter/600.css";
 @import "@fontsource/jetbrains-mono/400.css";
 @import "@fontsource/jetbrains-mono/500.css";
+@import "@fontsource/instrument-serif/latin-400-italic.css";
 
 @theme {
   --color-base-950: #050506;
@@ -14,9 +15,15 @@
   --color-base-800: #131317;
   --color-base-700: #1c1c21;
   --color-base-600: #28282f;
-  --color-base-500: #3c3c44;
-  --color-base-400: #6b6b74;
-  --color-base-300: #98989f;
+  /* Text grays, in three clearly separate steps so the page has a
+     hierarchy rather than one flat gray (2026-10-06): 300 body (9.9:1),
+     400 secondary (6.1:1), 500 captions (5.1:1 on the page, 4.6:1 on
+     cards). All meet WCAG AA for small text. 600 and darker are border and
+     surface tones, never text. */
+  --color-base-500: #7e7e87;
+  --color-base-400: #8c8c95;
+  --color-base-300: #b4b4bb;
+
   --color-base-200: #c2c2c8;
   --color-base-100: #eaeaec;
   --color-base-50: #f7f7f8;
@@ -68,6 +75,10 @@
   --font-display: "Sora Variable", "Inter", sans-serif;
   --font-sans: "Inter", -apple-system, sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", monospace;
+  /* The second line of a two-line headline only (lib/type.ts): Instrument
+     Serif italic against Sora, so headlines get their contrast from two
+     typefaces rather than a dimmed colour (2026-10-06, the user's pick). */
+  --font-serif: "Instrument Serif", Georgia, serif;
 
   --animate-marquee: marquee 32s linear infinite;
   --animate-marquee-reverse: marquee-reverse 32s linear infinite;

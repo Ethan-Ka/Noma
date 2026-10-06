@@ -1,0 +1,67 @@
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
+import AppIcon from './AppIcon'
+import { appProfiles } from '../../data/appProfiles'
+
+/**
+ * The hero's version of Noma: one slim bar, the app in front on the left and
+ * its four controls in a row. Same idea as AdaptiveSurface (the app changes,
+ * the controls follow) in a deliberately different shape, so the hero, the
+ * Flow section and the app picker don't show three near-identical cards
+ * (2026-10-06). On phones the controls drop under the app.
+ */
+export default function ControlBar({ appId, className = '' }: { appId: string; className?: string }) {
+  const reduceMotion = useReducedMotion()
+  const app = appProfiles[appId]
+  if (!app) return null
+
+  const ease = [0.22, 1, 0.36, 1] as const
+  const swap = (delay: number) => ({
+    initial: reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, filter: 'blur(5px)' },
+    animate: reduceMotion
+      ? { opacity: 1, transition: { duration: 0.2 } }
+      : { opacity: 1, y: 0, filter: 'blur(0px)', transition: { duration: 0.4, delay, ease } },
+    exit: reduceMotion
+      ? { opacity: 0, transition: { duration: 0.15 } }
+      : { opacity: 0, y: -6, filter: 'blur(5px)', transition: { duration: 0.22, ease } },
+  })
+
+  return (
+    <div
+      className={`flex flex-col gap-3 rounded-[22px] border border-white/10 bg-base-900/70 p-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_32px_80px_-32px_rgba(0,0,0,0.9)] backdrop-blur-2xl sm:flex-row sm:items-center sm:gap-4 sm:rounded-full sm:p-2.5 sm:pl-3 ${className}`}
+    >
+      <div className="flex min-w-0 items-center gap-3 px-1 sm:w-44 sm:shrink-0">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]">
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span key={app.id} {...swap(0)} className="flex">
+              <AppIcon id={app.id} color={app.color} className="h-5 w-5" />
+            </motion.span>
+          </AnimatePresence>
+        </span>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span key={app.id} {...swap(0.03)} className="truncate font-display text-base font-semibold tracking-tight text-base-50">
+            {app.shortName}
+          </motion.span>
+        </AnimatePresence>
+      </div>
+
+      <div className="grid flex-1 grid-cols-4 gap-2">
+        {app.controls.map((control, index) => (
+          <div
+            key={index}
+            className="flex h-11 items-center justify-center rounded-full border border-white/[0.09] bg-gradient-to-b from-white/[0.06] to-white/[0.015] px-2 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.09)]"
+          >
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={`${app.id}-${control}`}
+                {...swap(0.05 + index * 0.05)}
+                className="block w-full truncate text-center text-xs font-medium tracking-tight text-base-100 sm:text-[13px]"
+              >
+                {control}
+              </motion.span>
+            </AnimatePresence>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}

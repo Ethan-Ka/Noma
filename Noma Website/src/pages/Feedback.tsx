@@ -19,7 +19,7 @@ type Status = 'idle' | 'loading' | 'success' | 'error'
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const FIELD =
   'w-full rounded-lg border border-white/15 bg-white/5 px-4 py-3 text-sm text-base-50 placeholder:text-base-500 outline-none transition-colors focus:border-accent'
-const LABEL = 'block font-mono text-[11px] uppercase tracking-[0.15em] text-base-500'
+const LABEL = 'block text-sm font-medium text-base-300'
 
 export default function Feedback() {
   const { version: latestVersion } = useLatestDownloads()
@@ -77,8 +77,8 @@ export default function Feedback() {
     <div className="border-t border-base-800 bg-base-950 pb-24 pt-40 sm:pt-48">
       <div className="mx-auto max-w-xl px-6 sm:px-8">
         <Reveal>
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-base-500">Feedback</p>
-          <h1 className="mt-3 text-balance font-display text-[clamp(2rem,5vw,3rem)] font-semibold leading-[1.1] tracking-tight text-base-50">
+          <p className="text-sm font-medium text-base-400">Feedback</p>
+          <h1 className="mt-3 text-balance font-display text-[clamp(2rem,5vw,3rem)] font-medium leading-[1.1] tracking-[-0.02em] text-base-50">
             Report an issue.
           </h1>
           <p className="mt-4 max-w-md text-balance text-base text-base-400">
@@ -138,7 +138,7 @@ export default function Feedback() {
 
                 <fieldset>
                   <legend className={LABEL}>
-                    Your computer <span className="normal-case tracking-normal text-base-600">(optional)</span>
+                    Your computer <span className="normal-case tracking-normal text-base-500">(optional)</span>
                   </legend>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {PLATFORMS.map((p) => (
@@ -158,7 +158,7 @@ export default function Feedback() {
                 {platform !== 'Not using the app' && (
                   <div>
                     <label htmlFor="feedback-version" className={LABEL}>
-                      Noma version <span className="normal-case tracking-normal text-base-600">(optional)</span>
+                      Noma version <span className="normal-case tracking-normal text-base-500">(optional)</span>
                     </label>
                     <input
                       id="feedback-version"
@@ -197,7 +197,7 @@ export default function Feedback() {
 
                 <div>
                   <label htmlFor="feedback-email" className={LABEL}>
-                    Your email <span className="normal-case tracking-normal text-base-600">(optional)</span>
+                    Your email <span className="normal-case tracking-normal text-base-500">(optional)</span>
                   </label>
                   <input
                     id="feedback-email"

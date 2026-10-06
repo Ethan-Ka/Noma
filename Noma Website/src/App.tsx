@@ -9,6 +9,7 @@ import Contact from './pages/Contact'
 import Privacy from './pages/Privacy'
 import Terms from './pages/Terms'
 import Device from './pages/Device'
+import Uninstall from './pages/Uninstall'
 import Feedback from './pages/Feedback'
 
 /**
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/device" element={<Device />} />
+          <Route path="/uninstall" element={<Uninstall />} />
           <Route path="/feedback" element={<Feedback />} />
         </Routes>
       </main>

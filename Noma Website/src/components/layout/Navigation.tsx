@@ -50,7 +50,7 @@ export default function Navigation() {
             href="#beta"
             className={`hidden items-center rounded-full px-4 py-1.5 text-[13px] font-medium lg:inline-flex ${GLASS_ACCENT}`}
           >
-            Join the beta
+            Get the beta
           </SiteLink>
 
           <button
@@ -88,7 +88,7 @@ export default function Navigation() {
                     onClick={() => setMenuOpen(false)}
                     className={`inline-flex items-center rounded-full px-4 py-2 text-base font-medium ${GLASS_ACCENT}`}
                   >
-                    Join the beta
+                    Get the beta
                   </SiteLink>
                 </li>
               </ul>

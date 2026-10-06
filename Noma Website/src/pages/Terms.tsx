@@ -16,8 +16,8 @@ export default function Terms() {
     <div className="border-t border-base-800 bg-base-950 pb-24 pt-40 sm:pt-48">
       <div className="mx-auto max-w-2xl px-6 sm:px-8">
         <Reveal>
-          <p className="font-mono text-xs uppercase tracking-[0.2em] text-base-500">Legal</p>
-          <h1 className="mt-3 text-balance font-display text-[clamp(2rem,5vw,3rem)] font-semibold leading-[1.1] tracking-tight text-base-50">
+          <p className="text-sm font-medium text-base-400">Legal</p>
+          <h1 className="mt-3 text-balance font-display text-[clamp(2rem,5vw,3rem)] font-medium leading-[1.1] tracking-[-0.02em] text-base-50">
             Terms of Service
           </h1>
           <p className="mt-4 text-sm text-base-500">Last updated {LAST_UPDATED}</p>

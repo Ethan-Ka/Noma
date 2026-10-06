@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
-import AdaptiveSurface from '../visuals/AdaptiveSurface'
+import ControlBar from '../visuals/ControlBar'
 import SiteLink from '../layout/SiteLink'
 import { GLASS_ACCENT } from '../../lib/glass'
 import DotField from '../visuals/DotField'
+import { SERIF_LINE } from '../../lib/type'
 import AppIcon from '../visuals/AppIcon'
 import { appProfiles } from '../../data/appProfiles'
 
@@ -46,13 +47,14 @@ export default function Hero() {
             initial={reduceMotion ? false : { opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-            className="text-balance font-display text-[2.3rem] font-semibold leading-[1.04] tracking-[-0.04em] text-base-50 sm:text-6xl md:text-7xl"
+            className="text-balance font-display text-[2.3rem] font-medium leading-[0.98] tracking-[-0.02em] text-base-50 sm:text-6xl md:text-7xl"
           >
             Your computer,
             <br />
-            {/* Two-tone: the second line steps back a shade, so the eye
-                reads the subject first and the promise second. */}
-            <span className="text-base-400">adapting to you.</span>
+            {/* Two typefaces: Sora for the subject, Instrument Serif italic
+                for the promise, in Noma Blue's light tint (the hero only;
+                section headlines keep both lines white). */}
+            <span className={`${SERIF_LINE} leading-none text-accent-bright`}>adapting to you.</span>
           </motion.h1>
 
           <motion.p
@@ -61,7 +63,7 @@ export default function Hero() {
             transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             className="mx-auto mt-6 max-w-xl text-balance text-base leading-relaxed text-base-300 sm:text-lg"
           >
-            Noma learns the way you work and gives you the right controls, shortcuts and actions, right when you need them.
+            Noma sees which app you&apos;re in and changes your controls to match. Then it learns the sequences you repeat.
           </motion.p>
 
           <motion.div
@@ -74,7 +76,7 @@ export default function Hero() {
               href="#beta"
               className={`inline-flex items-center rounded-full px-6 py-3 text-sm font-medium tracking-tight ${GLASS_ACCENT}`}
             >
-              Join the Noma beta
+              Get the beta
             </SiteLink>
             <SiteLink
               href="#demo"
@@ -90,7 +92,7 @@ export default function Hero() {
           initial={reduceMotion ? false : { opacity: 0, y: 28 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.9, delay: 0.26, ease: [0.16, 1, 0.3, 1] }}
-          className="mx-auto mt-16 max-w-2xl sm:mt-20"
+          className="mx-auto mt-14 max-w-3xl sm:mt-16"
         >
           {/* The app in front, as a dock-like row: the visitor sees the app
               change first and the controls follow, which is the product. */}
@@ -107,11 +109,9 @@ export default function Hero() {
             ))}
           </div>
 
-          <AdaptiveSurface appId={CYCLE[index]} size="lg" />
+          <ControlBar appId={CYCLE[index]} />
 
-          <p className="mt-6 text-center font-mono text-[11px] uppercase tracking-[0.18em] text-base-500">
-            Switch apps · the controls follow
-          </p>
+          <p className="mt-5 text-center text-sm text-base-500">Switch apps and the controls follow.</p>
         </motion.div>
       </div>
     </section>

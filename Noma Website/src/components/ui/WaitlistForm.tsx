@@ -122,7 +122,7 @@ export default function WaitlistForm({ submitLabel = 'Join the Waitlist' }: { su
         )}
       </AnimatePresence>
 
-      <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.15em] text-base-500">
+      <p className="mt-3 text-xs text-base-500">
         No spam. Just real updates as the hardware comes together.
       </p>
     </div>

@@ -36,7 +36,7 @@ const SIZES = {
     icon: 'h-11 w-11 sm:h-14 sm:w-14',
     iconBox: 'h-16 w-16 sm:h-20 sm:w-20',
     name: 'text-xl sm:text-2xl',
-    doing: 'text-[11px] sm:text-xs',
+    doing: 'text-sm',
     gap: 'gap-4 sm:gap-5',
     tile: 'h-[64px] sm:h-[76px]',
     tileLabel: 'text-[11px] sm:text-[13px]',
@@ -47,7 +47,7 @@ const SIZES = {
     icon: 'h-8 w-8 sm:h-10 sm:w-10',
     iconBox: 'h-12 w-12 sm:h-14 sm:w-14',
     name: 'text-base sm:text-lg',
-    doing: 'text-[10px] sm:text-[11px]',
+    doing: 'text-xs sm:text-sm',
     gap: 'gap-3.5 sm:gap-4',
     tile: 'h-[54px] sm:h-[62px]',
     tileLabel: 'text-[10px] sm:text-xs',
@@ -127,7 +127,7 @@ export default function AdaptiveSurface({ appId, size = 'lg', className = '', co
               <p className={`truncate font-display font-semibold tracking-tight text-base-50 ${dim.name}`}>
                 {app.shortName}
               </p>
-              <p className={`mt-1 truncate font-mono uppercase tracking-[0.16em] text-base-400 ${dim.doing}`}>
+              <p className={`mt-0.5 truncate text-base-400 ${dim.doing}`}>
                 {DOING[app.id] ?? 'Active'}
               </p>
             </motion.div>

@@ -90,7 +90,7 @@ export default function FlowSuggestion({ onSaved }: { onSaved: (slot: number | n
               <span className="shrink-0 text-xs text-base-500">Just now</span>
             </div>
             <p className="mt-2 font-display text-xl font-semibold leading-snug tracking-tight text-base-50 sm:text-2xl">
-              You&rsquo;ve repeated this workflow {OCCURRENCES} times in {APP}.
+              You&rsquo;ve repeated this workflow {OCCURRENCES} times across your apps.
             </p>
             {/* The app's large chain on wider screens; its smaller one on
                 phones, where three large nodes don't fit. */}

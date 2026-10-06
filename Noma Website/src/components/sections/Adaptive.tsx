@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
 import Section from '../layout/Section'
 import SectionIntro from '../ui/SectionIntro'
+import Em from '../ui/Em'
 import Reveal from '../ui/Reveal'
 import AdaptiveSurface from '../visuals/AdaptiveSurface'
 import AppIcon from '../visuals/AppIcon'
@@ -50,8 +51,8 @@ export default function Adaptive() {
   return (
     <Section id="adaptive">
       <SectionIntro
-        title="Noma gets better"
-        quiet="as you use it."
+        title={<>Noma gets <Em>better</Em></>}
+        second="as you use it."
         line="It isn’t a toolbar you set up once. Pick an app and watch the controls change."
       />
 
@@ -105,9 +106,8 @@ export default function Adaptive() {
       </div>
 
       <Reveal>
-        <p className="mx-auto mt-24 max-w-3xl text-balance text-center font-display text-2xl font-semibold leading-snug tracking-[-0.02em] text-base-50 sm:text-4xl">
-          The computer should adapt to the person.{' '}
-          <span className="text-base-400">Not the other way around.</span>
+        <p className="mx-auto mt-16 max-w-3xl text-balance text-center font-display text-2xl font-medium leading-snug tracking-[-0.015em] text-base-50 sm:text-4xl">
+          The computer should adapt to <Em>the&nbsp;person.</Em> Not the other way around.
         </p>
       </Reveal>
     </Section>

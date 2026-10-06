@@ -62,6 +62,17 @@ with **Root Directory** set to `Noma Website`. Every push to `main` that touches
 this folder redeploys automatically — no config file needed, Vercel auto-detects
 the Vite preset.
 
+## Screen recording slot
+
+The "You work. Noma notices." section has a slot for a short real recording of the
+app, under the scripted demo (`src/components/visuals/ScreenRecording.tsx`). Add:
+
+- `public/media/noma-notice-recording.mp4`: about 10 to 20 seconds, H.264 MP4,
+  no audio (it plays muted, looped, inline), ideally under 5 MB.
+- `public/media/noma-notice-recording-poster.jpg`: a still from it, same aspect ratio.
+
+Until the .mp4 exists and loads, the slot is hidden and takes no space.
+
 ## Before shipping
 
 - **Waitlist isn't connected yet.** `src/data/config.ts` has a `WAITLIST_ENDPOINT` constant — create a free form at [formspree.io](https://formspree.io), paste its endpoint in, done. Until then the form renders normally but shows a "not connected yet" notice on submit instead of sending anywhere.
