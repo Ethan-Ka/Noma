@@ -1,34 +1,40 @@
 import { useEffect, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
 import Section from '../layout/Section'
+import SectionIntro from '../ui/SectionIntro'
 import Reveal from '../ui/Reveal'
 import AdaptiveSurface from '../visuals/AdaptiveSurface'
 import AppIcon from '../visuals/AppIcon'
 import { appProfiles } from '../../data/appProfiles'
 
 /**
- * The section the page is built to reach: the visitor drives the product
- * themselves.
+ * The larger idea: not a toolbar set up once, but an interface that keeps
+ * changing with the person. The app picker (from the earlier Context
+ * section) shows the most visible part; the list under it names what Noma
+ * actually adapts to, all of it real: the app in front, the shortcuts used
+ * there, the workflows repeated, and which suggestions get kept or
+ * dismissed (Flow's learned filter trains on exactly that).
  *
- * It advances on its own until the first click, then stops for good. An
- * autoplaying demo proves the idea to someone who is scrolling past; a demo
- * that keeps moving under someone who has started clicking is fighting them.
- * Yielding permanently on the first interaction is the whole rule.
+ * The picker advances on its own until the first click, then stops for good.
  */
 
 const APPS = ['vscode', 'chrome', 'claude', 'figma', 'premiere', 'spotify']
 const DWELL_MS = 3200
 
-export default function Context() {
+const SIGNALS = [
+  { title: 'The app in front', body: 'Every app gets its own four controls.' },
+  { title: 'What you do there', body: 'The shortcuts you actually reach for.' },
+  { title: 'What you repeat', body: 'Workflows you do again and again.' },
+  { title: 'What you keep', body: 'Suggestions you keep or dismiss shape the next ones.' },
+]
+
+export default function Adaptive() {
   const reduceMotion = useReducedMotion()
   const [active, setActive] = useState('vscode')
   const [taken, setTaken] = useState(false)
 
   useEffect(() => {
     if (taken || reduceMotion) return
-    // Functional update rather than a ref: the interval needs the *current*
-    // app to pick the next one, and reading it from the previous state is the
-    // one way to do that without writing a ref during render.
     const timer = setInterval(
       () => setActive((current) => APPS[(APPS.indexOf(current) + 1) % APPS.length]),
       DWELL_MS
@@ -42,31 +48,18 @@ export default function Context() {
   }
 
   return (
-    <Section id="context">
-      <Reveal>
-        <h2 className="max-w-3xl text-balance font-display text-3xl font-semibold leading-[1.08] tracking-[-0.035em] text-base-50 sm:text-5xl">
-          Same computer.
-          <br />
-          Different context.
-          <br />
-          <span className="text-base-400">Different interface.</span>
-        </h2>
-      </Reveal>
-
-      <Reveal delay={0.08}>
-        <p className="mt-6 max-w-lg text-base leading-relaxed text-base-300">
-          Pick an app. Watch the four controls change.
-        </p>
-      </Reveal>
+    <Section id="adaptive">
+      <SectionIntro
+        title="Noma gets better"
+        quiet="as you use it."
+        line="It isn’t a toolbar you set up once. Pick an app and watch the controls change."
+      />
 
       {/* grid-cols-1 is minmax(0,1fr): without it the implicit mobile column
           sizes to the scrolling app rail's full width and pushes the surface
           off-screen. */}
-      <div className="mt-14 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-12">
+      <div className="mt-14 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] lg:gap-12">
         <Reveal>
-          {/* A real list on desktop, a scrollable rail on phones — not the
-              desktop list squeezed, which would put six tap targets under the
-              minimum comfortable size. */}
           <ul
             className="-mx-6 flex gap-2 overflow-x-auto px-6 pb-2 lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:px-0 lg:pb-0"
             role="tablist"
@@ -90,13 +83,6 @@ export default function Context() {
                   >
                     <AppIcon id={id} color={isActive ? app.color : undefined} className="h-5 w-5 shrink-0" />
                     <span className="whitespace-nowrap text-sm font-medium tracking-tight">{app.shortName}</span>
-                    <span
-                      aria-hidden
-                      className={`ml-auto hidden h-1.5 w-1.5 rounded-full transition-opacity duration-200 lg:block ${
-                        isActive ? 'opacity-100' : 'opacity-0'
-                      }`}
-                      style={{ background: app.color }}
-                    />
                   </button>
                 </li>
               )
@@ -108,6 +94,22 @@ export default function Context() {
           <AdaptiveSurface appId={active} size="lg" />
         </Reveal>
       </div>
+
+      <div className="mt-16 grid gap-8 border-t border-base-800 pt-10 sm:grid-cols-2 lg:grid-cols-4">
+        {SIGNALS.map((signal, index) => (
+          <Reveal key={signal.title} delay={index * 0.06}>
+            <h3 className="font-display text-base font-semibold tracking-tight text-base-50">{signal.title}</h3>
+            <p className="mt-1.5 text-sm leading-relaxed text-base-400">{signal.body}</p>
+          </Reveal>
+        ))}
+      </div>
+
+      <Reveal>
+        <p className="mx-auto mt-24 max-w-3xl text-balance text-center font-display text-2xl font-semibold leading-snug tracking-[-0.02em] text-base-50 sm:text-4xl">
+          The computer should adapt to the person.{' '}
+          <span className="text-base-400">Not the other way around.</span>
+        </p>
+      </Reveal>
     </Section>
   )
 }

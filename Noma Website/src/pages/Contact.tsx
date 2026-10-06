@@ -59,7 +59,7 @@ export default function Contact() {
               Report an issue
             </SiteLink>
             . Looking to join the waitlist instead?{' '}
-            <SiteLink href="#waitlist" className="text-accent-bright transition-colors hover:text-accent">
+            <SiteLink href="#beta" className="text-accent-bright transition-colors hover:text-accent">
               Sign up here
             </SiteLink>
             .

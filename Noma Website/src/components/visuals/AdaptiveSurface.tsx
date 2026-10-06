@@ -24,6 +24,10 @@ interface AdaptiveSurfaceProps {
   appId: string
   size?: SurfaceSize
   className?: string
+  /** Overrides the app's default four, e.g. after a workflow is saved. */
+  controls?: string[]
+  /** A slot (0-3) to mark as just changed. */
+  highlight?: number | null
 }
 
 const SIZES = {
@@ -69,7 +73,7 @@ const DOING: Record<string, string> = {
   photoshop: 'Retouching',
 }
 
-export default function AdaptiveSurface({ appId, size = 'lg', className = '' }: AdaptiveSurfaceProps) {
+export default function AdaptiveSurface({ appId, size = 'lg', className = '', controls, highlight = null }: AdaptiveSurfaceProps) {
   const reduceMotion = useReducedMotion()
   const app = appProfiles[appId]
   const dim = SIZES[size]
@@ -132,10 +136,14 @@ export default function AdaptiveSurface({ appId, size = 'lg', className = '' }: 
       </div>
 
       <div className={`relative mt-5 grid grid-cols-4 ${dim.grid}`}>
-        {app.controls.map((control, index) => (
+        {(controls ?? app.controls).map((control, index) => (
           <div
             key={index}
-            className={`flex items-center justify-center rounded-xl border border-white/[0.09] bg-gradient-to-b from-white/[0.06] to-white/[0.015] px-2 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.09)] ${dim.tile}`}
+            className={`flex items-center justify-center rounded-xl border px-2 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.09)] transition-colors duration-500 ${
+              highlight === index
+                ? 'border-accent/45 bg-accent/[0.12]'
+                : 'border-white/[0.09] bg-gradient-to-b from-white/[0.06] to-white/[0.015]'
+            } ${dim.tile}`}
           >
             <AnimatePresence mode="wait" initial={false}>
               <motion.span

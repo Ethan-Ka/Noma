@@ -9,7 +9,7 @@ import SiteLink from './SiteLink'
 // the adaptation happening. Every href is a section id that exists on
 // `Home` — checked against it, not inherited from an older page.
 const links = [
-  { label: 'How it works', href: '#context' },
+  { label: 'How it works', href: '#how' },
   { label: 'Flow', href: '#flow' },
   { label: 'Glide', href: '#glide' },
   { label: 'Device', href: '/device' },
@@ -50,7 +50,7 @@ export default function Navigation() {
             href="#beta"
             className={`hidden items-center rounded-full px-4 py-1.5 text-[13px] font-medium lg:inline-flex ${GLASS_ACCENT}`}
           >
-            Get Noma Beta
+            Join the beta
           </SiteLink>
 
           <button
@@ -88,7 +88,7 @@ export default function Navigation() {
                     onClick={() => setMenuOpen(false)}
                     className={`inline-flex items-center rounded-full px-4 py-2 text-base font-medium ${GLASS_ACCENT}`}
                   >
-                    Get Noma Beta
+                    Join the beta
                   </SiteLink>
                 </li>
               </ul>

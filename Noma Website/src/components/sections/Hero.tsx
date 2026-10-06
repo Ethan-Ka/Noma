@@ -4,6 +4,8 @@ import AdaptiveSurface from '../visuals/AdaptiveSurface'
 import SiteLink from '../layout/SiteLink'
 import { GLASS_ACCENT } from '../../lib/glass'
 import DotField from '../visuals/DotField'
+import AppIcon from '../visuals/AppIcon'
+import { appProfiles } from '../../data/appProfiles'
 
 /**
  * The claim, and the proof of it, in one screen.
@@ -59,7 +61,7 @@ export default function Hero() {
             transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
             className="mx-auto mt-6 max-w-xl text-balance text-base leading-relaxed text-base-300 sm:text-lg"
           >
-            Controls that change with the app you&apos;re in, and learn what you repeat.
+            Noma learns the way you work and gives you the right controls, shortcuts and actions, right when you need them.
           </motion.p>
 
           <motion.div
@@ -72,13 +74,14 @@ export default function Hero() {
               href="#beta"
               className={`inline-flex items-center rounded-full px-6 py-3 text-sm font-medium tracking-tight ${GLASS_ACCENT}`}
             >
-              Get Noma Beta
+              Join the Noma beta
             </SiteLink>
             <SiteLink
-              href="#context"
-              className="inline-flex items-center rounded-full border border-base-600 px-6 py-3 text-sm font-medium tracking-tight text-base-200 transition-colors hover:border-base-400 hover:text-base-50"
+              href="#demo"
+              className="inline-flex items-center gap-2 rounded-full border border-base-600 px-6 py-3 text-sm font-medium tracking-tight text-base-200 transition-colors hover:border-base-400 hover:text-base-50"
             >
               See how it works
+              <span aria-hidden className="text-base-400">↓</span>
             </SiteLink>
           </motion.div>
         </div>
@@ -89,13 +92,25 @@ export default function Hero() {
           transition={{ duration: 0.9, delay: 0.26, ease: [0.16, 1, 0.3, 1] }}
           className="mx-auto mt-16 max-w-2xl sm:mt-20"
         >
+          {/* The app in front, as a dock-like row: the visitor sees the app
+              change first and the controls follow, which is the product. */}
+          <div className="mb-4 flex items-center justify-center gap-2" aria-hidden>
+            {CYCLE.map((id, i) => (
+              <span
+                key={id}
+                className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-all duration-500 ${
+                  i === index ? 'border-white/15 bg-white/[0.07] opacity-100' : 'border-transparent opacity-35'
+                }`}
+              >
+                <AppIcon id={id} color={appProfiles[id].color} className="h-[18px] w-[18px]" />
+              </span>
+            ))}
+          </div>
+
           <AdaptiveSurface appId={CYCLE[index]} size="lg" />
 
-          {/* The label under the surface is the only instruction on the page.
-              Without it a first-time visitor can read the change as decoration;
-              with it, the next switch is understood as the product working. */}
           <p className="mt-6 text-center font-mono text-[11px] uppercase tracking-[0.18em] text-base-500">
-            Same four controls · different application
+            Switch apps · the controls follow
           </p>
         </motion.div>
       </div>
