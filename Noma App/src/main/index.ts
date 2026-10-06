@@ -34,6 +34,10 @@ if (TEST_USER_DATA_DIR) {
 }
 import icon from '../../resources/icon.png?asset'
 import iconIco from '../../resources/icon.ico?asset'
+import iconMac from '../../resources/icon-mac.png?asset'
+// The website favicon's 32px artwork, whose strokes are drawn heavier to
+// stay legible at tray size (downscaling the big icon makes them too thin).
+import trayIconPath from '../../resources/tray.png?asset'
 import { APP_DISPLAY_NAME, IPC_CHANNELS, ISSUE_PAGE_URL } from '@shared/constants'
 import { buildDiagnosticsReport } from './diagnostics'
 import type { HoloTrackpadZoneCount } from '@shared/types'
@@ -337,7 +341,7 @@ function showMainWindow(): void {
  * the only real way left to quit the app.
  */
 function createTray(): void {
-  const trayIcon = nativeImage.createFromPath(icon).resize({ width: 16, height: 16 })
+  const trayIcon = nativeImage.createFromPath(trayIconPath).resize({ width: 16, height: 16 })
   tray = new Tray(trayIcon)
   tray.setToolTip(
     TEST_USER_DATA_DIR
@@ -518,7 +522,7 @@ app.whenReady().then(() => {
   registerAppIdentity()
   // In development the Dock shows Electron's icon; a packaged build uses the
   // bundle's own.
-  if (isMac && is.dev) app.dock?.setIcon(icon)
+  if (isMac && is.dev) app.dock?.setIcon(iconMac)
   requestMacAccessibility()
 
   app.on('browser-window-created', (_, window) => {
