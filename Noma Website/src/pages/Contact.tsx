@@ -32,17 +32,17 @@ export default function Contact() {
         <Reveal delay={0.1}>
           <div className={`mt-12 rounded-3xl px-8 py-12 ${GLASS}`}>
             <a
-              href="mailto:hello@noma.build"
+              href="mailto:hello@nomashift.com"
               className="text-balance font-display text-xl font-semibold text-base-50 transition-colors hover:text-accent-bright sm:text-2xl"
             >
-              hello@noma.build
+              hello@nomashift.com
             </a>
 
             <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5 border-t border-white/10 pt-8">
               {REASONS.map((r) => (
                 <a
                   key={r.label}
-                  href={`mailto:hello@noma.build?subject=${encodeURIComponent(r.subject)}`}
+                  href={`mailto:hello@nomashift.com?subject=${encodeURIComponent(r.subject)}`}
                   className="rounded-full border border-base-700 px-4 py-2 text-sm font-medium text-base-300 transition-colors hover:border-accent/40 hover:text-base-50"
                 >
                   {r.label}

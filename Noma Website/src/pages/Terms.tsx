@@ -85,8 +85,8 @@ export default function Terms() {
           <LegalSection title="Contact">
             <p>
               Questions about these terms: write to{' '}
-              <a href="mailto:hello@noma.build" className="text-accent-bright transition-colors hover:text-accent">
-                hello@noma.build
+              <a href="mailto:hello@nomashift.com" className="text-accent-bright transition-colors hover:text-accent">
+                hello@nomashift.com
               </a>
               .
             </p>

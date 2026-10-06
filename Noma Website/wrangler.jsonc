@@ -5,6 +5,10 @@
   "observability": {
     "enabled": true
   },
+  "routes": [
+    { "pattern": "nomashift.com", "custom_domain": true },
+    { "pattern": "www.nomashift.com", "custom_domain": true }
+  ],
   "assets": {
     "not_found_handling": "single-page-application"
   }

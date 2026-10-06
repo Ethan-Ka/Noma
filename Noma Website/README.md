@@ -65,8 +65,6 @@ the Vite preset.
 ## Before shipping
 
 - **Waitlist isn't connected yet.** `src/data/config.ts` has a `WAITLIST_ENDPOINT` constant — create a free form at [formspree.io](https://formspree.io), paste its endpoint in, done. Until then the form renders normally but shows a "not connected yet" notice on submit instead of sending anywhere.
-- `og:url` / `canonical` / `og:image` in `index.html` point at a placeholder `https://noma.build/` — once Vercel assigns its URL (or a custom domain is attached), swap it in there.
-- The footer/CTA "Contact" link points at a placeholder `mailto:` address — swap in a real one.
 - `KeyboardVisual` is an abstract, hand-drawn SVG concept, not a CAD render — replace it once real hardware imagery exists.
 - Social links (YouTube, TikTok, LinkedIn) are placeholder `#` hrefs, as are the footer's GitHub/Privacy/Terms links.
 - "Try Glide Free" (Hero, Nav, Glide, CTA) currently routes to the waitlist section (`#cta`) rather than a real download — there's no public Glide distribution yet. Point it at the real thing once one exists.

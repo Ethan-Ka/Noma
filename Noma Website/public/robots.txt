@@ -1,2 +1,4 @@
 User-agent: *
 Allow: /
+
+Sitemap: https://nomashift.com/sitemap.xml

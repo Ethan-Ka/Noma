@@ -71,8 +71,8 @@ export default function Privacy() {
           <LegalSection title="Your choices">
             <p>
               Email{' '}
-              <a href="mailto:hello@noma.build" className="text-accent-bright transition-colors hover:text-accent">
-                hello@noma.build
+              <a href="mailto:hello@nomashift.com" className="text-accent-bright transition-colors hover:text-accent">
+                hello@nomashift.com
               </a>{' '}
               at any time to see what we have, correct it, or have it deleted. We&rsquo;ll handle it directly,
               no automated flow to navigate.
@@ -94,8 +94,8 @@ export default function Privacy() {
           <LegalSection title="Contact">
             <p>
               Questions about this policy or your data: write to{' '}
-              <a href="mailto:hello@noma.build" className="text-accent-bright transition-colors hover:text-accent">
-                hello@noma.build
+              <a href="mailto:hello@nomashift.com" className="text-accent-bright transition-colors hover:text-accent">
+                hello@nomashift.com
               </a>
               .
             </p>
