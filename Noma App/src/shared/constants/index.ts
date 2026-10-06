@@ -85,6 +85,12 @@ export const IPC_CHANNELS = {
   PREVIEW_SUGGESTION_ACTION: 'flow:preview-suggestion-action',
   GET_DIAGNOSTICS_REPORT: 'flow:get-diagnostics-report',
   OPEN_ISSUE_PAGE: 'flow:open-issue-page',
+  /** Software updates (main/updater.ts): Settings' "Check for updates". */
+  UPDATE_GET_STATUS: 'flow:update-get-status',
+  UPDATE_CHECK: 'flow:update-check',
+  UPDATE_INSTALL: 'flow:update-install',
+  UPDATE_OPEN_DOWNLOAD: 'flow:update-open-download',
+  UPDATE_STATUS_CHANGED: 'flow:update-status-changed',
 
   /**
    * Noma Notice — the small glass surface that appears bottom-centre of the

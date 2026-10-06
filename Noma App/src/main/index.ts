@@ -44,7 +44,14 @@ import { isMac } from './platform'
 import { runSmokeTest } from './smokeTest'
 import { captureNotice } from './captureNotice'
 import { captureApp } from './captureApp'
-import { installUpdateNow, startAutoUpdates } from './updater'
+import {
+  checkForUpdatesNow,
+  getUpdateStatus,
+  installUpdateNow,
+  onUpdateStatus,
+  openDownloadPage,
+  startAutoUpdates
+} from './updater'
 import { ApplicationContextService } from './applications/contextService'
 import { getDefaultHardwareDevice } from './hardware/virtualDevice'
 import { DeviceTransportServer } from './hardware/deviceTransportServer'
@@ -533,6 +540,13 @@ app.whenReady().then(() => {
   )
   ipcMain.handle(IPC_CHANNELS.GET_DIAGNOSTICS_REPORT, () => buildDiagnosticsReport(glide.getState(), latestTouchCheckAt()))
   ipcMain.handle(IPC_CHANNELS.OPEN_ISSUE_PAGE, () => shell.openExternal(ISSUE_PAGE_URL))
+  ipcMain.handle(IPC_CHANNELS.UPDATE_GET_STATUS, () => getUpdateStatus())
+  ipcMain.handle(IPC_CHANNELS.UPDATE_CHECK, () => checkForUpdatesNow())
+  ipcMain.handle(IPC_CHANNELS.UPDATE_INSTALL, () => installUpdateNow())
+  ipcMain.handle(IPC_CHANNELS.UPDATE_OPEN_DOWNLOAD, () => openDownloadPage())
+  onUpdateStatus((status) => {
+    mainWindow?.webContents.send(IPC_CHANNELS.UPDATE_STATUS_CHANGED, status)
+  })
   ipcMain.handle(IPC_CHANNELS.GET_ACTION_RUN_STATE, () => getActionRunState())
   ipcMain.handle(IPC_CHANNELS.CANCEL_RUNNING_ACTION, () => cancelRunningAction())
   onActionRunState((state) => {

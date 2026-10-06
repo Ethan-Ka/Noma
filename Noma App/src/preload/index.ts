@@ -14,6 +14,7 @@ import type {
   MacroStep,
   ModuleFunctionConfig,
   Suggestion,
+  UpdateStatus,
   WorkflowNotice
 } from '@shared/types'
 
@@ -189,6 +190,17 @@ const flowApi: FlowApi = {
     ipcRenderer.invoke(IPC_CHANNELS.PREVIEW_SUGGESTION_ACTION, suggestionId),
   getDiagnosticsReport: () => ipcRenderer.invoke(IPC_CHANNELS.GET_DIAGNOSTICS_REPORT),
   openIssuePage: () => ipcRenderer.invoke(IPC_CHANNELS.OPEN_ISSUE_PAGE),
+  getUpdateStatus: () => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_GET_STATUS),
+  checkForUpdates: () => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_CHECK),
+  installUpdate: () => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_INSTALL),
+  openUpdateDownload: () => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_OPEN_DOWNLOAD),
+  onUpdateStatus: (callback) => {
+    const listener = (_event: IpcRendererEvent, value: UpdateStatus): void => callback(value)
+    ipcRenderer.on(IPC_CHANNELS.UPDATE_STATUS_CHANGED, listener)
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.UPDATE_STATUS_CHANGED, listener)
+    }
+  },
 
   onWorkflowNoticeShown: (callback) => {
     const listener = (_event: IpcRendererEvent, notice: WorkflowNotice): void => callback(notice)

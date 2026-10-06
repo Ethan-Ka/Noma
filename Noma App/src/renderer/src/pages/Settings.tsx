@@ -2,6 +2,7 @@ import { WorkflowMonitoringPanel } from '../components/WorkflowMonitoringPanel'
 import { useEffect } from 'react'
 import { DataManagementPanel } from '../components/DataManagementPanel'
 import { ReportProblemPanel } from '../components/ReportProblemPanel'
+import { UpdatesPanel } from '../components/UpdatesPanel'
 import { ToggleSwitch } from '../components/ToggleSwitch'
 import { useGlideStore } from '../stores/glideStore'
 import { useUiStore } from '../stores/uiStore'
@@ -41,7 +42,7 @@ export function Settings() {
     <div className="mx-auto max-w-3xl px-10 py-10">
       <div className="mb-8">
         <h1 className="font-display text-xl font-semibold text-neutral-100">Settings</h1>
-        <p className="mt-1 text-sm text-neutral-500">Glide, Flow learning, your data, and getting help.</p>
+        <p className="mt-1 text-sm text-neutral-500">Glide, Flow learning, your data, updates, and getting help.</p>
       </div>
 
       <section className={`mb-8 px-5 py-4 ${CARD}`}>
@@ -102,6 +103,8 @@ export function Settings() {
       </div>
 
       <DataManagementPanel />
+
+      <UpdatesPanel />
 
       <ReportProblemPanel />
 

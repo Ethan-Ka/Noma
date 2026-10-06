@@ -420,6 +420,33 @@ export type HoloTrackpadEvent =
       reason: 'too-slow' | 'not-sideways' | 'second-finger' | 'palm' | 'typing' | 'click'
     }
 
+/** Where software updates stand (main/updater.ts). */
+export type UpdatePhase =
+  /** A development or test build: updates don't apply. */
+  | 'unavailable'
+  | 'idle'
+  | 'checking'
+  | 'up-to-date'
+  /** Newer version out, but this copy can't install it itself (an unsigned
+   *  Mac build): the user downloads it. */
+  | 'available'
+  | 'downloading'
+  /** Downloaded; installs when Noma quits, or now via installUpdate(). */
+  | 'ready'
+  /** The last check the user asked for failed (usually offline). */
+  | 'error'
+
+export interface UpdateStatus {
+  phase: UpdatePhase
+  currentVersion: string
+  /** The newer version, once one is found. */
+  version: string | null
+  /** 0 to 100 while downloading. */
+  percent: number | null
+  /** When a check last finished, successfully or not (epoch ms). */
+  lastCheckedAt: number | null
+}
+
 /** Glide's state. Owned by main (stored in settings), so it survives
  *  restarts and works with Noma's window closed to the tray. */
 export interface GlideState {
@@ -945,6 +972,15 @@ export interface FlowApi {
   getDiagnosticsReport(): Promise<string>
   /** Opens the issue page in the browser, with nothing attached. */
   openIssuePage(): Promise<void>
+  /** Software updates. Updates are also checked on their own every few
+   *  hours; checkForUpdates() just runs a check now. */
+  getUpdateStatus(): Promise<UpdateStatus>
+  checkForUpdates(): Promise<UpdateStatus>
+  /** Quits and installs a downloaded update (phase 'ready'). */
+  installUpdate(): Promise<void>
+  /** Opens the download page, for a copy that can't update itself. */
+  openUpdateDownload(): Promise<void>
+  onUpdateStatus(callback: (status: UpdateStatus) => void): () => void
   /** The trackpad touch check: records finger positions (dry run, nothing
    *  fires) until stopped, then saves them on this computer and returns a
    *  summary. `phases` are the guided steps, in Date.now() time. */
