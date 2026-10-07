@@ -29,10 +29,10 @@ export default function App() {
   const reduceMotion = useReducedMotion()
 
   const page = (
-    <div className="min-h-screen bg-base-950">
+    <div className="page-backdrop min-h-screen">
       <ScrollToHash />
       <Navigation />
-      <main>
+      <main className="relative z-10">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/contact" element={<Contact />} />
@@ -43,7 +43,9 @@ export default function App() {
           <Route path="/feedback" element={<Feedback />} />
         </Routes>
       </main>
-      <Footer />
+      <div className="relative z-10">
+        <Footer />
+      </div>
     </div>
   )
 

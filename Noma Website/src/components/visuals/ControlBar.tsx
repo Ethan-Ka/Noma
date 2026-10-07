@@ -9,7 +9,23 @@ import { appProfiles } from '../../data/appProfiles'
  * Flow section and the app picker don't show three near-identical cards
  * (2026-10-06). On phones the controls drop under the app.
  */
-export default function ControlBar({ appId, className = '' }: { appId: string; className?: string }) {
+export default function ControlBar({
+  appId,
+  className = '',
+  controls,
+  highlight = null,
+  compact = false,
+}: {
+  appId: string
+  className?: string
+  /** Overrides the app's default four, e.g. after a workflow is saved. */
+  controls?: string[]
+  /** A slot (0-3) to mark, e.g. the one a workflow was saved to. */
+  highlight?: number | null
+  /** Stack the app above its controls at every width, for tight spaces
+   *  like the How it works window, so labels aren't cut off. */
+  compact?: boolean
+}) {
   const reduceMotion = useReducedMotion()
   const app = appProfiles[appId]
   if (!app) return null
@@ -27,9 +43,11 @@ export default function ControlBar({ appId, className = '' }: { appId: string; c
 
   return (
     <div
-      className={`flex flex-col gap-3 rounded-[22px] border border-white/10 bg-base-900/70 p-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_32px_80px_-32px_rgba(0,0,0,0.9)] backdrop-blur-2xl sm:flex-row sm:items-center sm:gap-4 sm:rounded-full sm:p-2.5 sm:pl-3 ${className}`}
+      className={`flex flex-col gap-3 rounded-[22px] border border-white/10 bg-base-900/70 p-3 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_32px_80px_-32px_rgba(0,0,0,0.9)] backdrop-blur-2xl ${
+        compact ? '' : 'sm:flex-row sm:items-center sm:gap-4 sm:rounded-full sm:p-2.5 sm:pl-3'
+      } ${className}`}
     >
-      <div className="flex min-w-0 items-center gap-3 px-1 sm:w-44 sm:shrink-0">
+      <div className={`flex min-w-0 items-center gap-3 px-1 ${compact ? '' : 'sm:w-44 sm:shrink-0'}`}>
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04]">
           <AnimatePresence mode="wait" initial={false}>
             <motion.span key={app.id} {...swap(0)} className="flex">
@@ -45,10 +63,14 @@ export default function ControlBar({ appId, className = '' }: { appId: string; c
       </div>
 
       <div className="grid flex-1 grid-cols-4 gap-2">
-        {app.controls.map((control, index) => (
+        {(controls ?? app.controls).map((control, index) => (
           <div
             key={index}
-            className="flex h-11 items-center justify-center rounded-full border border-white/[0.09] bg-gradient-to-b from-white/[0.06] to-white/[0.015] px-2 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.09)]"
+            className={`flex h-11 items-center justify-center rounded-full border px-2 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.09)] transition-colors duration-500 ${
+              highlight === index
+                ? 'border-accent/45 bg-accent/[0.12]'
+                : 'border-white/[0.09] bg-gradient-to-b from-white/[0.06] to-white/[0.015]'
+            }`}
           >
             <AnimatePresence mode="wait" initial={false}>
               <motion.span

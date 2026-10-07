@@ -3,10 +3,11 @@
 // SSR build has produced dist-ssr/entry-server.js. Head tags (meta, OG,
 // icons) are untouched; only the empty root is filled.
 import { readFileSync, writeFileSync } from 'fs'
-import { pathToFileURL } from 'url'
-import { resolve } from 'path'
+import { fileURLToPath, pathToFileURL } from 'url'
+import { dirname, resolve } from 'path'
 
-const root = resolve(import.meta.dirname, '..')
+// fileURLToPath rather than import.meta.dirname, which older Node lacks.
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const { render } = await import(pathToFileURL(resolve(root, 'dist-ssr/entry-server.js')).href)
 
 const file = resolve(root, 'dist/index.html')

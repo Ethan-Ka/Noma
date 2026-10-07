@@ -4,19 +4,37 @@ interface SectionProps {
   id: string
   children: ReactNode
   className?: string
-  bordered?: boolean
+  /** Sit directly on the page instead of in a glass panel. */
+  bare?: boolean
 }
 
-/** Consistent full-bleed section shell: id anchor, spacing rhythm, top hairline. */
-export default function Section({ id, children, className = '', bordered = true }: SectionProps) {
+/**
+ * A homepage section: its own glass panel floating over the page backdrop
+ * (2026-10-06). The user found the (then) stardust running through text
+ * hard to read and asked for each section in its own Apple-style glass
+ * container; the panel blurs and darkens what's behind it, so text sits on
+ * a calm surface while the dust still moves around and through it. See
+ * `.glass-panel` in index.css for the recipe (restrained: no colour, no
+ * glow, no sheen).
+ *
+ * scroll-mt clears the fixed nav pill, so a jump to `#flow` lands on the
+ * heading rather than behind the bar covering it.
+ */
+export default function Section({ id, children, className = '', bare = false }: SectionProps) {
+  if (bare) {
+    return (
+      <section id={id} className={`relative scroll-mt-28 ${className}`}>
+        <div className="mx-auto max-w-6xl px-6 py-16 sm:px-8 sm:py-20 md:py-24">{children}</div>
+      </section>
+    )
+  }
   return (
-    <section
-      id={id}
-      /* scroll-mt clears the fixed nav pill, so a jump to `#flow` lands on
-         the heading rather than behind the bar covering it. */
-      className={`relative scroll-mt-28 ${bordered ? 'border-t border-base-800' : ''} ${className}`}
-    >
-      <div className="mx-auto max-w-6xl px-6 py-16 sm:px-8 sm:py-20 md:py-24">{children}</div>
+    <section id={id} className={`relative scroll-mt-24 px-3 py-3 sm:px-5 sm:py-4 ${className}`}>
+      {/* This section's stop on the page's thread (see ScrollThread). */}
+      <span aria-hidden className="thread-node" />
+      <div className="glass-panel mx-auto max-w-[76rem] rounded-[28px] sm:rounded-[36px]">
+        <div className="mx-auto max-w-6xl px-5 py-12 sm:px-10 sm:py-16 md:px-12 md:py-20">{children}</div>
+      </div>
     </section>
   )
 }

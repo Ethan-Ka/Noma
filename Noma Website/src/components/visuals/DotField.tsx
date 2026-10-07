@@ -85,12 +85,17 @@ export default function DotField({ className = '' }: { className?: string }) {
     // Where the cursor is, in the canvas's own pixels; null when it isn't
     // over the hero.
     let pointer: { x: number; y: number } | null = null
+    // Full frame rate only while the cursor is moving over the field (so the
+    // mark follows it smoothly), and for a second after while it settles;
+    // otherwise 30 fps, plenty for the slow wave. Halves its cost at rest.
+    let lastPointerMove = -Infinity
     const onPointerMove = (event: PointerEvent) => {
       if (event.pointerType !== 'mouse') return
       const rect = canvas.getBoundingClientRect()
       const x = event.clientX - rect.left
       const y = event.clientY - rect.top
       pointer = x >= 0 && y >= 0 && x <= rect.width && y <= rect.height ? { x, y } : null
+      lastPointerMove = performance.now()
     }
     const onPointerLeave = () => {
       pointer = null
@@ -172,13 +177,22 @@ export default function DotField({ className = '' }: { className?: string }) {
     }
 
     const tick = (now: number) => {
+      const settling = now - lastPointerMove < 1000
+      if (!settling && now - last < 32) {
+        frame = document.hidden || !onScreen ? 0 : requestAnimationFrame(tick)
+        return
+      }
       const dt = Math.min(0.1, (now - last) / 1000)
       last = now
       draw((now - started) / 1000, dt, window.scrollY)
-      frame = document.hidden ? 0 : requestAnimationFrame(tick)
+      frame = document.hidden || !onScreen ? 0 : requestAnimationFrame(tick)
     }
+    // Only animate while the hero is actually on screen: scrolled past it,
+    // the field stops costing anything (it used to keep drawing ~2,000 dots
+    // a frame for the whole visit).
+    let onScreen = true
     const resume = () => {
-      if (!frame && !document.hidden && !reduceMotion) {
+      if (!frame && onScreen && !document.hidden && !reduceMotion) {
         last = performance.now()
         frame = requestAnimationFrame(tick)
       }
@@ -196,7 +210,13 @@ export default function DotField({ className = '' }: { className?: string }) {
     window.addEventListener('pointermove', onPointerMove, { passive: true })
     document.documentElement.addEventListener('pointerleave', onPointerLeave)
     document.addEventListener('visibilitychange', resume)
+    const visibility = new IntersectionObserver(([entry]) => {
+      onScreen = entry.isIntersecting
+      if (onScreen) resume()
+    })
+    visibility.observe(canvas)
     return () => {
+      visibility.disconnect()
       cancelAnimationFrame(frame)
       window.removeEventListener('resize', onResize)
       window.removeEventListener('pointermove', onPointerMove)

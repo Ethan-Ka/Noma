@@ -10,8 +10,9 @@ import Em from '../ui/Em'
  */
 export default function Device() {
   return (
-    <section id="device" className="relative scroll-mt-28 border-t border-base-800">
-      <div className="mx-auto max-w-6xl px-6 py-16 sm:px-8 sm:py-20 md:py-24">
+    <section id="device" className="relative scroll-mt-24 px-3 py-3 sm:px-5 sm:py-4">
+      <span aria-hidden className="thread-node" />
+      <div className="glass-panel mx-auto max-w-[76rem] rounded-[28px] px-5 py-12 sm:rounded-[36px] sm:px-10 sm:py-16 md:px-12 md:py-20">
         <Reveal>
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-balance font-display text-[2rem] font-medium leading-[1.02] tracking-[-0.02em] text-base-50 sm:text-5xl">

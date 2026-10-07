@@ -42,7 +42,13 @@ export default function Hero() {
       <div aria-hidden className="hero-glow pointer-events-none absolute inset-x-0 top-0 h-[70vh]" />
 
       <div className="relative mx-auto max-w-6xl px-6 pb-24 pt-36 sm:px-8 sm:pt-44 md:pb-32">
-        <div className="mx-auto max-w-3xl text-center">
+        <div className="relative mx-auto max-w-3xl text-center">
+          {/* A soft dark backing behind the copy, so the dot field never
+              sits under the words. Darkening only, no colour. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -inset-x-24 -inset-y-16 -z-10 bg-[radial-gradient(ellipse_closest-side,rgb(4_5_10/0.82),rgb(4_5_10/0.55)_55%,transparent)]"
+          />
           <motion.h1
             initial={reduceMotion ? false : { opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
@@ -111,7 +117,13 @@ export default function Hero() {
 
           <ControlBar appId={CYCLE[index]} />
 
-          <p className="mt-5 text-center text-sm text-base-500">Switch apps and the controls follow.</p>
+          <p className="relative mt-5 text-center text-sm text-base-400">
+            <span
+              aria-hidden
+              className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-20 w-[30rem] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(ellipse_closest-side,rgb(4_5_10/0.95),rgb(4_5_10/0.8)_50%,transparent)]"
+            />
+            Switch apps and the controls follow.
+          </p>
         </motion.div>
       </div>
     </section>
