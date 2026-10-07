@@ -9,8 +9,8 @@
  * - Keys use Noma's own key names (the ones a recorded shortcut produces) and each
  *   shortcut has a Windows and a Mac form, since the modifiers differ (Control on
  *   Windows is usually Command, written Meta, on a Mac).
- * - `short` is the zone name the shortcut gets. At most 12 characters: the limit of
- *   the small display a zone can appear on.
+ * - `short` is the zone name the shortcut gets. At most MAX_CONTROL_LABEL_LENGTH
+ *   characters, the limit of the small display a zone can appear on.
  * - Ids are the ones app detection reports (appKnowledge.ts): the lowercased exe name
  *   on Windows, mapped to the same id on a Mac.
  * index.test.ts checks every shortcut here is sendable and every name fits.

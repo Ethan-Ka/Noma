@@ -159,6 +159,11 @@ export const MODULE_CATALOG: ModuleCatalogEntry[] = [
  * actually runnable. The main process still owns the virtual-key mapping;
  * this is only the list of valid *names*.
  */
+/** The most characters a zone's name can have. A name also appears on a small physical
+ *  display, so this is the one place the limit is set: the editor, the generated names
+ *  and the saved labels all use it. */
+export const MAX_CONTROL_LABEL_LENGTH = 16
+
 export const SYSTEM_COMMAND_CATALOG: string[] = ['volumeMute', 'volumeUp', 'volumeDown']
 
 /** The exact allowlist `actionExecutor.ts`'s `isKnownFlowAction` accepts. */

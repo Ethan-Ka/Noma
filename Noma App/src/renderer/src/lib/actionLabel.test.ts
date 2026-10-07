@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { MAX_CONTROL_LABEL_LENGTH } from '@shared/constants'
 import type { Macro } from '@shared/types'
 import { defaultLabelForAction } from './actionLabel'
 
@@ -20,12 +21,12 @@ describe('defaultLabelForAction', () => {
 
   it('names a workflow for where it ends, and waits until one is chosen', () => {
     const macros = [macro('m1', 'Visual Studio Code → GitHub Desktop'), macro('m2', 'Morning setup')]
-    expect(defaultLabelForAction({ type: 'macro', macroId: 'm1' }, macros)).toBe('GitHub Deskt')
-    expect(defaultLabelForAction({ type: 'macro', macroId: 'm2' }, macros)).toBe('Morning setu')
+    expect(defaultLabelForAction({ type: 'macro', macroId: 'm1' }, macros)).toBe('GitHub Desktop')
+    expect(defaultLabelForAction({ type: 'macro', macroId: 'm2' }, macros)).toBe('Morning setup')
     expect(defaultLabelForAction({ type: 'macro', macroId: '' }, macros)).toBeNull()
   })
 
-  it('never exceeds the 12 characters a small display can show', () => {
-    expect(defaultLabelForAction({ type: 'shortcut', keys: ['Control', 'Shift', 'Alt', 'F12'] }, [])!.length).toBeLessThanOrEqual(12)
+  it('never exceeds the longest name a zone can have', () => {
+    expect(defaultLabelForAction({ type: 'shortcut', keys: ['Control', 'Shift', 'Alt', 'F12'] }, [])!.length).toBeLessThanOrEqual(MAX_CONTROL_LABEL_LENGTH)
   })
 })

@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
-import { FLOW_ACTION_CATALOG, GLIDE_ZONE_LABELS, SYSTEM_COMMAND_CATALOG, glideZoneForSlot } from '@shared/constants'
+import {
+  FLOW_ACTION_CATALOG,
+  GLIDE_ZONE_LABELS,
+  MAX_CONTROL_LABEL_LENGTH,
+  SYSTEM_COMMAND_CATALOG,
+  glideZoneForSlot
+} from '@shared/constants'
 import { useGlideStore } from '../stores/glideStore'
 import type { Control, ControlAction, Macro } from '@shared/types'
 import { ShortcutRecorder } from './ShortcutRecorder'
@@ -161,10 +167,10 @@ export function ControlEditorModal({
           value={label}
           onChange={(event) => {
             setNameEdited(true)
-            setLabel(event.target.value.slice(0, 12))
+            setLabel(event.target.value.slice(0, MAX_CONTROL_LABEL_LENGTH))
           }}
           placeholder="e.g. RUN"
-          maxLength={12}
+          maxLength={MAX_CONTROL_LABEL_LENGTH}
           className={FIELD_INPUT}
         />
       </div>

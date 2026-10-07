@@ -1,3 +1,4 @@
+import { MAX_CONTROL_LABEL_LENGTH } from '@shared/constants'
 import Database from 'better-sqlite3'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { __setDatabaseForTesting, runMigrations, getDatabase } from '../db'
@@ -34,7 +35,7 @@ describe('toDisplayLabel', () => {
 
   it('truncates long labels for a small physical display', () => {
     const label = toDisplayLabel('Control+Shift+Alt+P')
-    expect(label.length).toBeLessThanOrEqual(12)
+    expect(label.length).toBeLessThanOrEqual(MAX_CONTROL_LABEL_LENGTH)
     expect(label.endsWith('…')).toBe(true)
   })
 })

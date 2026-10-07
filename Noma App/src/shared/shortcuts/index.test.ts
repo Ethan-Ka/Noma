@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { MAX_CONTROL_LABEL_LENGTH } from '../constants'
 import { DOM_CODE_TO_KEY_NAME } from '../constants/domKeyCodes'
 import { SHORTCUT_LIBRARY, knownShortcutsFor } from './index'
 
@@ -35,7 +36,7 @@ describe('shortcut library', () => {
         it('has zone names that fit a small display', () => {
           for (const shortcut of shortcuts) {
             expect(shortcut.short.length, shortcut.label).toBeGreaterThan(0)
-            expect(shortcut.short.length, shortcut.label).toBeLessThanOrEqual(12)
+            expect(shortcut.short.length, shortcut.label).toBeLessThanOrEqual(MAX_CONTROL_LABEL_LENGTH)
           }
         })
 

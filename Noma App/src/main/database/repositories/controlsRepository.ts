@@ -1,12 +1,11 @@
+import { MAX_CONTROL_LABEL_LENGTH } from '@shared/constants'
 import type { ControlAction } from '@shared/types'
 import { getDatabase } from '../db'
 
 /** Truncates a generated label to what a small physical display can render
  *  (see docs/architecture.md's "Hardware embedding considerations"). */
-const MAX_LABEL_LENGTH = 12
-
 export function toDisplayLabel(text: string): string {
-  return text.length > MAX_LABEL_LENGTH ? `${text.slice(0, MAX_LABEL_LENGTH - 1)}…` : text
+  return text.length > MAX_CONTROL_LABEL_LENGTH ? `${text.slice(0, MAX_CONTROL_LABEL_LENGTH - 1)}…` : text
 }
 
 /**

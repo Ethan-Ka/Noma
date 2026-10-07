@@ -73,7 +73,7 @@ export interface Control {
   id: string
   /** 1-based physical slot position (maps to a control on the keyboard/module). */
   slot: number
-  /** Short label — must remain renderable on a small physical display (~12 chars). */
+  /** Short label — must remain renderable on a small physical display (see MAX_CONTROL_LABEL_LENGTH). */
   label: string
   action: ControlAction
 }

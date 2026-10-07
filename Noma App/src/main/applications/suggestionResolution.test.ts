@@ -333,7 +333,7 @@ describe('assignSuggestionToControl; workflows that must do something', () => {
 
     const result = assignSuggestionToControl('suggestion:switch-only', 1)
     const control = result?.profile.controls.find((c) => c.slot === 1)
-    expect(control?.label).toBe('GitHub Desk…')
+    expect(control?.label).toBe('GitHub Desktop')
     if (control?.action.type === 'macro') {
       const row = getDatabase().prepare('SELECT name FROM macros WHERE id = ?').get(control.action.macroId) as { name: string }
       expect(row.name).toBe('Visual Studio Code → GitHub Desktop')

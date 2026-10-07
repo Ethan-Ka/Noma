@@ -5,8 +5,8 @@ import { getAllApplications, upsertApplication } from '../database/repositories/
 import { getProfileForApplicationId } from '../database/repositories/profileRepository'
 import { isSystemUtilityApp } from '../os/systemApps'
 
-/** New profiles start with 4 unconfigured slots: the same 12-char
- *  display-label constraint as every other label in the app. The user
+/** New profiles start with 4 unconfigured slots: the same display-label
+ *  length limit (MAX_CONTROL_LABEL_LENGTH) as every other label in the app. The user
  *  fills these in with the Control Mapping Editor (Phase 1); an empty
  *  `keys` array is already a safe no-op (actionExecutor.ts refuses to send
  *  an empty combo with a clear reason) rather than a placeholder shortcut

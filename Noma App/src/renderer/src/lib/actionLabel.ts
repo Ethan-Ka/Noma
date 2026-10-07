@@ -1,12 +1,10 @@
+import { MAX_CONTROL_LABEL_LENGTH } from '@shared/constants'
 import type { ControlAction, Macro } from '@shared/types'
 import type { KnownShortcutOption } from '@shared/shortcuts'
 import { formatShortcutCaption } from './describeAction'
 
-/** Labels also appear on a small physical display, so they stop at 12 characters. */
-const MAX_LABEL_LENGTH = 12
-
 function fit(text: string): string {
-  return text.length > MAX_LABEL_LENGTH ? text.slice(0, MAX_LABEL_LENGTH).trimEnd() : text
+  return text.length > MAX_CONTROL_LABEL_LENGTH ? text.slice(0, MAX_CONTROL_LABEL_LENGTH).trimEnd() : text
 }
 
 /** "volumeMute" becomes "VOLUME MUTE", matching the all-caps starter labels (RUN, DEBUG). */
