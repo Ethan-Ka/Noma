@@ -3,6 +3,7 @@ import type { Application, ApplicationProfile, ApplicationProfileSummary } from 
 import { getDatabase } from '../database/db'
 import { getAllApplications, upsertApplication } from '../database/repositories/applicationsRepository'
 import { getProfileForApplicationId } from '../database/repositories/profileRepository'
+import { isSystemUtilityApp } from '../os/systemApps'
 
 /** New profiles start with 4 unconfigured slots: the same 12-char
  *  display-label constraint as every other label in the app. The user
@@ -84,8 +85,10 @@ export function deleteApplicationProfile(applicationId: string): boolean {
  *  reads the applications table, which only ever holds a handful of rows
  *  in a single-user desktop app. */
 export function listApplicationProfileSummaries(): ApplicationProfileSummary[] {
-  return getAllApplications().map((application) => {
-    const profile = getProfileForApplicationId(application.id)
-    return { application, hasProfile: profile !== null, profileName: profile?.name }
-  })
+  return getAllApplications()
+    .filter((application) => !isSystemUtilityApp(application.executablePath))
+    .map((application) => {
+      const profile = getProfileForApplicationId(application.id)
+      return { application, hasProfile: profile !== null, profileName: profile?.name }
+    })
 }

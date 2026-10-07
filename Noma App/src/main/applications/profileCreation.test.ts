@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { __setDatabaseForTesting, runMigrations, getDatabase } from '../database/db'
-import { getApplicationById } from '../database/repositories/applicationsRepository'
+import { getApplicationById, upsertApplication } from '../database/repositories/applicationsRepository'
 import {
   createProfileForApplication,
   deleteApplicationProfile,
@@ -101,5 +101,27 @@ describe('listApplicationProfileSummaries', () => {
 
   it('returns an empty list when no applications are known', () => {
     expect(listApplicationProfileSummaries()).toEqual([])
+  })
+})
+
+describe('listApplicationProfileSummaries and system helpers', () => {
+  it('leaves out macOS system helpers that were detected earlier, and keeps real apps', () => {
+    upsertApplication({
+      id: 'universalaccessauthwarn',
+      name: 'universalAccessAuthWarn',
+      processName: 'universalAccessAuthWarn',
+      executablePath: '/System/Library/PrivateFrameworks/UniversalAccess.framework/Versions/A/Resources/universalAccessAuthWarn.app'
+    })
+    upsertApplication({
+      id: 'finder',
+      name: 'Finder',
+      processName: 'Finder',
+      executablePath: '/System/Library/CoreServices/Finder.app'
+    })
+
+    const ids = listApplicationProfileSummaries().map((summary) => summary.application.id)
+
+    expect(ids).toContain('finder')
+    expect(ids).not.toContain('universalaccessauthwarn')
   })
 })
