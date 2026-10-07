@@ -6,8 +6,8 @@ import { CARD } from '../lib/surfaces'
  * details" builds a plain-text summary (versions, Glide and Flow settings,
  * counts, recent success/failure lines; never shortcuts, workflow steps,
  * app or control names, typed text or screenshots), shows all of it, and
- * lets the tester copy it. "Open the issue page" opens the browser on an
- * empty form. Whatever they paste is their choice.
+ * lets the tester copy it. "Open the report form" opens the website's
+ * report form (nomashift.com/feedback) in the browser, empty. Whatever they paste is their choice.
  */
 export function ReportProblemPanel() {
   const [report, setReport] = useState<string | null>(null)
@@ -40,7 +40,7 @@ export function ReportProblemPanel() {
           onClick={() => void window.flow.openIssuePage()}
           className="rounded-md bg-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-accent/90"
         >
-          Open the issue page
+          Open the report form
         </button>
         <button
           type="button"
@@ -59,7 +59,7 @@ export function ReportProblemPanel() {
             <button type="button" onClick={() => void copy()} className="text-xs text-accent hover:opacity-80">
               Copy
             </button>
-            {copied && <span className="text-xs text-neutral-500">Copied. Paste it into the issue if you want to.</span>}
+            {copied && <span className="text-xs text-neutral-500">Copied. Paste it into the form if you want to.</span>}
           </div>
         </div>
       )}

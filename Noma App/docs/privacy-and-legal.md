@@ -238,9 +238,9 @@ spyware statutes in the relevant jurisdictions.
 
 ## Beta issue reports (v0.1)
 
-Settings > Report a problem never sends anything by itself. "Open the issue
-page" opens an empty GitHub issue form in the tester's browser; nothing is
-put in the URL. "Show technical details" builds a plain-text summary on
+Settings > Report a problem never sends anything by itself. "Open the report
+form" opens the website's empty report form (nomashift.com/feedback) in the
+tester's browser; nothing is put in the URL. "Show technical details" builds a plain-text summary on
 request (`main/diagnostics.ts`) and shows all of it before the tester can
 copy it: Noma and Electron versions, OS version, Glide on/off, zone count,
 touchpad count and any Glide error, Flow on/off, counts of pending

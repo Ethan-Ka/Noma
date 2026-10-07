@@ -238,6 +238,8 @@ export function glideZoneForSlot(slot: number, zoneCount: 2 | 4): GlideZoneName 
   return glideZonesFor(zoneCount).find((zone) => GLIDE_ZONE_SLOTS[zone] === slot) ?? null
 }
 
-/** Where beta testers report problems. Opened in the browser with nothing
- *  attached: the tester pastes what they choose to share. */
-export const ISSUE_PAGE_URL = 'https://github.com/awnsh/Noma/issues/new'
+/** Where beta testers report problems: the website's report form (the
+ *  GitHub repo is going private, so its issue page won't be reachable).
+ *  Opened in the browser with nothing attached: the tester writes what they
+ *  choose to share. */
+export const ISSUE_PAGE_URL = 'https://nomashift.com/feedback'
