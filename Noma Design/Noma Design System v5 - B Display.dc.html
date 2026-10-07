@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600&amp;family=JetBrains+Mono:wght@400;500&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;family=Archivo:wght@400..700&amp;family=Atkinson+Hyperlegible+Next:wght@400;500;600&amp;family=Public+Sans:wght@400;500;600&amp;family=Source+Sans+3:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#0f1113;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+a:hover{text-decoration-thickness:2px}
+button{font:inherit}
+:focus-visible{outline:2px solid var(--acc,#69a7f0);outline-offset:2px}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{transition-duration:0ms !important;animation:none !important}}
+</style>
+</helmet>
+<div style="{{ vars }}">
+<div style="min-height:100vh;background:var(--bg);color:var(--t2);font-family:var(--sans);font-size:14px;line-height:21px">
+
+<header style="max-width:1240px;margin:0 auto;padding:56px 32px 40px;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:24px 48px;align-items:end">
+  <div style="grid-column:span 2;min-width:0">
+    <h1 style="margin:0 0 12px;font:600 36px/44px var(--display);letter-spacing:-0.02em;color:var(--t1)">Noma design system v5: Display</h1>
+    <p style="margin:0;max-width:62ch;text-wrap:pretty">A replacement for v4: a critique, the Display direction on the four real screens, then tokens, components and drop-in code. The Machined direction is in its own file. Sora and JetBrains Mono stay; Atkinson Hyperlegible Next replaces Inter. Recommendation: Machined.</p>
+  </div>
+  <nav aria-label="Sections" style="display:flex;flex-wrap:wrap;gap:4px 16px;color:var(--t1)">
+    <a href="#critique">Critique</a><a href="#directions">Directions</a><a href="#typography">Typography</a><a href="#foundations">Foundations</a><a href="#components">Components</a><a href="#rules">Rules</a><a href="#recommendation">Recommendation</a><a href="#code">Code</a>
+  </nav>
+</header>
+
+<section id="critique" style="max-width:1240px;margin:0 auto;padding:32px 32px 56px;border-top:1px solid var(--line)">
+  <h2 style="margin:0 0 24px;font:600 24px/30px var(--display);letter-spacing:-0.01em;color:var(--t1)">Critique of v4</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,500px),1fr));gap:40px 56px">
+    <div>
+      <h3 style="margin:0 0 12px;font:600 16px/22px var(--display);color:var(--t1)">Your list, checked</h3>
+      <dl style="margin:0;display:grid;gap:16px">
+        <div><dt style="font-weight:600;color:var(--t1)">One-off sizes, four radii, per-page spacing. Real.</dt><dd style="margin:2px 0 0">Ten text sizes are in use (10, 11, 12, 13, 14, 16, 18, 20, 24, 30). v5 has five sizes, one radius and three spacing steps for grouping.</dd></div>
+        <div><dt style="font-weight:600;color:var(--t1)">Page headers drifted. Real.</dt><dd style="margin:2px 0 0">Titles run 20 to 30px across three container widths. v5: one 28px Sora title, no subtitle, an optional action on the right, one 720px column.</dd></div>
+        <div><dt style="font-weight:600;color:var(--t1)">Uppercase 10px label doing five jobs. Real, and the loudest AI tell in the app.</dt><dd style="margin:2px 0 0">It is the eyebrow recipe, and at 10px in neutral-500 it also fails contrast. v5 drops tracked caps. Zone names become 12px sentence case; control labels stay uppercase only because users type them that way for the device.</dd></div>
+        <div><dt style="font-weight:600;color:var(--t1)">Three button looks plus one-offs. Real, and primary is not primary.</dt><dd style="margin:2px 0 0">The primary button is a 10% accent tint with an outline, so it carries less weight than a heading. v5: filled primary, bordered secondary, text-only quiet. Destructive is a color modifier, not a fourth look.</dd></div>
+        <div><dt style="font-weight:600;color:var(--t1)">Inconsistent icons. Real.</dt><dd style="margin:2px 0 0">The same app icon also repeats on all four tiles, which tells the reader nothing. v5: text-only navigation, real app icons at 16, 20 and 32px, one stroke set (16px, 1.5 stroke) for the few actions that need one.</dd></div>
+        <div><dt style="font-weight:600;color:var(--t1)">Accent carries too many meanings. Real.</dt><dd style="margin:2px 0 0">Active nav, selection, links and suggestions move to neutral ink. Accent keeps three jobs (see Rules).</dd></div>
+        <div><dt style="font-weight:600;color:var(--t1)">Glass versus solid is easy to break. Partly.</dt><dd style="margin:2px 0 0">The material rule is fine; the names are wrong. One glass surface survives: the Notice window, which really sits over the desktop. The device card and hero card become solid.</dd></div>
+        <div><dt style="font-weight:600;color:var(--t1)">No empty, loading or error pattern. Real.</dt><dd style="margin:2px 0 0">v5 has one state block with three variants and one line of copy each.</dd></div>
+        <div><dt style="font-weight:600;color:var(--t1)">Website drifted by 10 tokens. Real.</dt><dd style="margin:2px 0 0">Both apps import one tokens.css, so drift becomes a merge conflict instead of a silent difference.</dd></div>
+      </dl>
+    </div>
+    <div>
+      <h3 style="margin:0 0 12px;font:600 16px/22px var(--display);color:var(--t1)">What the list missed</h3>
+      <dl style="margin:0;display:grid;gap:16px">
+        <div><dt style="font-weight:600;color:var(--t1)">Contrast fails where text is smallest.</dt><dd style="margin:2px 0 0">neutral-500 is 4.15:1 and neutral-600 is 3.4:1 on the card fill, and those carry the 10 to 12px captions. White on the accent fill is 3.66:1. Input borders are about 1.3:1 against the 3:1 non-text rule.</dd></div>
+        <div><dt style="font-weight:600;color:var(--t1)">Shadows nobody can see.</dt><dd style="margin:2px 0 0">Five black shadow recipes on a #08090a canvas. On near-black a shadow reads as dirt or as nothing. v5 has no drop shadows: height is a fill step plus a hairline.</dd></div>
+        <div><dt style="font-weight:600;color:var(--t1)">v3 residue that still reads as generated.</dt><dd style="margin:2px 0 0">16px radius on everything, the top-lit gradient on keycaps, hover lift, staggered rise-in on lists, scale-in modals, the accent-tinted nav pill with a tinted border, and #4c7eff, a near neighbour of the framework blue.</dd></div>
+        <div><dt style="font-weight:600;color:var(--t1)">Motion has seven curves and runs to 420ms.</dt><dd style="margin:2px 0 0">Two keyframes are identical (settle and node-in). v5: three durations, none over 220ms, two curves.</dd></div>
+        <div><dt style="font-weight:600;color:var(--t1)">Token names lie.</dt><dd style="margin:2px 0 0">neutral-800 to 950 are surfaces, not text. GLASS_PANEL is solid. violet is dead. v5 names tokens for their role (ink-1, line-strong), so the name is the rule.</dd></div>
+        <div><dt style="font-weight:600;color:var(--t1)">Success, error and gold are three unrelated hues.</dt><dd style="margin:2px 0 0">Success needs no color; a check and the word do it. v5 keeps one error color and the hardware gold.</dd></div>
+        <div><dt style="font-weight:600;color:var(--t1)">Decisions live in comments.</dt><dd style="margin:2px 0 0">surfaces.ts is mostly history. The why belongs in DESIGN.md; the code should be short enough to read.</dd></div>
+      </dl>
+      <h3 style="margin:32px 0 8px;font:600 16px/22px var(--display);color:var(--t1)">Type: what stays</h3>
+      <p style="margin:0;max-width:62ch">Sora stays for titles and headings, where its rounded geometry echoes the wordmark. It is held to 16px and up at 600, because its width wastes room below that. JetBrains Mono stays for shortcut text only (Ctrl+F5), never labels or chrome. Inter goes: it is the default for generated interfaces and gives the 12 to 14px UI no voice. The directions differ in the face that replaces it.</p>
+      <h3 style="margin:32px 0 8px;font:600 16px/22px var(--display);color:var(--t1)">Also worth keeping</h3>
+      <p style="margin:0;max-width:62ch">Solid surfaces, one accent, real application icons, the global focus-visible rule, the reduced-motion handling, dark as the theme, and the 12-character label limit tied to the device display.</p>
+    </div>
+  </div>
+</section>
+
+<section id="directions" style="max-width:1240px;margin:0 auto;padding:32px 32px 56px;border-top:1px solid var(--line)">
+  <h2 style="margin:0 0 8px;font:600 24px/30px var(--display);letter-spacing:-0.01em;color:var(--t1)">Direction B: Display</h2>
+  <p style="margin:0 0 24px;max-width:66ch">{{ d.idea }} {{ d.why }}</p>
+  
+
+  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin-bottom:12px;flex-wrap:wrap">
+    <h3 style="margin:0;font:600 18px/24px var(--display);color:var(--t1)">{{ d.label }}, four screens</h3>
+    <p style="margin:0;font-size:12px;color:var(--t3)">Grey squares stand in for real application icons.</p>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,580px),1fr));gap:24px">
+
+    <figure style="margin:0">
+      <figcaption style="font-size:12px;color:var(--t3);margin-bottom:6px">Home</figcaption>
+      <div style="display:flex;height:540px;background:var(--bg);border-radius:var(--r);overflow:hidden;border:1px solid var(--line2)">
+        <aside style="width:148px;flex:none;background:var(--panel);border-right:1px solid var(--line);padding:16px 8px;display:flex;flex-direction:column;gap:2px">
+          <div style="font:600 16px/20px var(--display);color:var(--t1);padding:0 8px 16px">noma</div>
+          <div style="padding:6px 8px;border-radius:var(--r);font-weight:500;color:var(--t1);background:var(--raised)">Home</div>
+          <div style="padding:6px 8px;border-radius:var(--r);color:var(--t3)" style-hover="color:var(--t1)">Glide</div>
+          <div style="padding:6px 8px;border-radius:var(--r);color:var(--t3)" style-hover="color:var(--t1)">Workflows</div>
+          <div style="padding:6px 8px;border-radius:var(--r);color:var(--t3)" style-hover="color:var(--t1)">Activity</div>
+          <div style="padding:6px 8px;border-radius:var(--r);color:var(--t3)" style-hover="color:var(--t1)">Settings</div>
+          <div style="margin-top:auto;padding:8px;display:grid;gap:2px;font-size:12px;line-height:16px"><div style="display:flex;align-items:center;gap:8px;font-weight:500;color:var(--t2)"><span style="width:6px;height:6px;border-radius:50%;background:var(--hw)"></span>Noma Device</div><div style="color:var(--t3);padding-left:14px">Docked</div></div>
+        </aside>
+        <main style="flex:1;min-width:0;padding:32px">
+          <h1 style="margin:0 0 32px;font:600 28px/34px var(--display);letter-spacing:-0.015em;color:var(--t1)">Glide is ready.</h1>
+          <h2 style="margin:0 0 8px;font:600 16px/22px var(--display);color:var(--t1)">Noticed today</h2>
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:12px">
+            <div style="display:flex;align-items:center;gap:8px"><span style="width:20px;height:20px;border-radius:min(var(--r),5px);background:var(--raised);border:1px solid var(--line2);flex:none"></span><span style="font-size:12px;line-height:16px;color:var(--t3)">Visual Studio Code, 11 times today</span></div>
+            <div style="display:grid;gap:8px">
+              <div style="font-weight:500;color:var(--t1)">Save, build, then run</div>
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                <span style="font:400 12px/16px var(--mono);color:var(--t1);padding:3px 7px;border:1px solid var(--line2);border-radius:min(var(--r),4px);background:var(--field)">Ctrl+S</span><span style="width:14px;height:1px;background:var(--line2)"></span>
+                <span style="font:400 12px/16px var(--mono);color:var(--t1);padding:3px 7px;border:1px solid var(--line2);border-radius:min(var(--r),4px);background:var(--field)">Ctrl+Shift+B</span><span style="width:14px;height:1px;background:var(--line2)"></span>
+                <span style="font:400 12px/16px var(--mono);color:var(--t1);padding:3px 7px;border:1px solid var(--line2);border-radius:min(var(--r),4px);background:var(--field)">F5</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:4px">
+              <button style="height:32px;padding:0 12px;border-radius:var(--r);border:1px solid var(--acc);background:var(--acc);color:var(--onacc);font-weight:500;font-family:var(--sans);cursor:pointer;transition:background-color 100ms" style-hover="background:var(--accH)" style-active="background:var(--accP)">Save to a zone</button>
+              <button style="height:32px;padding:0 12px;border-radius:var(--r);border:1px solid transparent;background:transparent;color:var(--t2);font-weight:500;font-family:var(--sans);cursor:pointer;transition:background-color 100ms" style-hover="background:var(--raised);color:var(--t1)">Not now</button>
+            </div>
+          </div>
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;margin:32px 0 8px">
+            <h2 style="margin:0;font:600 16px/22px var(--display);color:var(--t1)">Your four zones</h2>
+            <span style="font-size:12px;line-height:16px;color:var(--t3)">Visual Studio Code</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div tabindex="0" style="background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--key);padding:10px 12px 12px;display:grid;gap:8px;transition:border-color 100ms" style-hover="border-color:var(--line2)"><span style="font-size:12px;line-height:16px;font-weight:500;color:var(--t3)">Upper left</span><div><div style="font-weight:600;letter-spacing:0.02em;color:var(--t1)">RUN</div><div style="font:400 12px/16px var(--mono);color:var(--t3);margin-top:2px">Ctrl+F5</div></div></div>
+            <div tabindex="0" style="background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--key);padding:10px 12px 12px;display:grid;gap:8px;transition:border-color 100ms" style-hover="border-color:var(--line2)"><span style="font-size:12px;line-height:16px;font-weight:500;color:var(--t3)">Upper right</span><div><div style="font-weight:600;letter-spacing:0.02em;color:var(--t1)">DEBUG</div><div style="font:400 12px/16px var(--mono);color:var(--t3);margin-top:2px">F5</div></div></div>
+            <div tabindex="0" style="background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--key);padding:10px 12px 12px;display:grid;gap:8px;transition:border-color 100ms" style-hover="border-color:var(--line2)"><span style="font-size:12px;line-height:16px;font-weight:500;color:var(--t3)">Lower left</span><div><div style="font-weight:600;letter-spacing:0.02em;color:var(--t1)">TERMINAL</div><div style="font:400 12px/16px var(--mono);color:var(--t3);margin-top:2px">Ctrl+`</div></div></div>
+            <div tabindex="0" style="border:1px dashed var(--line2);border-radius:var(--r);padding:10px 12px 12px;display:grid;gap:8px;cursor:pointer" style-hover="background:var(--card)"><span style="font-size:12px;line-height:16px;font-weight:500;color:var(--t3)">Lower right</span><div style="font-weight:500;color:var(--t2)">Assign an action</div></div>
+          </div>
+        </main>
+      </div>
+    </figure>
+
+    <figure style="margin:0">
+      <figcaption style="font-size:12px;color:var(--t3);margin-bottom:6px">Glide</figcaption>
+      <div style="display:flex;height:540px;background:var(--bg);border-radius:var(--r);overflow:hidden;border:1px solid var(--line2)">
+        <aside style="width:148px;flex:none;background:var(--panel);border-right:1px solid var(--line);padding:16px 8px;display:flex;flex-direction:column;gap:2px">
+          <div style="font:600 16px/20px var(--display);color:var(--t1);padding:0 8px 16px">noma</div>
+          <div style="padding:6px 8px;border-radius:var(--r);color:var(--t3)" style-hover="color:var(--t1)">Home</div>
+          <div style="padding:6px 8px;border-radius:var(--r);font-weight:500;color:var(--t1);background:var(--raised)">Glide</div>
+          <div style="padding:6px 8px;border-radius:var(--r);color:var(--t3)" style-hover="color:var(--t1)">Workflows</div>
+          <div style="padding:6px 8px;border-radius:var(--r);color:var(--t3)" style-hover="color:var(--t1)">Activity</div>
+          <div style="padding:6px 8px;border-radius:var(--r);color:var(--t3)" style-hover="color:var(--t1)">Settings</div>
+          <div style="margin-top:auto;padding:8px;display:grid;gap:2px;font-size:12px;line-height:16px"><div style="display:flex;align-items:center;gap:8px;font-weight:500;color:var(--t2)"><span style="width:6px;height:6px;border-radius:50%;background:var(--hw)"></span>Noma Device</div><div style="color:var(--t3);padding-left:14px">Docked</div></div>
+        </aside>
+        <main style="flex:1;min-width:0;padding:32px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:32px">
+            <h1 style="margin:0;font:600 28px/34px var(--display);letter-spacing:-0.015em;color:var(--t1)">Glide</h1>
+            <label style="display:flex;align-items:center;gap:8px;font-weight:500;color:var(--t1);cursor:pointer">{{ glideWord }}
+              <button role="switch" aria-checked="{{ glideOn }}" aria-label="Glide" onClick="{{ toggleGlide }}" style="{{ glideTrack }}"><span style="{{ glideKnob }}"></span></button>
+            </label>
+          </div>
+          <h2 style="margin:0 0 8px;font:600 16px/22px var(--display);color:var(--t1)">What each zone does</h2>
+          <div style="display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;height:168px;border:1px solid var(--line2);border-radius:var(--r);background:var(--card);overflow:hidden">
+            <div style="padding:10px 12px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between;background:var(--raised)"><span style="font-size:12px;line-height:16px;font-weight:500;color:var(--t3)">Upper left, last used</span><div><div style="font-weight:600;letter-spacing:0.02em;color:var(--t1)">RUN</div><div style="font:400 12px/16px var(--mono);color:var(--t3)">Ctrl+F5</div></div></div>
+            <div style="padding:10px 12px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between;text-align:right"><span style="font-size:12px;line-height:16px;font-weight:500;color:var(--t3)">Upper right</span><div><div style="font-weight:600;letter-spacing:0.02em;color:var(--t1)">DEBUG</div><div style="font:400 12px/16px var(--mono);color:var(--t3)">F5</div></div></div>
+            <div style="padding:10px 12px;border-right:1px solid var(--line);display:flex;flex-direction:column;justify-content:space-between"><div><div style="font-weight:600;letter-spacing:0.02em;color:var(--t1)">TERMINAL</div><div style="font:400 12px/16px var(--mono);color:var(--t3)">Ctrl+`</div></div><span style="font-size:12px;line-height:16px;font-weight:500;color:var(--t3)">Lower left</span></div>
+            <div style="padding:10px 12px;display:flex;flex-direction:column;justify-content:space-between;text-align:right"><div style="font-weight:500;color:var(--t3)">Empty</div><span style="font-size:12px;line-height:16px;font-weight:500;color:var(--t3)">Lower right</span></div>
+          </div>
+          <h2 style="margin:32px 0 8px;font:600 16px/22px var(--display);color:var(--t1)">Settings</h2>
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--r)">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px">
+              <div><div style="font-weight:500;color:var(--t1)">Flick speed</div><div style="font-size:12px;line-height:16px;color:var(--t3)">Quick ignores slow slides off the palm rest.</div></div>
+              <div role="radiogroup" aria-label="Flick speed" style="display:flex;padding:2px;gap:2px;border:1px solid var(--line2);border-radius:var(--r);background:var(--field)">
+                <span style="padding:3px 10px;border-radius:calc(var(--r) - 2px);font-size:12px;line-height:18px;color:var(--t3)">Relaxed</span>
+                <span style="padding:3px 10px;border-radius:calc(var(--r) - 2px);font-size:12px;line-height:18px;color:var(--t1);background:var(--raised);font-weight:500">Normal</span>
+                <span style="padding:3px 10px;border-radius:calc(var(--r) - 2px);font-size:12px;line-height:18px;color:var(--t3)">Quick</span>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;border-top:1px solid var(--line)">
+              <div style="font-weight:500;color:var(--t1)">Labels on Noma Device</div>
+              <button role="switch" aria-checked="{{ labelsOn }}" aria-label="Labels on Noma Device" onClick="{{ toggleLabels }}" style="{{ labelsTrack }}"><span style="{{ labelsKnob }}"></span></button>
+            </div>
+            <div style="display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)">
+              <button style="height:32px;padding:0 12px;border-radius:var(--r);border:1px solid var(--line2);background:var(--raised);color:var(--t1);font-weight:500;font-family:var(--sans);cursor:pointer;transition:background-color 100ms" style-hover="background:var(--raisedH)">Try a glide</button>
+              <button style="height:32px;padding:0 12px;border-radius:var(--r);border:1px solid transparent;background:transparent;color:var(--t2);font-weight:500;font-family:var(--sans);cursor:pointer;transition:background-color 100ms" style-hover="background:var(--raised);color:var(--t1)">Reset zones</button>
+            </div>
+          </div>
+        </main>
+      </div>
+    </figure>
+
+    <figure style="margin:0">
+      <figcaption style="font-size:12px;color:var(--t3);margin-bottom:6px">Workflows</figcaption>
+      <div style="display:flex;height:540px;background:var(--bg);border-radius:var(--r);overflow:hidden;border:1px solid var(--line2)">
+        <aside style="width:148px;flex:none;background:var(--panel);border-right:1px solid var(--line);padding:16px 8px;display:flex;flex-direction:column;gap:2px">
+          <div style="font:600 16px/20px var(--display);color:var(--t1);padding:0 8px 16px">noma</div>
+          <div style="padding:6px 8px;border-radius:var(--r);color:var(--t3)" style-hover="color:var(--t1)">Home</div>
+          <div style="padding:6px 8px;border-radius:var(--r);color:var(--t3)" style-hover="color:var(--t1)">Glide</div>
+          <div style="padding:6px 8px;border-radius:var(--r);font-weight:500;color:var(--t1);background:var(--raised)">Workflows</div>
+          <div style="padding:6px 8px;border-radius:var(--r);color:var(--t3)" style-hover="color:var(--t1)">Activity</div>
+          <div style="padding:6px 8px;border-radius:var(--r);color:var(--t3)" style-hover="color:var(--t1)">Settings</div>
+          <div style="margin-top:auto;padding:8px;display:grid;gap:2px;font-size:12px;line-height:16px"><div style="display:flex;align-items:center;gap:8px;font-weight:500;color:var(--t2)"><span style="width:6px;height:6px;border-radius:50%;background:var(--hw)"></span>Noma Device</div><div style="color:var(--t3);padding-left:14px">Docked</div></div>
+        </aside>
+        <main style="flex:1;min-width:0;padding:32px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:32px">
+            <h1 style="margin:0;font:600 28px/34px var(--display);letter-spacing:-0.015em;color:var(--t1)">Workflows</h1>
+            <button style="height:32px;padding:0 12px;border-radius:var(--r);border:1px solid var(--acc);background:var(--acc);color:var(--onacc);font-weight:500;font-family:var(--sans);cursor:pointer;transition:background-color 100ms" style-hover="background:var(--accH)" style-active="background:var(--accP)">New workflow</button>
+          </div>
+          <ul style="list-style:none;margin:0;padding:0;background:var(--card);border:1px solid var(--line);border-radius:var(--r)">
+            <sc-for list="{{ workflows }}" as="w" hint-placeholder-count="4">
+              <li style="{{ w.row }}">
+                <span style="width:20px;height:20px;border-radius:min(var(--r),5px);background:var(--raised);border:1px solid var(--line2);flex:none"></span>
+                <div style="flex:1;min-width:0"><div style="font-weight:500;color:var(--t1)">{{ w.name }}</div><div style="font:400 12px/16px var(--mono);color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ w.keys }}</div></div>
+                <div style="text-align:right;flex:none"><div style="font-size:12px;line-height:16px;font-weight:500;color:var(--t2)">{{ w.zone }}</div><div style="font-size:12px;line-height:16px;color:var(--t3);font-variant-numeric:tabular-nums">{{ w.used }}</div></div>
+              </li>
+            </sc-for>
+          </ul>
+        </main>
+      </div>
+    </figure>
+
+    <figure style="margin:0">
+      <figcaption style="font-size:12px;color:var(--t3);margin-bottom:6px">Edit control (modal)</figcaption>
+      <div style="position:relative;display:flex;height:540px;background:var(--bg);border-radius:var(--r);overflow:hidden;border:1px solid var(--line2)">
+        <aside style="width:148px;flex:none;background:var(--panel);border-right:1px solid var(--line);padding:16px 8px"><div style="font:600 16px/20px var(--display);color:var(--t1);padding:0 8px 16px">noma</div></aside>
+        <main style="flex:1;padding:32px"><div style="font:600 28px/34px var(--display);color:var(--t1)">Home</div></main>
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,0.6);display:grid;place-items:center;padding:16px">
+          <div role="dialog" aria-modal="true" aria-labelledby="edit-title" style="width:100%;max-width:380px;background:var(--raised);border:1px solid var(--line2);border-radius:var(--r);padding:20px">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:20px">
+              <div><h2 id="edit-title" style="margin:0;font:600 18px/24px var(--display);color:var(--t1)">Edit control</h2><div style="font-size:12px;line-height:16px;color:var(--t3);margin-top:2px">Visual Studio Code, lower right zone</div></div>
+              <button aria-label="Close" style="width:32px;height:32px;margin:-6px -6px 0 0;display:grid;place-items:center;border:0;border-radius:var(--r);background:transparent;cursor:pointer" style-hover="background:var(--raisedH)"><svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 2l8 8M10 2l-8 8" style="stroke:var(--t2);stroke-width:1.5;stroke-linecap:round"></path></svg></button>
+            </div>
+            <div style="display:grid;gap:16px">
+              <div><div style="display:flex;justify-content:space-between;margin-bottom:6px"><label style="font-weight:500;color:var(--t1)">Label</label><span style="font-size:12px;color:var(--t3);font-variant-numeric:tabular-nums">4 of 12</span></div><div style="height:34px;display:flex;align-items:center;padding:0 10px;background:var(--field);border:1px solid var(--line2);border-radius:var(--r);color:var(--t1)">MUTE</div></div>
+              <div><label style="display:block;margin-bottom:6px;font-weight:500;color:var(--t1)">Action</label><div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:var(--field);border:1px solid var(--line2);border-radius:var(--r);color:var(--t1)">Keyboard shortcut<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" style="fill:none;stroke:var(--t2);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"></path></svg></div></div>
+              <div><label style="display:block;margin-bottom:6px;font-weight:500;color:var(--t1)">Shortcut</label><div style="height:34px;display:flex;align-items:center;padding:0 10px;background:var(--field);border:1px solid var(--acc);box-shadow:0 0 0 1px var(--acc);border-radius:var(--r);color:var(--t1);font:400 13px/18px var(--mono)">Ctrl+Shift+M</div><div style="font-size:12px;line-height:16px;color:var(--t3);margin-top:6px">Press the keys to record them.</div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;margin-top:24px">
+              <button style="height:32px;padding:0 10px;margin-left:-10px;border-radius:var(--r);border:1px solid transparent;background:transparent;color:var(--err);font-weight:500;font-family:var(--sans);cursor:pointer" style-hover="background:var(--errW)">Clear zone</button>
+              <span style="flex:1"></span>
+              <button style="height:32px;padding:0 12px;border-radius:var(--r);border:1px solid transparent;background:transparent;color:var(--t2);font-weight:500;font-family:var(--sans);cursor:pointer" style-hover="background:var(--raisedH);color:var(--t1)">Cancel</button>
+              <button style="height:32px;padding:0 12px;border-radius:var(--r);border:1px solid var(--acc);background:var(--acc);color:var(--onacc);font-weight:500;font-family:var(--sans);cursor:pointer" style-hover="background:var(--accH)" style-active="background:var(--accP)">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </figure>
+  </div>
+</section>
+
+<section id="typography" style="max-width:1240px;margin:0 auto;padding:32px 32px 56px;border-top:1px solid var(--line)">
+  <h2 style="margin:0 0 8px;font:600 24px/30px var(--display);letter-spacing:-0.01em;color:var(--t1)">Typography</h2>
+  <p style="margin:0 0 24px;max-width:66ch">Sora and JetBrains Mono are fixed. Atkinson Hyperlegible Next replaces Inter in both directions. The other four stay here for comparison and can be swapped in. The whole page, screens and code follow the pick.</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:8px;margin-bottom:32px">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:grid;gap:10px;align-content:start">
+      <div style="font-size:12px;line-height:16px;color:var(--t3)">Display, fixed</div>
+      <div style="font:600 30px/36px var(--display);letter-spacing:-0.015em;color:var(--t1)">Sora</div>
+      <p style="margin:0">Page titles 28, modal titles 18, section headings 16. Weight 600 only, never below 16px, where its width starts to cost room. The rounded geometry echoes the wordmark.</p>
+      <div style="font:400 12px/16px var(--mono);color:var(--t3)">@fontsource-variable/sora</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:grid;gap:10px;align-content:start">
+      <div style="font-size:12px;line-height:16px;color:var(--t3)">UI, selected</div>
+      <div style="font:600 30px/36px var(--sans);letter-spacing:-0.01em;color:var(--t1)">{{ font.name }}</div>
+      <p style="margin:0">{{ font.why }}</p>
+      <div style="font:400 12px/16px var(--mono);color:var(--t3)">{{ font.pkg }}</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:grid;gap:10px;align-content:start">
+      <div style="font-size:12px;line-height:16px;color:var(--t3)">Shortcuts, fixed</div>
+      <div style="font:400 30px/36px var(--mono);color:var(--t1)">Ctrl+F5</div>
+      <p style="margin:0">Literal key text only: shortcut captions, key chips, recorded shortcuts. Never labels, headings or chrome. 400 at 12px; 13px inside inputs.</p>
+      <div style="font:400 12px/16px var(--mono);color:var(--t3)">@fontsource/jetbrains-mono/400.css</div>
+    </div>
+  </div>
+
+  <h3 style="margin:0 0 12px;font:600 16px/22px var(--display);color:var(--t1)">UI face options</h3>
+  <div role="radiogroup" aria-label="UI typeface" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:8px;margin-bottom:32px">
+    <sc-for list="{{ fontOpts }}" as="f" hint-placeholder-count="5">
+      <button role="radio" aria-checked="{{ f.on }}" onClick="{{ f.pick }}" style="{{ f.style }}">
+        <span style="{{ f.nameStyle }}">{{ f.name }}</span>
+        <span style="{{ f.sampleStyle }}">Switch window. Used 13 times. Il1 0O</span>
+        <span style="font-size:12px;line-height:16px;color:var(--t3)">{{ f.note }}</span>
+      </button>
+    </sc-for>
+  </div>
+
+  <h3 style="margin:0 0 12px;font:600 16px/22px var(--display);color:var(--t1)">Roles in {{ font.name }}</h3>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:24px 40px">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:grid;gap:16px">
+      <div style="font:600 28px/34px var(--display);letter-spacing:-0.015em;color:var(--t1)">Glide is ready.</div>
+      <div style="display:grid;gap:8px">
+        <div style="font:600 16px/22px var(--display);color:var(--t1)">What each zone does</div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line)"><span style="font-size:12px;line-height:16px;font-weight:500;color:var(--t3)">Upper left</span><span style="font-weight:600;letter-spacing:0.02em;color:var(--t1)">PLAY / PAUSE</span></div>
+        <div style="display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-top:1px solid var(--line)"><span style="font-size:12px;line-height:16px;font-weight:500;color:var(--t3)">Lower right</span><span style="font-weight:600;letter-spacing:0.02em;color:var(--t1)">TERMINAL</span></div>
+      </div>
+      <p style="margin:0">Flick in quickly. Repeat a shortcut sequence about three times and it shows up here.</p>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span style="font-weight:500;color:var(--t1)">Build and run</span>
+        <span style="font:400 12px/16px var(--mono);color:var(--t3)">Ctrl+S  Ctrl+Shift+B  F5</span>
+        <span style="font-size:12px;line-height:16px;color:var(--t3);font-variant-numeric:tabular-nums">Used 13 times, 4m ago</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        <span style="display:inline-flex;align-items:center;height:32px;padding:0 12px;border-radius:var(--r);background:var(--acc);color:var(--onacc);font-weight:500">Save</span>
+        <span style="display:inline-flex;align-items:center;height:32px;padding:0 12px;border-radius:var(--r);border:1px solid var(--line2);background:var(--raised);color:var(--t1);font-weight:500">+ New macro</span>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table style="width:100%;min-width:440px;border-collapse:collapse;font-size:13px;line-height:18px">
+        <thead><tr style="color:var(--t3);text-align:left"><th scope="col" style="padding:8px 0;font-weight:500">Role</th><th scope="col" style="padding:8px;font-weight:500">Face</th><th scope="col" style="padding:8px;font-weight:500">Size / line</th><th scope="col" style="padding:8px;font-weight:500">Weight, tracking</th></tr></thead>
+        <tbody style="color:var(--t2)">
+          <tr style="border-top:1px solid var(--line)"><td style="padding:8px 0;color:var(--t1)">Page title</td><td style="padding:8px">Sora</td><td style="padding:8px;font-family:var(--mono);font-size:12px">28 / 34</td><td style="padding:8px">600, -0.015em</td></tr>
+          <tr style="border-top:1px solid var(--line)"><td style="padding:8px 0;color:var(--t1)">Modal title</td><td style="padding:8px">Sora</td><td style="padding:8px;font-family:var(--mono);font-size:12px">18 / 24</td><td style="padding:8px">600</td></tr>
+          <tr style="border-top:1px solid var(--line)"><td style="padding:8px 0;color:var(--t1)">Section heading</td><td style="padding:8px">Sora</td><td style="padding:8px;font-family:var(--mono);font-size:12px">16 / 22</td><td style="padding:8px">600</td></tr>
+          <tr style="border-top:1px solid var(--line)"><td style="padding:8px 0;color:var(--t1)">Strong, buttons, nav</td><td style="padding:8px">{{ font.name }}</td><td style="padding:8px;font-family:var(--mono);font-size:12px">14 / 20</td><td style="padding:8px">500</td></tr>
+          <tr style="border-top:1px solid var(--line)"><td style="padding:8px 0;color:var(--t1)">Body</td><td style="padding:8px">{{ font.name }}</td><td style="padding:8px;font-family:var(--mono);font-size:12px">14 / 20</td><td style="padding:8px">400</td></tr>
+          <tr style="border-top:1px solid var(--line)"><td style="padding:8px 0;color:var(--t1)">Control label</td><td style="padding:8px">{{ font.name }}</td><td style="padding:8px;font-family:var(--mono);font-size:12px">14 / 18</td><td style="padding:8px">600, +0.02em, as typed</td></tr>
+          <tr style="border-top:1px solid var(--line)"><td style="padding:8px 0;color:var(--t1)">Small, zone names</td><td style="padding:8px">{{ font.name }}</td><td style="padding:8px;font-family:var(--mono);font-size:12px">12 / 16</td><td style="padding:8px">400 or 500</td></tr>
+          <tr style="border-top:1px solid var(--line)"><td style="padding:8px 0;color:var(--t1)">Shortcut</td><td style="padding:8px">JetBrains Mono</td><td style="padding:8px;font-family:var(--mono);font-size:12px">12 / 16</td><td style="padding:8px">400</td></tr>
+        </tbody>
+      </table>
+      <p style="margin:12px 0 0;font-size:12px;line-height:16px;color:var(--t3)">CSS stack: <span style="font-family:var(--mono)">{{ font.stack }}</span>. Tabular figures on every count and time.</p>
+    </div>
+  </div>
+</section>
+
+<section id="foundations" style="max-width:1240px;margin:0 auto;padding:32px 32px 56px;border-top:1px solid var(--line)">
+  <h2 style="margin:0 0 24px;font:600 24px/30px var(--display);letter-spacing:-0.01em;color:var(--t1)">Foundations, {{ d.label }}</h2>
+
+  <h3 style="margin:0 0 12px;font:600 16px/22px var(--display);color:var(--t1)">Color roles</h3>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-bottom:24px">
+    <sc-for list="{{ swatches }}" as="s" hint-placeholder-count="16">
+      <div style="display:grid;gap:6px">
+        <div style="{{ s.chip }}"></div>
+        <div style="font-size:12px;line-height:16px"><div style="font-weight:500;color:var(--t1)">{{ s.name }}</div><div style="font-family:var(--mono);color:var(--t3)">{{ s.hex }}</div><div style="color:var(--t3)">{{ s.use }}</div></div>
+      </div>
+    </sc-for>
+  </div>
+
+  <h3 style="margin:32px 0 12px;font:600 16px/22px var(--display);color:var(--t1)">Measured contrast</h3>
+  <div style="overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);margin-bottom:8px">
+    <table style="width:100%;min-width:560px;border-collapse:collapse;font-size:13px;line-height:18px">
+      <thead><tr style="color:var(--t3);text-align:left"><th scope="col" style="padding:8px 12px;font-weight:500">Pair</th><th scope="col" style="padding:8px 12px;font-weight:500">Sample</th><th scope="col" style="padding:8px 12px;font-weight:500;text-align:right">Ratio</th><th scope="col" style="padding:8px 12px;font-weight:500;text-align:right">Needs</th><th scope="col" style="padding:8px 12px;font-weight:500">Result</th></tr></thead>
+      <tbody>
+        <sc-for list="{{ contrast }}" as="c" hint-placeholder-count="14">
+          <tr style="border-top:1px solid var(--line)">
+            <td style="padding:8px 12px;color:var(--t1)">{{ c.label }}</td>
+            <td style="padding:6px 12px"><span style="{{ c.sample }}">Aa 12</span></td>
+            <td style="padding:8px 12px;text-align:right;font-family:var(--mono);color:var(--t1)">{{ c.ratio }}</td>
+            <td style="padding:8px 12px;text-align:right;font-family:var(--mono);color:var(--t3)">{{ c.need }}</td>
+            <td style="{{ c.resStyle }}">{{ c.result }}</td>
+          </tr>
+        </sc-for>
+      </tbody>
+    </table>
+  </div>
+  <p style="margin:0 0 0;font-size:12px;color:var(--t3)">Computed live from the hex values above with the WCAG 2.x relative-luminance formula.</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:40px 56px;margin-top:40px">
+    <div>
+      <h3 style="margin:0 0 12px;font:600 16px/22px var(--display);color:var(--t1)">Type scale</h3>
+      <div style="display:grid;gap:0;border-top:1px solid var(--line)">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:16px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--line)"><span style="font:600 28px/34px var(--display);letter-spacing:-0.015em;color:var(--t1)">Glide is ready.</span><span style="font-size:12px;line-height:16px;color:var(--t3)">title: Sora 600, 28/34, -0.015em. Once per page.</span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:16px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--line)"><span style="font:600 16px/22px var(--display);color:var(--t1)">What each zone does</span><span style="font-size:12px;line-height:16px;color:var(--t3)">heading: Sora 600, 16/22. Sections, modal titles at 18.</span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:16px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--line)"><span style="font-weight:500;color:var(--t1)">Switch window</span><span style="font-size:12px;line-height:16px;color:var(--t3)">strong: UI 500, 14/20, ink-1. Buttons, nav, labels, row titles.</span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:16px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--line)"><span>Repeat a shortcut sequence about three times and it shows up here.</span><span style="font-size:12px;line-height:16px;color:var(--t3)">body: UI 400, 14/20, ink-2.</span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:16px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--line)"><span style="font-weight:600;letter-spacing:0.02em;color:var(--t1)">PLAY / PAUSE</span><span style="font-size:12px;line-height:16px;color:var(--t3)">key: UI 600, 14/18, +0.02em. Control labels as typed, 12 characters.</span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:16px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--line)"><span style="font-size:12px;line-height:16px;color:var(--t3)">Last used 4m ago. Upper left.</span><span style="font-size:12px;line-height:16px;color:var(--t3)">small: UI 400 or 500, 12/16, ink-3. Meta, zone names, hints.</span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:16px;align-items:baseline;padding:12px 0;border-bottom:1px solid var(--line)"><span style="font:400 12px/16px var(--mono);color:var(--t1)">Ctrl+F5  Meta+Shift+F  F5</span><span style="font-size:12px;line-height:16px;color:var(--t3)">shortcut: JetBrains Mono 400, 12/16. Key text only.</span></div>
+      </div>
+      <p style="margin:12px 0 0;font-size:12px;line-height:16px;color:var(--t3);max-width:62ch">Five sizes: 12, 14, 16, 18, 28. Hierarchy comes from face (Sora versus UI), weight and ink first; the 12 to 14 step is small on purpose because the app is dense. UI face for {{ d.label }}: {{ d.sansName }}. Tabular figures on all counts.</p>
+    </div>
+    <div style="display:grid;gap:32px;align-content:start">
+      <div>
+        <h3 style="margin:0 0 12px;font:600 16px/22px var(--display);color:var(--t1)">Spacing and frame</h3>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 16px;align-items:center">
+          <span style="font-family:var(--mono);font-size:12px;color:var(--t1)">4 8 12 16</span><span>Inside a group: label to field, rows, button gaps.</span>
+          <span style="font-family:var(--mono);font-size:12px;color:var(--t1)">24 32</span><span>Between groups. Heading sits 8 above its content, 32 below the previous one.</span>
+          <span style="font-family:var(--mono);font-size:12px;color:var(--t1)">720 / 32</span><span>Page column max width, padding. Title then 32 to the first section.</span>
+        </div>
+      </div>
+      <div>
+        <h3 style="margin:0 0 12px;font:600 16px/22px var(--display);color:var(--t1)">Radius and elevation</h3>
+        <p style="margin:0 0 8px">One radius: <span style="font-family:var(--mono);font-size:12px;color:var(--t1)">{{ d.r }}</span> on every button, field, card, tile and modal. Full only for the toggle and the device dot. Nested shapes use the radius minus the gap (the segmented control).</p>
+        <p style="margin:0">Three levels, no drop shadows. 0 canvas. 1 card: card fill and a hairline. 2 overlay: raised fill, strong hairline, 60% black scrim behind. Keycaps add one inset bottom edge, the skirt of a real key.</p>
+      </div>
+      <div>
+        <h3 style="margin:0 0 12px;font:600 16px/22px var(--display);color:var(--t1)">Icons</h3>
+        <p style="margin:0">Real app icons at 16 (inline), 20 (rows, cards) and 32 (modal headers, onboarding). UI icons from one set, Lucide at 16px and 1.5 stroke, only for close, chevrons, check and drag. No icon in navigation.</p>
+      </div>
+      <div>
+        <h3 style="margin:0 0 12px;font:600 16px/22px var(--display);color:var(--t1)">Motion</h3>
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:8px 16px">
+          <span style="font-family:var(--mono);font-size:12px;color:var(--t1)">100ms</span><span>Color and press feedback. Press moves 1px down.</span>
+          <span style="font-family:var(--mono);font-size:12px;color:var(--t1)">160ms</span><span>Enter: modal, toast, menu, page. Fade plus 4px rise, ease-out. Exit is a 100ms fade, ease-in.</span>
+          <span style="font-family:var(--mono);font-size:12px;color:var(--t1)">220ms</span><span>Layout: collapse, toggle travel, zone highlight on glide.</span>
+        </div>
+        <p style="margin:8px 0 0;font-size:12px;line-height:16px;color:var(--t3)">Curves: ease-out cubic-bezier(.2,.7,.2,1), ease-in cubic-bezier(.4,0,1,1). No stagger, lift, scale or pop. Reduced motion keeps fades, drops every translate.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="components" style="max-width:1240px;margin:0 auto;padding:32px 32px 56px;border-top:1px solid var(--line)">
+  <h2 style="margin:0 0 24px;font:600 24px/30px var(--display);letter-spacing:-0.01em;color:var(--t1)">Components and states</h2>
+
+  <h3 style="margin:0 0 12px;font:600 16px/22px var(--display);color:var(--t1)">Buttons</h3>
+  <div style="overflow-x:auto;margin-bottom:8px">
+    <div style="display:grid;grid-template-columns:110px repeat(6,minmax(110px,1fr));gap:12px 8px;align-items:center;min-width:820px">
+      <span></span>
+      <sc-for list="{{ stateNames }}" as="n" hint-placeholder-count="6"><span style="font-size:12px;color:var(--t3)">{{ n }}</span></sc-for>
+      <sc-for list="{{ btnRows }}" as="row" hint-placeholder-count="4">
+        <span style="font-weight:500;color:var(--t1)">{{ row.name }}</span>
+        <sc-for list="{{ row.cells }}" as="c" hint-placeholder-count="6"><div><button aria-disabled="{{ c.dis }}" style="{{ c.style }}">{{ c.text }}</button></div></sc-for>
+      </sc-for>
+    </div>
+  </div>
+  <p style="margin:0 0 40px;font-size:12px;line-height:16px;color:var(--t3);max-width:70ch">Height 32 (WCAG 2.2 AA asks 24; 44 is a touch target and this is a trackpad app). One primary per view. Danger is the quiet or secondary button in the error color; a destructive confirm asks in words: "Delete 4 workflows? This cannot be undone."</p>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:40px 40px">
+    <div>
+      <h3 style="margin:0 0 12px;font:600 16px/22px var(--display);color:var(--t1)">Text input and select</h3>
+      <div style="display:grid;gap:12px">
+        <sc-for list="{{ fieldRows }}" as="f" hint-placeholder-count="5">
+          <div style="display:grid;grid-template-columns:72px 1fr;gap:12px;align-items:start"><span style="font-size:12px;color:var(--t3);padding-top:8px">{{ f.state }}</span><div><div style="{{ f.style }}">{{ f.text }}</div><sc-if value="{{ f.err }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;line-height:16px;color:var(--err);margin-top:6px">Ctrl+C is already the copy shortcut. Pick another.</div></sc-if></div></div>
+        </sc-for>
+        <div style="display:grid;grid-template-columns:72px 1fr;gap:12px"><span style="font-size:12px;color:var(--t3);padding-top:8px">Select</span><div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:var(--field);border:1px solid var(--line2);border-radius:var(--r);color:var(--t1)">Keyboard shortcut<svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 3.5l3 3 3-3" style="fill:none;stroke:var(--t2);stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round"></path></svg></div></div>
+      </div>
+      <p style="margin:12px 0 0;font-size:12px;line-height:16px;color:var(--t3)">Label above in strong, never a placeholder. Helper text only for a constraint. Mono fields for shortcuts only.</p>
+    </div>
+
+    <div>
+      <h3 style="margin:0 0 12px;font:600 16px/22px var(--display);color:var(--t1)">Toggle and checkbox</h3>
+      <div style="display:grid;grid-template-columns:repeat(4,auto);gap:12px 20px;justify-content:start;align-items:center">
+        <span style="font-size:12px;color:var(--t3)">Off</span><span style="font-size:12px;color:var(--t3)">On</span><span style="font-size:12px;color:var(--t3)">Focus</span><span style="font-size:12px;color:var(--t3)">Disabled</span>
+        <span style="width:36px;height:20px;border-radius:999px;border:1px solid var(--line2);background:var(--field);padding:2px;display:flex;align-items:center;box-sizing:border-box"><span style="width:14px;height:14px;border-radius:50%;background:var(--t3)"></span></span>
+        <span style="width:36px;height:20px;border-radius:999px;border:1px solid var(--acc);background:var(--acc);padding:2px;display:flex;align-items:center;box-sizing:border-box"><span style="width:14px;height:14px;border-radius:50%;background:var(--onacc);transform:translateX(16px)"></span></span>
+        <span style="width:36px;height:20px;border-radius:999px;border:1px solid var(--acc);background:var(--acc);padding:2px;display:flex;align-items:center;box-sizing:border-box;outline:2px solid var(--acc);outline-offset:2px"><span style="width:14px;height:14px;border-radius:50%;background:var(--onacc);transform:translateX(16px)"></span></span>
+        <span style="width:36px;height:20px;border-radius:999px;border:1px solid var(--line);background:transparent;padding:2px;display:flex;align-items:center;box-sizing:border-box"><span style="width:14px;height:14px;border-radius:50%;background:var(--t4)"></span></span>
+        <span style="width:16px;height:16px;border-radius:min(var(--r),4px);border:1px solid var(--line2);background:var(--field);box-sizing:border-box"></span>
+        <span style="width:16px;height:16px;border-radius:min(var(--r),4px);background:var(--acc);display:grid;place-items:center"><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.8 5.2L4 7.4l4.2-4.8" style="fill:none;stroke:var(--onacc);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"></path></svg></span>
+        <span style="width:16px;height:16px;border-radius:min(var(--r),4px);background:var(--acc);display:grid;place-items:center;outline:2px solid var(--acc);outline-offset:2px"><svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M1.8 5.2L4 7.4l4.2-4.8" style="fill:none;stroke:var(--onacc);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"></path></svg></span>
+        <span style="width:16px;height:16px;border-radius:min(var(--r),4px);border:1px solid var(--line);box-sizing:border-box"></span>
+      </div>
+      <p style="margin:12px 0 0;font-size:12px;line-height:16px;color:var(--t3)">Track 36 by 20, 16px travel at 220ms. The on-state is one of accent's three jobs; position is the second signal.</p>
+
+      <h3 style="margin:32px 0 12px;font:600 16px/22px var(--display);color:var(--t1)">Tag, tooltip, toast</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center">
+        <span style="font-size:12px;line-height:16px;padding:2px 6px;border-radius:min(var(--r),4px);background:var(--raised);color:var(--t2)">Demo</span>
+        <span style="font-size:12px;line-height:16px;color:var(--t3)">Beta</span>
+        <span role="tooltip" style="font-size:12px;line-height:16px;padding:4px 8px;border-radius:min(var(--r),4px);background:var(--t1);color:var(--bg)">Ctrl+Shift+B</span>
+      </div>
+      <div role="status" style="margin-top:12px;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 14px;background:var(--raised);border:1px solid var(--line2);border-radius:var(--r);max-width:340px">
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true" style="flex:none"><path d="M2.5 7.3l3 3 6-6.6" style="fill:none;stroke:var(--t1);stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round"></path></svg>
+        <span style="flex:1;color:var(--t1)">Saved to upper left.</span>
+        <button style="height:28px;padding:0 8px;border:0;border-radius:var(--r);background:transparent;color:var(--t1);font-weight:500;cursor:pointer;text-decoration:underline;text-underline-offset:3px">Undo</button>
+      </div>
+      <p style="margin:12px 0 0;font-size:12px;line-height:16px;color:var(--t3)">One tag style, used only when it changes what the reader does. Tooltips for shortcut hints, never for a label. A toast with an action stays until dismissed.</p>
+    </div>
+
+    <div>
+      <h3 style="margin:0 0 12px;font:600 16px/22px var(--display);color:var(--t1)">Nav item and list row</h3>
+      <div style="display:grid;grid-template-columns:72px 160px;gap:8px 12px;align-items:center">
+        <span style="font-size:12px;color:var(--t3)">Default</span><div style="padding:6px 8px;border-radius:var(--r);color:var(--t3)">Workflows</div>
+        <span style="font-size:12px;color:var(--t3)">Hover</span><div style="padding:6px 8px;border-radius:var(--r);color:var(--t1)">Workflows</div>
+        <span style="font-size:12px;color:var(--t3)">Current</span><div style="padding:6px 8px;border-radius:var(--r);color:var(--t1);background:var(--raised);font-weight:500">Workflows</div>
+        <span style="font-size:12px;color:var(--t3)">Focus</span><div style="padding:6px 8px;border-radius:var(--r);color:var(--t3);outline:2px solid var(--acc);outline-offset:-2px">Workflows</div>
+      </div>
+      <p style="margin:8px 0 16px;font-size:12px;line-height:16px;color:var(--t3)">Current is fill plus weight plus aria-current, never accent.</p>
+      <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--r)">
+        <div style="display:flex;justify-content:space-between;padding:10px 12px"><span style="color:var(--t1);font-weight:500">Reopen tab</span><span style="font-size:12px;color:var(--t3)">Default</span></div>
+        <div style="display:flex;justify-content:space-between;padding:10px 12px;border-top:1px solid var(--line);background:var(--raised)"><span style="color:var(--t1);font-weight:500">Next track</span><span style="font-size:12px;color:var(--t3)">Hover</span></div>
+        <div style="display:flex;justify-content:space-between;padding:10px 12px;border-top:1px solid var(--line);background:var(--raisedH);box-shadow:inset 2px 0 0 var(--t1)"><span style="color:var(--t1);font-weight:500">Build and run</span><span style="font-size:12px;color:var(--t2)">Selected</span></div>
+      </div>
+      <p style="margin:8px 0 0;font-size:12px;line-height:16px;color:var(--t3)">One divider between rows, none above the first. Selected uses ink, not accent.</p>
+    </div>
+
+    <div>
+      <h3 style="margin:0 0 12px;font:600 16px/22px var(--display);color:var(--t1)">Control tile</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--key);padding:10px 12px 12px;display:grid;gap:8px"><span style="font-size:12px;line-height:16px;font-weight:500;color:var(--t3)">Default</span><div><div style="font-weight:600;letter-spacing:0.02em;color:var(--t1)">RUN</div><div style="font:400 12px/16px var(--mono);color:var(--t3)">Ctrl+F5</div></div></div>
+        <div style="background:var(--card);border:1px solid var(--line2);border-radius:var(--r);box-shadow:var(--key);padding:10px 12px 12px;display:grid;gap:8px"><span style="font-size:12px;line-height:16px;font-weight:500;color:var(--t3)">Hover</span><div><div style="font-weight:600;letter-spacing:0.02em;color:var(--t1)">RUN</div><div style="font:400 12px/16px var(--mono);color:var(--t3)">Ctrl+F5</div></div></div>
+        <div style="background:var(--raised);border:1px solid var(--line2);border-radius:var(--r);padding:10px 12px 12px;display:grid;gap:8px;transform:translateY(1px)"><span style="font-size:12px;line-height:16px;font-weight:500;color:var(--t3)">Pressed, or glided</span><div><div style="font-weight:600;letter-spacing:0.02em;color:var(--t1)">RUN</div><div style="font:400 12px/16px var(--mono);color:var(--t3)">Ctrl+F5</div></div></div>
+        <div style="border:1px dashed var(--line2);border-radius:var(--r);padding:10px 12px 12px;display:grid;gap:8px"><span style="font-size:12px;line-height:16px;font-weight:500;color:var(--t3)">Empty</span><div style="font-weight:500;color:var(--t2)">Assign an action</div></div>
+      </div>
+      <p style="margin:8px 0 0;font-size:12px;line-height:16px;color:var(--t3)">Always four, always 2 by 2 in trackpad order. No app icon on the tile; it goes once, in the section header.</p>
+
+      <h3 style="margin:32px 0 12px;font:600 16px/22px var(--display);color:var(--t1)">Workflow chain</h3>
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+        <span style="width:20px;height:20px;border-radius:min(var(--r),5px);background:var(--raised);border:1px solid var(--line2)"></span><span style="width:14px;height:1px;background:var(--line2)"></span>
+        <span style="font:400 12px/16px var(--mono);color:var(--t1);padding:3px 7px;border:1px solid var(--line2);border-radius:min(var(--r),4px);background:var(--field)">Ctrl+C</span><span style="width:14px;height:1px;background:var(--line2)"></span>
+        <span style="width:20px;height:20px;border-radius:min(var(--r),5px);background:var(--raised);border:1px solid var(--line2)"></span><span style="width:14px;height:1px;background:var(--line2)"></span>
+        <span style="font:400 12px/16px var(--mono);color:var(--t1);padding:3px 7px;border:1px solid var(--line2);border-radius:min(var(--r),4px);background:var(--field)">Ctrl+Shift+V</span>
+      </div>
+      <p style="margin:8px 0 0;font-size:12px;line-height:16px;color:var(--t3)">App icon where the app changes, a key chip per step, a 1px connector. No arrows, no reveal animation.</p>
+    </div>
+
+    <div style="grid-column:1 / -1">
+      <h3 style="margin:0 0 12px;font:600 16px/22px var(--display);color:var(--t1)">Empty, loading, error</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:8px">
+        <div style="background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:4px;align-content:start"><span style="font-size:12px;color:var(--t3)">Empty</span><p style="margin:0;color:var(--t2)">A workflow appears here once Noma sees one repeat.</p></div>
+        <div aria-busy="true" style="background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:8px;align-content:start"><span style="font-size:12px;color:var(--t3)">Loading, after 400ms</span><p style="margin:0;color:var(--t2)">Reading shortcuts from Visual Studio Code…</p><div style="height:2px;background:var(--line);border-radius:1px;overflow:hidden"><div style="width:40%;height:100%;background:var(--t2)"></div></div></div>
+        <div role="alert" style="background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:8px;align-content:start"><span style="font-size:12px;color:var(--t3)">Error</span><p style="margin:0;color:var(--t1)"><span style="font-weight:600;color:var(--err)">Noma Device isn't responding.</span> Check the USB cable, then try again.</p><div><button style="height:32px;padding:0 12px;border-radius:var(--r);border:1px solid var(--line2);background:var(--raised);color:var(--t1);font-weight:500;cursor:pointer" style-hover="background:var(--raisedH)">Try again</button></div></div>
+      </div>
+      <p style="margin:8px 0 0;font-size:12px;line-height:16px;color:var(--t3)">One component, one line of copy, no title when the line is enough. Never reuse a sentence across two states.</p>
+    </div>
+  </div>
+</section>
+
+<section id="rules" style="max-width:1240px;margin:0 auto;padding:32px 32px 56px;border-top:1px solid var(--line)">
+  <h2 style="margin:0 0 24px;font:600 24px/30px var(--display);letter-spacing:-0.01em;color:var(--t1)">Rules</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:32px 56px">
+    <div>
+      <h3 style="margin:0 0 8px;font:600 16px/22px var(--display);color:var(--t1)">What accent may mean</h3>
+      <p style="margin:0 0 8px;color:var(--t1)">Accent means you can act on this, now. Three uses only: the one primary button, the focus ring, and the on-state of a toggle or checkbox.</p>
+      <p style="margin:0">It never marks where you are (nav, selection), what Noma suggests, a link, a count or success. Those use ink, weight and words. A Flow suggestion is signalled by its heading ("Noticed today") and its real count.</p>
+    </div>
+    <div>
+      <h3 style="margin:0 0 8px;font:600 16px/22px var(--display);color:var(--t1)">Do</h3>
+      <ul style="margin:0;padding-left:18px;display:grid;gap:6px">
+        <li>Use the five sizes and seven roles. A new size means changing the system, not the page.</li>
+        <li>Lay out four zones as 2 by 2 in trackpad order, never a row of four.</li>
+        <li>Write control labels the device can show: 12 characters, the user's own words.</li>
+        <li>Give each view one primary button.</li>
+        <li>Say what Noma noticed with the real number: "11 times today".</li>
+      </ul>
+    </div>
+    <div>
+      <h3 style="margin:0 0 8px;font:600 16px/22px var(--display);color:var(--t1)">Don't</h3>
+      <ul style="margin:0;padding-left:18px;display:grid;gap:6px">
+        <li>Uppercase or letter-space anything except a control label.</li>
+        <li>Add drop shadows, gradients, or blur outside the Notice window.</li>
+        <li>Animate hover, stagger lists, or scale anything in.</li>
+        <li>Mute text with opacity. Pick an ink.</li>
+        <li>Put a subtitle under a page title, or text glyphs where an icon belongs.</li>
+      </ul>
+    </div>
+    <div>
+      <h3 style="margin:0 0 8px;font:600 16px/22px var(--display);color:var(--t1)">Light theme</h3>
+      <p style="margin:0">Not in v5. Dark is a decision here: Noma sits beside editors and players that are mostly dark, and the device display is light-on-black. A light theme would cost 16 more values, re-measuring every pair in the table, a second hardware color, and double the screenshot QA. Because every color is a CSS variable, it can arrive later as one [data-theme] block with no component changes.</p>
+    </div>
+  </div>
+</section>
+
+<section id="recommendation" style="max-width:1240px;margin:0 auto;padding:32px 32px 56px;border-top:1px solid var(--line)">
+  <h2 style="margin:0 0 16px;font:600 24px/30px var(--display);letter-spacing:-0.01em;color:var(--t1)">Recommendation: A, Machined</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:24px 56px;max-width:1100px">
+    <p style="margin:0;color:var(--t1)">Ship Machined. It keeps what v4 got right (graphite, one blue, solid surfaces, Sora and JetBrains Mono) and fixes what failed: the cobalt clears 7:1 as a fill under dark text where #4c7eff failed under white, every caption clears 4.5:1, and Atkinson Hyperlegible Next keeps 1, l and I distinct in the 12px captions where most of this app lives.</p>
+    <p style="margin:0">Display is the stronger identity but sits closest to the near-black terminal template, and a white primary competes with Sora headings. Borrow its idea that the app speaks the device's language: labels as typed, 12 characters.</p>
+  </div>
+</section>
+
+<section id="code" style="max-width:1240px;margin:0 auto;padding:32px 32px 72px;border-top:1px solid var(--line)">
+  <div style="display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+    <h2 style="margin:0;font:600 24px/30px var(--display);letter-spacing:-0.01em;color:var(--t1)">Drop-in code, {{ d.label }}</h2>
+    <span style="font-size:12px;color:var(--t3)">Generated from the selected direction's tokens.</span>
+  </div>
+  <div role="tablist" aria-label="Files" style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px">
+    <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="4">
+      <button role="tab" aria-selected="{{ t.on }}" onClick="{{ t.pick }}" style="{{ t.style }}">{{ t.label }}</button>
+    </sc-for>
+    <span style="flex:1"></span>
+    <button onClick="{{ copy }}" style="height:32px;padding:0 12px;border-radius:var(--r);border:1px solid var(--line2);background:var(--raised);color:var(--t1);font-weight:500;cursor:pointer" style-hover="background:var(--raisedH)">{{ copyLabel }}</button>
+  </div>
+  <pre style="margin:0;padding:16px;max-height:560px;overflow:auto;background:var(--field);border:1px solid var(--line);border-radius:var(--r);font:400 12px/19px var(--mono);color:var(--t2);white-space:pre">{{ codeText }}</pre>
+</section>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;direction&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;A&quot;,&quot;B&quot;],&quot;default&quot;:&quot;A&quot;,&quot;tsType&quot;:&quot;'A'|'B'&quot;}}">
+const DIRS = {
+  A: { id: 'A', label: 'Machined', tag: 'Recommended', sansName: 'IBM Plex Sans',
+    idea: 'Laser-etched legends on bead-blasted aluminium: cool graphite and one cobalt for the thing you press.',
+    why: 'Palette from a dark anodized laptop deck, the surface the palm rests on before every glide. One cobalt, 6px radius. Closest to v4, so migration is mostly a value swap.',
+    hex: { bg: '#0f1113', panel: '#121417', card: '#171a1e', raised: '#1f2329', raisedH: '#272b32', field: '#0b0d0f', line: '#272b31', line2: '#5f6672', t1: '#eceef1', t2: '#b6bbc3', t3: '#8e949e', t4: '#5d636c', acc: '#69a7f0', accH: '#86b9f4', accP: '#5a93d8', onacc: '#0a1726', err: '#f07a6e', hw: '#d0ad6a' },
+    r: '6px', key: 'inset 0 -2px 0 rgba(0,0,0,0.4)', sans: '"IBM Plex Sans", "Segoe UI", system-ui, sans-serif',
+    fonts: ["@fontsource/ibm-plex-sans/400.css", "@fontsource/ibm-plex-sans/500.css", "@fontsource/ibm-plex-sans/600.css"] },
+  B: { id: 'B', label: 'Display', tag: 'Most distinct', sansName: 'Archivo',
+    idea: 'The app is the device display, enlarged: true black, one white, no accent hue.',
+    why: 'Palette from the Noma Device\'s monochrome screen. White is the accent, so primary, focus and on-state are inversions and overload cannot happen. 2px radius. Risk: close to the near-black terminal template.',
+    hex: { bg: '#000000', panel: '#080808', card: '#111111', raised: '#1b1b1b', raisedH: '#242424', field: '#000000', line: '#262626', line2: '#6e6e6e', t1: '#ededed', t2: '#c4c4c4', t3: '#969696', t4: '#5c5c5c', acc: '#ededed', accH: '#ffffff', accP: '#cfcfcf', onacc: '#000000', err: '#ff7d6e', hw: '#d6b46e' },
+    r: '2px', key: 'inset 0 -2px 0 #2a2a2a', sans: '"Archivo Variable", "Archivo", "Segoe UI", system-ui, sans-serif',
+    fonts: ["@fontsource-variable/archivo"] },
+  C: { id: 'C', label: 'Soft-touch', tag: 'Most legible', sansName: 'Atkinson Hyperlegible Next',
+    idea: 'A student\'s desk at night: rubberized keycaps, a felt mat, one highlighter.',
+    why: 'Palette from soft-touch plastic and a yellow-green highlighter, the one bright thing students already use to mark what matters. UI face Atkinson Hyperlegible Next: drawn for low vision, so 1, l and I stay distinct at 12px. Risk: warmth edges toward cosy.',
+    hex: { bg: '#15130f', panel: '#1a1814', card: '#201d19', raised: '#2a2621', raisedH: '#322d27', field: '#100e0b', line: '#36312b', line2: '#6f675c', t1: '#f2ede6', t2: '#c6beb3', t3: '#9d9488', t4: '#655d53', acc: '#dde45a', accH: '#e6ec7c', accP: '#c4cb45', onacc: '#1d1f05', err: '#f2806f', hw: '#9cc2d4' },
+    r: '8px', key: 'inset 0 -3px 0 rgba(0,0,0,0.35)', sans: '"Atkinson Hyperlegible Next Variable", "Atkinson Hyperlegible Next", "Segoe UI", system-ui, sans-serif',
+    fonts: ["@fontsource-variable/atkinson-hyperlegible-next"] }
+};
+const FONTS = [
+  { id: 'plex', name: 'IBM Plex Sans', stack: '"IBM Plex Sans", "Segoe UI", system-ui, sans-serif', pkg: '@fontsource/ibm-plex-sans 400, 500, 600', fonts: ["@fontsource/ibm-plex-sans/400.css", "@fontsource/ibm-plex-sans/500.css", "@fontsource/ibm-plex-sans/600.css"],
+    why: 'Engineered grotesque with humanist apertures. Strong hinting, so it is the safest at 12px under ClearType.', note: 'Engineered. Best on Windows.' },
+  { id: 'archivo', name: 'Archivo', stack: '"Archivo Variable", "Archivo", "Segoe UI", system-ui, sans-serif', pkg: '@fontsource-variable/archivo', fonts: ["@fontsource-variable/archivo"],
+    why: 'Compact grotesque with a slightly industrial edge. Fits more in a 148px sidebar and stays sturdy at 12px.', note: 'Compact grotesque. Narrowest.' },
+  { id: 'atkinson', name: 'Atkinson Hyperlegible Next', stack: '"Atkinson Hyperlegible Next Variable", "Atkinson Hyperlegible Next", "Segoe UI", system-ui, sans-serif', pkg: '@fontsource-variable/atkinson-hyperlegible-next', fonts: ["@fontsource-variable/atkinson-hyperlegible-next"],
+    why: 'Drawn for low-vision readers: 1, l and I and 0 and O never collide, which matters in captions like "Used 11 times". Its open shapes hold at 12px on ClearType. The chosen UI face.', note: 'Humanist. Most legible.' },
+  { id: 'public', name: 'Public Sans', stack: '"Public Sans Variable", "Public Sans", "Segoe UI", system-ui, sans-serif', pkg: '@fontsource-variable/public-sans', fonts: ["@fontsource-variable/public-sans"],
+    why: 'Neutral neo-grotesque from the US government design system. Plainest of the five; lets Sora carry all the personality.', note: 'Neutral neo-grotesque.' },
+  { id: 'source', name: 'Source Sans 3', stack: '"Source Sans 3 Variable", "Source Sans 3", "Segoe UI", system-ui, sans-serif', pkg: '@fontsource-variable/source-sans-3', fonts: ["@fontsource-variable/source-sans-3"],
+    why: 'Humanist with a small x-height and calm rhythm. Softest beside Sora, a little smaller at the same size, so body could step up to 15px.', note: 'Calm humanist. Smallest.' }
+];
+const DIR_FONT = { A: 'atkinson', B: 'atkinson' };
+const DISPLAY = '"Sora Variable", "Sora", "Segoe UI", system-ui, sans-serif';
+const MONO = '"JetBrains Mono", Consolas, ui-monospace, monospace';
+
+function lum(h) { h = h.replace('#', ''); const f = c => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); }; return 0.2126 * f(parseInt(h.slice(0, 2), 16)) + 0.7152 * f(parseInt(h.slice(2, 4), 16)) + 0.0722 * f(parseInt(h.slice(4, 6), 16)); }
+function cr(a, b) { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); }
+
+const PAIRS = [
+  ['ink-1 on canvas', 't1', 'bg', 4.5], ['ink-1 on card', 't1', 'card', 4.5], ['ink-2 on card', 't2', 'card', 4.5], ['ink-2 on raised', 't2', 'raised', 4.5],
+  ['ink-3 on canvas', 't3', 'bg', 4.5], ['ink-3 on card', 't3', 'card', 4.5], ['ink-3 on raised (modal)', 't3', 'raised', 4.5], ['ink-3 on sidebar', 't3', 'panel', 4.5],
+  ['accent-on on accent (primary)', 'onacc', 'acc', 4.5], ['accent on canvas (focus ring)', 'acc', 'bg', 3], ['accent on raised (focus in modal)', 'acc', 'raised', 3],
+  ['error on card', 'err', 'card', 4.5], ['error on raised', 'err', 'raised', 4.5], ['hardware on sidebar (dot)', 'hw', 'panel', 3],
+  ['line-strong on field (input edge)', 'line2', 'field', 3], ['line-strong on card', 'line2', 'card', 3], ['line on card (divider)', 'line', 'card', 0], ['ink-4 on card (disabled)', 't4', 'card', 0]
+];
+
+const SW = [
+  ['canvas', 'bg', 'Page'], ['panel', 'panel', 'Sidebar'], ['card', 'card', 'Level 1'], ['raised', 'raised', 'Level 2, current, hover'], ['raised-hover', 'raisedH', 'Hover on raised'], ['field', 'field', 'Inputs, key chips'],
+  ['line', 'line', 'Dividers, card edges'], ['line-strong', 'line2', 'Input edges, 3:1'], ['ink-1', 't1', 'Headings, values'], ['ink-2', 't2', 'Body'], ['ink-3', 't3', 'Meta, zone names'], ['ink-4', 't4', 'Disabled only'],
+  ['accent', 'acc', 'Primary, focus, on'], ['accent-on', 'onacc', 'Text on accent'], ['error', 'err', 'Errors, danger'], ['hardware', 'hw', 'Real device contact']
+];
+
+const WF = [
+  { name: 'Build and run', keys: 'Ctrl+S   Ctrl+Shift+B   F5', zone: 'Upper left', used: 'Used 13 times' },
+  { name: 'Next track', keys: 'Ctrl+Right', zone: 'Lower right', used: 'Used 41 times' },
+  { name: 'Clean paste', keys: 'Ctrl+Shift+V', zone: 'Lower left', used: 'Used 6 times' },
+  { name: 'Reopen tab', keys: 'Ctrl+Shift+T', zone: 'No zone', used: 'Not used yet' }
+];
+
+class Component extends DCLogic {
+  state = { dir: null, tab: 0, glideOn: true, labelsOn: true, copied: false };
+
+  sw(d, on) {
+    const t = { width: '36px', height: '20px', borderRadius: '999px', padding: '2px', display: 'flex', alignItems: 'center', boxSizing: 'border-box', cursor: 'pointer', flex: 'none', transition: 'background-color 100ms, border-color 100ms' };
+    const k = { width: '14px', height: '14px', borderRadius: '50%', transition: 'transform 220ms cubic-bezier(.2,.7,.2,1)' };
+    return on
+      ? [{ ...t, border: '1px solid var(--acc)', background: 'var(--acc)' }, { ...k, background: 'var(--onacc)', transform: 'translateX(16px)' }]
+      : [{ ...t, border: '1px solid var(--line2)', background: 'var(--field)' }, { ...k, background: 'var(--t3)', transform: 'none' }];
+  }
+
+  code(d) {
+    const h = d.hex;
+    const tw = `/** @type {import('tailwindcss').Config} */
+// Noma v5 (${d.label}). Colors replace the default palette, so blue-500 and
+// friends no longer exist. Values live in styles/tokens.css.
+module.exports = {
+  content: ['./src/renderer/index.html', './src/renderer/src/**/*.{ts,tsx}'],
+  theme: {
+    colors: {
+      transparent: 'transparent',
+      current: 'currentColor',
+      black: '#000',
+      canvas: 'var(--canvas)',
+      panel: 'var(--panel)',
+      card: 'var(--card)',
+      raised: { DEFAULT: 'var(--raised)', hover: 'var(--raised-hover)' },
+      field: 'var(--field)',
+      line: { DEFAULT: 'var(--line)', strong: 'var(--line-strong)' },
+      ink: { 1: 'var(--ink-1)', 2: 'var(--ink-2)', 3: 'var(--ink-3)', 4: 'var(--ink-4)' },
+      accent: { DEFAULT: 'var(--accent)', hover: 'var(--accent-hover)', press: 'var(--accent-press)', on: 'var(--accent-on)' },
+      err: { DEFAULT: 'var(--err)', wash: 'var(--err-wash)' },
+      hw: 'var(--hw)'
+    },
+    fontFamily: {
+      display: [${DISPLAY.split(', ').map(s => s.startsWith('"') ? `'${s}'` : `'${s}'`).join(', ')}],
+      sans: [${d.sans.split(', ').map(s => `'${s}'`).join(', ')}],
+      mono: [${MONO.split(', ').map(s => `'${s}'`).join(', ')}]
+    },
+    fontSize: {
+      // Five sizes. Use with the role classes in lib/ui.ts, not on their own.
+      title: ['28px', { lineHeight: '34px', letterSpacing: '-0.015em' }],
+      modal: ['18px', { lineHeight: '24px' }],
+      heading: ['16px', { lineHeight: '22px' }],
+      body: ['14px', { lineHeight: '20px' }],
+      small: ['12px', { lineHeight: '16px' }]
+    },
+    borderRadius: { none: '0', DEFAULT: 'var(--radius)', full: '9999px' },
+    boxShadow: { none: 'none', key: 'var(--key-edge)' },
+    extend: {
+      maxWidth: { page: '720px' },
+      transitionDuration: { fast: '100ms', enter: '160ms', layout: '220ms' },
+      transitionTimingFunction: { out: 'cubic-bezier(.2,.7,.2,1)', in: 'cubic-bezier(.4,0,1,1)' }
+    }
+  },
+  plugins: []
+}`;
+    const css = `/* Noma v5 tokens (${d.label}). Imported by the app and the website. */
+@import '@fontsource-variable/sora/wght.css';
+${d.fonts.map(f => `@import '${f}';`).join('\n')}
+@import '@fontsource/jetbrains-mono/400.css';
+
+:root {
+  --canvas: ${h.bg};
+  --panel: ${h.panel};
+  --card: ${h.card};
+  --raised: ${h.raised};
+  --raised-hover: ${h.raisedH};
+  --field: ${h.field};
+  --line: ${h.line};
+  --line-strong: ${h.line2};
+  --ink-1: ${h.t1};
+  --ink-2: ${h.t2};
+  --ink-3: ${h.t3};
+  --ink-4: ${h.t4};
+  --accent: ${h.acc};
+  --accent-hover: ${h.accH};
+  --accent-press: ${h.accP};
+  --accent-on: ${h.onacc};
+  --err: ${h.err};
+  --err-wash: color-mix(in oklab, ${h.err} 14%, transparent);
+  --hw: ${h.hw};
+  --radius: ${d.r};
+  --key-edge: ${d.key};
+  --ease-out: cubic-bezier(.2,.7,.2,1);
+  --ease-in: cubic-bezier(.4,0,1,1);
+}
+
+#root { color-scheme: dark; }
+html, body, #root { height: 100%; }
+body {
+  background: var(--canvas);
+  color: var(--ink-2);
+  font: 400 14px/20px theme('fontFamily.sans');
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Motion: three durations, transform and opacity only. */
+@keyframes noma-enter { from { opacity: 0; transform: translateY(4px); } }
+@keyframes noma-fade { from { opacity: 0; } }
+@keyframes noma-leave { to { opacity: 0; } }
+.noma-enter { animation: noma-enter 160ms var(--ease-out) both; }
+.noma-fade { animation: noma-fade 160ms var(--ease-out) both; }
+.noma-leave { animation: noma-leave 100ms var(--ease-in) both; pointer-events: none; }
+.noma-press { transition: background-color 100ms, border-color 100ms, color 100ms, transform 100ms var(--ease-out); }
+.noma-press:active:not(:disabled) { transform: translateY(1px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .noma-enter { animation-name: noma-fade; }
+  .noma-press:active:not(:disabled) { transform: none; }
+  *, *::before, *::after { transition-duration: 0ms !important; }
+}
+
+/* Noma Notice window: transparent document. Unchanged from v4. */
+html.noma-notice-surface, html.noma-notice-surface body, html.noma-notice-surface #root { background: transparent; overflow: hidden; }`;
+    const ui = `// Noma v5 shared class strings. Replaces lib/surfaces.ts.
+// If a value is not here or in tailwind.config.js, it is not in the system.
+
+// Page frame
+export const PAGE = 'max-w-page px-8 pt-8 pb-12'
+export const PAGE_HEADER = 'mb-8 flex items-center justify-between gap-4'
+export const PAGE_TITLE = 'font-display text-title font-semibold text-ink-1'
+export const SECTION = 'mt-8 first:mt-0'
+export const SECTION_HEADER = 'mb-2 flex items-baseline justify-between gap-4'
+export const SECTION_TITLE = 'font-display text-heading font-semibold text-ink-1'
+
+// Text roles
+export const STRONG = 'text-body font-medium text-ink-1'
+export const BODY = 'text-body text-ink-2'
+export const META = 'text-small text-ink-3'
+export const ZONE_NAME = 'text-small font-medium text-ink-3'
+export const KEY_LABEL = 'text-body font-semibold tracking-[0.02em] text-ink-1'
+export const SHORTCUT = 'font-mono text-small text-ink-3'
+export const KEY_CHIP = 'rounded border border-line-strong bg-field px-[7px] py-[3px] font-mono text-small text-ink-1'
+export const LINK = 'text-ink-1 underline decoration-line-strong underline-offset-[3px] hover:decoration-ink-1'
+
+// Surfaces: level 1 card, level 2 overlay. No drop shadows.
+export const CARD = 'rounded border border-line bg-card'
+export const CARD_ROW = 'flex items-center gap-3 px-4 py-3 border-t border-line first:border-t-0'
+export const OVERLAY = 'rounded border border-line-strong bg-raised'
+export const SCRIM = 'fixed inset-0 z-50 grid place-items-center bg-black/60 p-4 noma-fade'
+export const MODAL = OVERLAY + ' w-full max-w-sm p-5 noma-enter'
+export const MODAL_TITLE = 'font-display text-modal font-semibold text-ink-1'
+// The one glass surface: the Notice window over the user's desktop.
+export const NOTICE_GLASS = 'rounded border border-line-strong bg-[color-mix(in_oklab,var(--card)_86%,transparent)] backdrop-blur-xl'
+
+// Control tile: always four, 2 by 2, trackpad order.
+export const ZONE_GRID = 'grid grid-cols-2 gap-2'
+export const KEYCAP = 'noma-press grid gap-2 rounded border border-line bg-card px-3 pt-2.5 pb-3 shadow-key hover:border-line-strong active:bg-raised active:shadow-none'
+export const KEYCAP_EMPTY = 'grid gap-2 rounded border border-dashed border-line-strong px-3 pt-2.5 pb-3 hover:bg-card'
+
+// Buttons: three looks, plus a danger color modifier.
+const BTN = 'noma-press inline-flex h-8 items-center justify-center gap-1.5 rounded border px-3 text-body font-medium disabled:cursor-not-allowed aria-busy:cursor-progress'
+export const BUTTON = {
+  primary: BTN + ' border-accent bg-accent text-accent-on hover:bg-accent-hover active:bg-accent-press disabled:border-line disabled:bg-raised disabled:text-ink-4',
+  secondary: BTN + ' border-line-strong bg-raised text-ink-1 hover:bg-raised-hover active:bg-card disabled:border-line disabled:bg-transparent disabled:text-ink-4',
+  quiet: BTN + ' border-transparent bg-transparent text-ink-2 hover:bg-raised hover:text-ink-1 active:bg-raised-hover disabled:text-ink-4 disabled:hover:bg-transparent'
+} as const
+export const DANGER = 'text-err hover:bg-err-wash hover:text-err'
+
+// Fields
+export const FIELD_LABEL = 'mb-1.5 block text-body font-medium text-ink-1'
+export const FIELD_HINT = 'mt-1.5 text-small text-ink-3'
+export const FIELD_ERROR = 'mt-1.5 text-small text-err'
+export const FIELD = 'h-[34px] w-full rounded border border-line-strong bg-field px-2.5 text-body text-ink-1 placeholder:text-ink-3 hover:border-ink-3 focus:border-accent focus:shadow-[0_0_0_1px_var(--accent)] focus:outline-none disabled:border-line disabled:bg-card disabled:text-ink-4 aria-[invalid=true]:border-err'
+export const FIELD_MONO = FIELD + ' font-mono text-[13px]'
+
+// Navigation
+export const NAV_ITEM = 'noma-press block w-full rounded px-2 py-1.5 text-left text-body text-ink-3 hover:text-ink-1'
+export const NAV_ITEM_CURRENT = 'bg-raised font-medium text-ink-1' // plus aria-current="page"
+
+// Small things
+export const TAG = 'rounded bg-raised px-1.5 py-0.5 text-small text-ink-2'
+export const TOOLTIP = 'rounded bg-ink-1 px-2 py-1 text-small text-canvas'
+export const TOAST = OVERLAY + ' flex items-center gap-3 py-2.5 pl-3.5 pr-3 noma-enter'
+export const STATE_BLOCK = CARD + ' grid gap-2 p-4'
+export const DEVICE_DOT = 'h-1.5 w-1.5 rounded-full bg-hw'`;
+    const md = `# Noma design system v5 (${d.label})
+
+Calm, precise, a little tactile. Information over decoration.
+
+## Files
+- styles/tokens.css: every value. Shared with the website.
+- tailwind.config.js: maps tokens to classes. The default palette is removed.
+- lib/ui.ts: class strings for every role below. Use these; do not compose new ones per page.
+
+## Color
+Surfaces climb canvas, panel, card, raised. Text is ink-1 (headings, values), ink-2 (body), ink-3 (meta), ink-4 (disabled only).
+Accent has three jobs: the one primary button, the focus ring, the on-state of a toggle or checkbox. Nothing else.
+Error is the only status color. Success is a check and a word. Hardware gold marks real device contact only.
+Every pair is measured in the v5 spec page; ink-3 is the floor for any readable text.
+
+## Type
+Sora: page titles (28), modal titles (18), section headings (16). Weight 600. Never below 16.
+${d.sansName}: everything else. Body 14, small 12. Strong is 500 in ink-1.
+JetBrains Mono: shortcut text only (Ctrl+F5). Never labels, never chrome.
+No uppercase and no letter-spacing, except control labels, which are shown as the user typed them for the device (12 characters).
+
+## Space and shape
+Steps 4, 8, 12, 16 inside a group; 24 and 32 between groups. Section headings sit 8 above their content.
+One page frame: 720px column, 32px padding, title then 32 to the first section. No page subtitles.
+One radius (${d.r}) on everything. Full only for the toggle and the device dot.
+No drop shadows. Level 1 is card plus line. Level 2 is raised plus line-strong, over a 60% black scrim.
+
+## Components
+Buttons: primary (filled), secondary (bordered), quiet (text). Danger is a color modifier. One primary per view. Height 32.
+Fields: visible label above, helper text only for a constraint, error text below in err.
+Control tiles: always four, 2 by 2 in trackpad order. Zone name, label, shortcut. The app icon goes once, in the section header.
+Empty, loading, error: one STATE_BLOCK, one line of copy, no repeated sentences across states.
+Nav: text only. Current is raised fill plus weight plus aria-current.
+
+## Glass
+One place: the Notice window, because it really sits over the desktop. Nowhere else.
+
+## Motion
+100ms feedback, 160ms enter (fade plus 4px rise), 100ms exit (fade), 220ms layout. No stagger, hover lift, scale or pop.
+Reduced motion keeps fades and drops all movement.
+
+## Copy
+No em dashes. No page intros. Buttons name the outcome. Errors say what to do next.
+Say what Noma noticed with the real number.
+
+## Not in v5
+A light theme. When it comes, it is one [data-theme] block in tokens.css.`;
+    return [tw, css, ui, md];
+  }
+
+  renderVals() {
+    const id = 'B';
+    const d0 = DIRS[id] || DIRS.A;
+    const font = FONTS.find(f => f.id === (this.state.font ?? DIR_FONT[d0.id])) || FONTS[0];
+    const d = { ...d0, sans: font.stack, sansName: font.name, fonts: font.fonts };
+    const h = d.hex;
+    const fontOpts = FONTS.map(f => {
+      const on = f.id === font.id;
+      return { name: f.name, note: f.note + (DIR_FONT[d0.id] === f.id ? ' Direction default.' : ''), on,
+        pick: () => this.setState({ font: f.id }),
+        style: { display: 'grid', gap: '6px', textAlign: 'left', padding: '14px 16px', borderRadius: d.r, border: `1px solid ${on ? h.t1 : h.line}`, background: on ? h.card : 'transparent', cursor: 'pointer', color: h.t2 },
+        nameStyle: { font: `600 16px/22px ${f.stack}`, color: h.t1 },
+        sampleStyle: { font: `400 13px/18px ${f.stack}`, color: h.t2 } };
+    });
+    const vars = {
+      '--bg': h.bg, '--panel': h.panel, '--card': h.card, '--raised': h.raised, '--raisedH': h.raisedH, '--field': h.field,
+      '--line': h.line, '--line2': h.line2, '--t1': h.t1, '--t2': h.t2, '--t3': h.t3, '--t4': h.t4,
+      '--acc': h.acc, '--accH': h.accH, '--accP': h.accP, '--onacc': h.onacc, '--err': h.err, '--hw': h.hw,
+      '--errW': `color-mix(in oklab, ${h.err} 14%, transparent)`,
+      '--sans': d.sans, '--display': DISPLAY, '--mono': MONO, '--r': d.r, '--key': d.key
+    };
+
+    const dirList = ['A', 'B'].map(k => {
+      const o = DIRS[k]; const on = k === id;
+      return {
+        on, label: `${k}. ${o.label}`, tag: o.tag, idea: o.idea, why: o.why,
+        pick: () => this.setState({ dir: k, font: null }),
+        sw: [o.hex.bg, o.hex.card, o.hex.t2, o.hex.acc].map(c => ({ width: '18px', height: '40px', borderRadius: '2px', background: c, border: `1px solid ${h.line2}` })),
+        style: { display: 'grid', gridTemplateColumns: '150px minmax(0,1fr) auto', gap: '20px', alignItems: 'start', textAlign: 'left', padding: '16px 20px', borderRadius: d.r, border: `1px solid ${on ? h.t1 : h.line}`, background: on ? h.card : 'transparent', cursor: 'pointer', color: h.t2, fontFamily: d.sans, fontSize: '14px', lineHeight: '21px' }
+      };
+    });
+
+    const swatches = SW.map(([name, k, use]) => ({ name, use, hex: h[k], chip: { height: '44px', borderRadius: d.r, background: h[k], border: `1px solid ${h.line}` } }));
+
+    const contrast = PAIRS.map(([label, f, b, need]) => {
+      const r = cr(h[f], h[b]); const pass = need === 0 ? null : r >= need;
+      return {
+        label, ratio: r.toFixed(2) + ':1', need: need === 0 ? 'exempt' : need + ':1',
+        result: pass === null ? 'Not required' : pass ? 'Pass' : 'Fail',
+        resStyle: { padding: '8px 12px', color: pass === false ? h.err : pass ? h.t1 : h.t3, fontWeight: pass === false ? 600 : 400 },
+        sample: { display: 'inline-block', padding: '2px 8px', borderRadius: '3px', background: h[b], color: h[f], border: `1px solid ${h.line}`, fontSize: '12px', fontWeight: 500 }
+      };
+    });
+
+    const base = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', height: '32px', padding: '0 12px', borderRadius: d.r, fontFamily: d.sans, fontSize: '14px', fontWeight: 500, border: '1px solid transparent', whiteSpace: 'nowrap', cursor: 'default' };
+    const focus = { outline: `2px solid ${h.acc}`, outlineOffset: '2px' };
+    const press = { transform: 'translateY(1px)' };
+    const V = {
+      Primary: { text: 'Save', load: 'Saving…', def: { background: h.acc, color: h.onacc, borderColor: h.acc }, hov: { background: h.accH, borderColor: h.accH }, act: { background: h.accP, borderColor: h.accP }, dis: { background: h.raised, color: h.t4, borderColor: h.line } },
+      Secondary: { text: 'Try a glide', load: 'Testing…', def: { background: h.raised, color: h.t1, borderColor: h.line2 }, hov: { background: h.raisedH }, act: { background: h.card }, dis: { background: 'transparent', color: h.t4, borderColor: h.line } },
+      Quiet: { text: 'Cancel', load: null, def: { background: 'transparent', color: h.t2 }, hov: { background: h.raised, color: h.t1 }, act: { background: h.raisedH, color: h.t1 }, dis: { color: h.t4 } },
+      Danger: { text: 'Clear zone', load: 'Clearing…', def: { background: 'transparent', color: h.err }, hov: { background: vars['--errW'] }, act: { background: vars['--errW'] }, dis: { color: h.t4 } }
+    };
+    const btnRows = Object.entries(V).map(([name, v]) => {
+      const def = { ...base, ...v.def };
+      return { name, cells: [
+        { text: v.text, dis: false, style: def },
+        { text: v.text, dis: false, style: { ...def, ...v.hov } },
+        { text: v.text, dis: false, style: { ...def, ...v.hov, ...v.act, ...press } },
+        { text: v.text, dis: false, style: { ...def, ...focus } },
+        { text: v.text, dis: true, style: { ...def, ...v.dis, cursor: 'not-allowed' } },
+        v.load ? { text: v.load, dis: true, style: { ...def, cursor: 'progress' } } : { text: 'n/a', dis: true, style: { fontSize: '12px', color: h.t3, fontFamily: d.sans } }
+      ] };
+    });
+
+    const fb = { height: '34px', display: 'flex', alignItems: 'center', padding: '0 10px', background: h.field, border: `1px solid ${h.line2}`, borderRadius: d.r, color: h.t1, fontFamily: d.sans, fontSize: '14px', boxSizing: 'border-box' };
+    const fieldRows = [
+      { state: 'Default', text: 'Switch window', err: false, style: fb },
+      { state: 'Hover', text: 'Switch window', err: false, style: { ...fb, borderColor: h.t3 } },
+      { state: 'Focus', text: 'Switch window', err: false, style: { ...fb, borderColor: h.acc, boxShadow: `0 0 0 1px ${h.acc}` } },
+      { state: 'Disabled', text: 'Switch window', err: false, style: { ...fb, background: h.card, borderColor: h.line, color: h.t4 } },
+      { state: 'Error', text: 'Ctrl+C', err: true, style: { ...fb, borderColor: h.err, fontFamily: MONO, fontSize: '13px' } }
+    ];
+
+    const workflows = WF.map((w, i) => ({ ...w, row: { display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i ? `1px solid ${h.line}` : 'none' } }));
+
+    const [gt, gk] = this.sw(d, this.state.glideOn);
+    const [lt, lk] = this.sw(d, this.state.labelsOn);
+    const files = ['tailwind.config.js', 'styles/tokens.css', 'lib/ui.ts', 'DESIGN.md'];
+    const code = this.code(d);
+    const tabs = files.map((label, i) => {
+      const on = i === this.state.tab;
+      return { label, on, pick: () => this.setState({ tab: i, copied: false }), style: { height: '32px', padding: '0 12px', borderRadius: d.r, border: `1px solid ${on ? h.line2 : 'transparent'}`, background: on ? h.raised : 'transparent', color: on ? h.t1 : h.t3, fontFamily: MONO, fontSize: '12px', cursor: 'pointer' } };
+    });
+
+    return {
+      vars, d, dirList, font, fontOpts, swatches, contrast, btnRows, fieldRows, workflows, tabs,
+      stateNames: ['Default', 'Hover', 'Pressed', 'Focus', 'Disabled', 'Loading'],
+      glideOn: this.state.glideOn, glideWord: this.state.glideOn ? 'On' : 'Off', glideTrack: gt, glideKnob: gk,
+      toggleGlide: () => this.setState(s => ({ glideOn: !s.glideOn })),
+      labelsOn: this.state.labelsOn, labelsTrack: lt, labelsKnob: lk,
+      toggleLabels: () => this.setState(s => ({ labelsOn: !s.labelsOn })),
+      codeText: code[this.state.tab],
+      copyLabel: this.state.copied ? 'Copied' : 'Copy file',
+      copy: () => { navigator.clipboard && navigator.clipboard.writeText(code[this.state.tab]).then(() => this.setState({ copied: true })).catch(() => {}); }
+    };
+  }
+}
+</script>
+</body>
+</html>
