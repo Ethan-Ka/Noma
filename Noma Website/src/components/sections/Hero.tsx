@@ -3,7 +3,6 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import ControlBar from '../visuals/ControlBar'
 import SiteLink from '../layout/SiteLink'
 import { GLASS_ACCENT } from '../../lib/glass'
-import SwipeTrail from '../visuals/SwipeTrail'
 import { SERIF_LINE } from '../../lib/type'
 import AppIcon from '../visuals/AppIcon'
 import { appProfiles } from '../../data/appProfiles'
@@ -111,7 +110,6 @@ export default function Hero() {
 
   return (
     <section id="top" className="relative overflow-hidden">
-      <SwipeTrail className="absolute inset-0" />
       <div aria-hidden className="hero-glow pointer-events-none absolute inset-x-0 top-0 h-[70vh]" />
 
       <div className="relative mx-auto max-w-6xl px-6 pb-24 pt-36 sm:px-8 sm:pt-44 md:pb-32">
