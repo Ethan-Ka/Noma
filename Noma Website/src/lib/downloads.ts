@@ -19,6 +19,8 @@ const RELEASES_API = 'https://api.github.com/repos/awnsh/Noma/releases?per_page=
 
 export interface Downloads {
   version: string | null
+  /** When that version was published (ISO). */
+  releasedAt: string | null
   windows: string
   macAppleSilicon: string
   macIntel: string
@@ -26,6 +28,7 @@ export interface Downloads {
 
 const FALLBACK: Downloads = {
   version: null,
+  releasedAt: null,
   windows: `${LATEST}/Noma-Setup.exe`,
   macAppleSilicon: `${LATEST}/Noma-arm64.dmg`,
   macIntel: `${LATEST}/Noma-x64.dmg`,
@@ -42,6 +45,7 @@ interface Release {
   tag_name: string
   draft: boolean
   prerelease: boolean
+  published_at?: string
   assets: { name: string; browser_download_url: string }[]
 }
 
@@ -51,17 +55,24 @@ export function pickDownloads(releases: Release[]): Downloads {
   const find = (pattern: RegExp) => {
     for (const release of published) {
       const asset = release.assets.find((candidate) => pattern.test(candidate.name))
-      if (asset) return { url: asset.browser_download_url, version: release.tag_name.replace(/^v/, '') }
+      if (asset)
+        return {
+          url: asset.browser_download_url,
+          version: release.tag_name.replace(/^v/, ''),
+          releasedAt: release.published_at ?? null,
+        }
     }
     return null
   }
   const windows = find(INSTALLERS.windows)
   const macAppleSilicon = find(INSTALLERS.macAppleSilicon)
   const macIntel = find(INSTALLERS.macIntel)
+  const shown = windows ?? macAppleSilicon
   return {
     // The version shown is the one the visitor's likely download has; the
     // Windows build is checked first because it's uploaded alongside the Macs.
-    version: windows?.version ?? macAppleSilicon?.version ?? null,
+    version: shown?.version ?? null,
+    releasedAt: shown?.releasedAt ?? null,
     windows: windows?.url ?? FALLBACK.windows,
     macAppleSilicon: macAppleSilicon?.url ?? FALLBACK.macAppleSilicon,
     macIntel: macIntel?.url ?? FALLBACK.macIntel,

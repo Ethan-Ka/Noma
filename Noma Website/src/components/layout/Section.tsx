@@ -4,7 +4,9 @@ interface SectionProps {
   id: string
   children: ReactNode
   className?: string
-  /** Sit directly on the page instead of in a glass panel. */
+  /** Sit directly on the page instead of in a glass panel. Used on
+   *  alternating sections (2026-10-07) so the page isn't one card after
+   *  another, which read as templated. */
   bare?: boolean
 }
 
@@ -23,8 +25,10 @@ interface SectionProps {
 export default function Section({ id, children, className = '', bare = false }: SectionProps) {
   if (bare) {
     return (
-      <section id={id} className={`relative scroll-mt-28 ${className}`}>
-        <div className="mx-auto max-w-6xl px-6 py-16 sm:px-8 sm:py-20 md:py-24">{children}</div>
+      <section id={id} className={`relative scroll-mt-28 px-3 sm:px-5 ${className}`}>
+        <span aria-hidden className="thread-node" />
+        {/* Same content edges as a panel's, so text lines up down the page. */}
+        <div className="mx-auto max-w-6xl px-5 py-16 sm:px-10 sm:py-20 md:px-12 md:py-28">{children}</div>
       </section>
     )
   }

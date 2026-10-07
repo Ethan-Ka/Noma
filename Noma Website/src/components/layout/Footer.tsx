@@ -24,7 +24,6 @@ const columns: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: 'Resources',
     links: [
-      { label: 'GitHub', href: '#' },
       { label: 'Privacy', href: '/privacy' },
       { label: 'Uninstall', href: '/uninstall' },
       { label: 'Terms', href: '/terms' },

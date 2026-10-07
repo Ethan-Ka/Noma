@@ -22,10 +22,10 @@ export default function Contact() {
         <Reveal>
           <p className="text-sm font-medium text-base-400">Contact</p>
           <h1 className="mt-3 text-balance font-display text-[clamp(2rem,5vw,3rem)] font-medium leading-[1.1] tracking-[-0.02em] text-base-50">
-            Talk to us.
+            Get in touch.
           </h1>
           <p className="mx-auto mt-4 max-w-sm text-balance text-base text-base-400">
-            We&rsquo;re a small team building Noma. A real person reads every email.
+            Noma is built by one person, and I read every email myself.
           </p>
         </Reveal>
 

@@ -6,6 +6,14 @@ import { FaWindows } from 'react-icons/fa6'
 import { GLASS_ACCENT } from '../../lib/glass'
 import { detectPlatform, useLatestDownloads } from '../../lib/downloads'
 
+/** "Oct 6", or "Oct 6, 2026" outside the current year. A recent date is a
+ *  quiet sign the beta is actively worked on. */
+function formatDate(iso: string) {
+  const date = new Date(iso)
+  const sameYear = date.getFullYear() === new Date().getFullYear()
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(sameYear ? {} : { year: 'numeric' }) })
+}
+
 const SECONDARY =
   'border border-base-600 text-base-200 transition-colors hover:border-base-400 hover:text-base-50'
 
@@ -49,7 +57,13 @@ export default function DownloadButtons() {
         <a href={downloads.macIntel} download className="text-base-300 underline underline-offset-4 hover:text-base-50">
           Intel Mac
         </a>
-        {downloads.version && <span className="text-base-500"> · Version {downloads.version}</span>}
+        {downloads.version && (
+          <span className="text-base-500">
+            {' '}
+            · Version {downloads.version}
+            {downloads.releasedAt && <>, updated {formatDate(downloads.releasedAt)}</>}
+          </span>
+        )}
       </p>
 
       <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-base-400">

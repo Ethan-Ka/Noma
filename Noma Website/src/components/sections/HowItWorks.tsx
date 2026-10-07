@@ -25,7 +25,7 @@ export default function HowItWorks() {
   const Current = STEPS[active]
 
   return (
-    <Section id="how">
+    <Section id="how" bare>
       <SectionIntro title="How it works." />
 
       <div className="mt-10 grid grid-cols-1 gap-10 lg:mt-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16">

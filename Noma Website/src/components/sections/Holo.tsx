@@ -1,6 +1,5 @@
 import Section from '../layout/Section'
 import SectionIntro from '../ui/SectionIntro'
-import Em from '../ui/Em'
 import Reveal from '../ui/Reveal'
 import HoloDemo from '../visuals/HoloDemo'
 
@@ -14,9 +13,8 @@ export default function Holo() {
       <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-center lg:gap-16">
         <SectionIntro
           compact
-          title="The right controls."
-          second={<>Right <Em>where you need them.</Em></>}
-          line="Glide puts your four controls at the edges of the trackpad you already have. Swipe in from the palm rest. No extra hardware."
+          title="Your four controls, on the trackpad."
+          line="Glide puts them at the edges of the trackpad you already have. Swipe in from the palm rest to use one. No extra hardware."
         />
         <Reveal delay={0.06}>
           <HoloDemo />

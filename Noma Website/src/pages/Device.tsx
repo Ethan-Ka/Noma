@@ -5,7 +5,6 @@ import SiteLink from '../components/layout/SiteLink'
 import WaitlistForm from '../components/ui/WaitlistForm'
 import KeyboardVisual from '../components/visuals/KeyboardVisual'
 import { appProfiles } from '../data/appProfiles'
-import Em from '../components/ui/Em'
 
 /**
  * The hardware's own page (2026-10-06: moved off the homepage at the user's
@@ -47,7 +46,7 @@ export default function Device() {
             <h1 className="mt-3 text-balance font-display text-[clamp(2.2rem,6vw,4rem)] font-medium leading-[1.04] tracking-[-0.02em] text-base-50">
               Your controls,
               <br />
-              as <Em>keys.</Em>
+              as physical keys.
             </h1>
           </Reveal>
           <Reveal delay={0.08}>

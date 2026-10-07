@@ -5,7 +5,7 @@ import Flow from '../components/sections/Flow'
 import HowItWorks from '../components/sections/HowItWorks'
 import Holo from '../components/sections/Holo'
 import Adaptive from '../components/sections/Adaptive'
-import Device from '../components/sections/Device'
+import Privacy from '../components/sections/Privacy'
 import Beta from '../components/sections/Beta'
 import ScrollThread from '../components/visuals/ScrollThread'
 
@@ -20,7 +20,7 @@ import ScrollThread from '../components/visuals/ScrollThread'
  *   HowItWorks  four steps, short
  *   Holo        Glide: the controls on the trackpad (id "glide")
  *   Adaptive    it gets better as you use it; the larger idea
- *   Device      the hardware, honestly (details on /device)
+ *   Privacy     what Noma records and never records (hardware lives on /device)
  *   Beta        the invitation
  *
  * Built from the existing visuals (AdaptiveSurface, the desktop notice scene,
@@ -40,7 +40,7 @@ export default function Home() {
         <HowItWorks />
         <Holo />
         <Adaptive />
-        <Device />
+        <Privacy />
         <Beta />
       </div>
     </>

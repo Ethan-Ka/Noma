@@ -82,8 +82,8 @@ export default function Feedback() {
             Report an issue.
           </h1>
           <p className="mt-4 max-w-md text-balance text-base text-base-400">
-            Noma is in beta, so things will break. Tell us what happened and we&rsquo;ll fix it. A real person reads
-            every report.
+            Noma is in beta, so things will break. Tell me what happened and I&rsquo;ll fix it. I read
+            every report myself.
           </p>
         </Reveal>
 
