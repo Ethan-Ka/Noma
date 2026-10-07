@@ -113,4 +113,15 @@ describe('ControlEditorModal', () => {
     expect(onClose).not.toHaveBeenCalled()
     await waitFor(() => expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled())
   })
+
+  it('renames the zone for the new action until you type a name of your own', async () => {
+    open(LOWER_LEFT)
+
+    fireEvent.change(await screen.findByDisplayValue('Saved workflow'), { target: { value: 'systemCommand' } })
+    expect(screen.getByDisplayValue('VOLUME MUTE')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByDisplayValue('VOLUME MUTE'), { target: { value: 'MY NAME' } })
+    fireEvent.change(screen.getByDisplayValue('System action'), { target: { value: 'flowAction' } })
+    expect(screen.getByDisplayValue('MY NAME')).toBeInTheDocument()
+  })
 })

@@ -1,0 +1,42 @@
+import type { ControlAction, Macro } from '@shared/types'
+import { formatShortcutCaption } from './describeAction'
+
+/** Labels also appear on a small physical display, so they stop at 12 characters. */
+const MAX_LABEL_LENGTH = 12
+
+function fit(text: string): string {
+  return text.length > MAX_LABEL_LENGTH ? text.slice(0, MAX_LABEL_LENGTH).trimEnd() : text
+}
+
+/** "volumeMute" becomes "VOLUME MUTE", matching the all-caps starter labels (RUN, DEBUG). */
+function humanize(id: string): string {
+  return id.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toUpperCase()
+}
+
+/** A workflow named "Visual Studio Code → GitHub Desktop" is best labeled for where it ends. */
+function workflowLabel(name: string): string {
+  const destination = name.split(/→|->/).pop()?.trim()
+  return destination || name
+}
+
+/**
+ * The name a zone gets by default for an action, so changing what a zone does also
+ * renames it (until the user types a name of their own). Null when the action is not
+ * complete yet, such as a shortcut with no keys, so the current name is left alone.
+ */
+export function defaultLabelForAction(action: ControlAction, macros: Macro[]): string | null {
+  switch (action.type) {
+    case 'shortcut':
+      return action.keys.length > 0 ? fit(formatShortcutCaption(action.keys)) : null
+    case 'macro': {
+      const macro = macros.find((candidate) => candidate.id === action.macroId)
+      return macro ? fit(workflowLabel(macro.name)) : null
+    }
+    case 'systemCommand':
+      return fit(humanize(action.command))
+    case 'flowAction':
+      return fit(humanize(action.action))
+    default:
+      return null
+  }
+}

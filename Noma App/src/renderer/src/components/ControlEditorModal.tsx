@@ -7,6 +7,7 @@ import { Modal, ModalCloseButton } from './Modal'
 import { PrimaryButton } from './Button'
 import { FIELD_INPUT, FIELD_LABEL } from '../lib/surfaces'
 import { defaultActionForType, type SelectableActionType } from '../lib/actions'
+import { defaultLabelForAction } from '../lib/actionLabel'
 
 interface ControlEditorModalProps {
   applicationId: string
@@ -38,6 +39,8 @@ export function ControlEditorModal({
   const existing = control && control.action.type !== 'none' ? control : undefined
   const [label, setLabel] = useState(existing?.label ?? '')
   const [action, setAction] = useState<ControlAction>(existing?.action ?? defaultActionForType('shortcut'))
+  // The name follows the action (RUN, VOLUME MUTE, ...) until the user types one of their own.
+  const [nameEdited, setNameEdited] = useState(false)
   const [macros, setMacros] = useState<Macro[]>([])
   const [testResult, setTestResult] = useState<{
     ok: boolean
@@ -68,8 +71,15 @@ export function ControlEditorModal({
         ? 'Choose a workflow to save.'
         : null
 
+  const changeAction = (next: ControlAction): void => {
+    setAction(next)
+    if (nameEdited) return
+    const suggested = defaultLabelForAction(next, macros)
+    if (suggested) setLabel(suggested)
+  }
+
   const handleActionTypeChange = (nextType: SelectableActionType): void => {
-    setAction(defaultActionForType(nextType))
+    changeAction(defaultActionForType(nextType))
     setTestResult(null)
   }
 
@@ -132,7 +142,10 @@ export function ControlEditorModal({
         <input
           type="text"
           value={label}
-          onChange={(event) => setLabel(event.target.value.slice(0, 12))}
+          onChange={(event) => {
+            setNameEdited(true)
+            setLabel(event.target.value.slice(0, 12))
+          }}
           placeholder="e.g. RUN"
           maxLength={12}
           className={FIELD_INPUT}
@@ -158,7 +171,7 @@ export function ControlEditorModal({
 
       <div className="mb-5">
         {action.type === 'shortcut' && (
-          <ShortcutRecorder value={action.keys} onChange={(keys) => setAction({ type: 'shortcut', keys })} />
+          <ShortcutRecorder value={action.keys} onChange={(keys) => changeAction({ type: 'shortcut', keys })} />
         )}
 
         {action.type === 'macro' &&
@@ -169,7 +182,7 @@ export function ControlEditorModal({
           ) : (
             <select
               value={action.macroId}
-              onChange={(event) => setAction({ type: 'macro', macroId: event.target.value })}
+              onChange={(event) => changeAction({ type: 'macro', macroId: event.target.value })}
               className={FIELD_INPUT}
             >
               <option value="" disabled>
@@ -186,7 +199,7 @@ export function ControlEditorModal({
         {action.type === 'systemCommand' && (
           <select
             value={action.command}
-            onChange={(event) => setAction({ type: 'systemCommand', command: event.target.value })}
+            onChange={(event) => changeAction({ type: 'systemCommand', command: event.target.value })}
             className={FIELD_INPUT}
           >
             {SYSTEM_COMMAND_CATALOG.map((command) => (
@@ -200,7 +213,7 @@ export function ControlEditorModal({
         {action.type === 'flowAction' && (
           <select
             value={action.action}
-            onChange={(event) => setAction({ type: 'flowAction', action: event.target.value })}
+            onChange={(event) => changeAction({ type: 'flowAction', action: event.target.value })}
             className={FIELD_INPUT}
           >
             {FLOW_ACTION_CATALOG.map((flowAction) => (
