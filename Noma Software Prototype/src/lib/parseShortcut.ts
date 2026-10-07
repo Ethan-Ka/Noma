@@ -1,4 +1,4 @@
-/**
+s/**
  * Turns a display shortcut string (e.g. "Ctrl+Shift+F") into the canonical
  * key names HardwareKeyboard.tsx's layout data uses, so pressing a contextual
  * control can flash the literal keys on the decorative base keyboard.
