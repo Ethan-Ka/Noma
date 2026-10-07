@@ -58,7 +58,9 @@ export default function Navigation() {
             aria-label="Toggle menu"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((v) => !v)}
-            className="flex flex-col gap-1.5 lg:hidden"
+            // The two lines are 20 by 8 pixels, far too small to tap. Padding makes the
+            // button a 44 by 44 target and the negative margin keeps the pill's layout.
+            className="-mx-3 -my-[18px] flex flex-col gap-1.5 px-3 py-[18px] lg:hidden"
           >
             <span className={`h-px w-5 bg-base-100 transition-transform duration-300 ${menuOpen ? 'translate-y-[3.5px] rotate-45' : ''}`} />
             <span className={`h-px w-5 bg-base-100 transition-transform duration-300 ${menuOpen ? '-translate-y-[3.5px] -rotate-45' : ''}`} />
