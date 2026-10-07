@@ -1,4 +1,5 @@
 import type { ControlAction, Macro } from '@shared/types'
+import type { KnownShortcutOption } from '@shared/shortcuts'
 import { formatShortcutCaption } from './describeAction'
 
 /** Labels also appear on a small physical display, so they stop at 12 characters. */
@@ -24,10 +25,17 @@ function workflowLabel(name: string): string {
  * renames it (until the user types a name of their own). Null when the action is not
  * complete yet, such as a shortcut with no keys, so the current name is left alone.
  */
-export function defaultLabelForAction(action: ControlAction, macros: Macro[]): string | null {
+export function defaultLabelForAction(
+  action: ControlAction,
+  macros: Macro[],
+  known: KnownShortcutOption[] = []
+): string | null {
   switch (action.type) {
-    case 'shortcut':
-      return action.keys.length > 0 ? fit(formatShortcutCaption(action.keys)) : null
+    case 'shortcut': {
+      if (action.keys.length === 0) return null
+      const hit = known.find((shortcut) => shortcut.keys.join('+') === action.keys.join('+'))
+      return hit ? hit.short : fit(formatShortcutCaption(action.keys))
+    }
     case 'macro': {
       const macro = macros.find((candidate) => candidate.id === action.macroId)
       return macro ? fit(workflowLabel(macro.name)) : null

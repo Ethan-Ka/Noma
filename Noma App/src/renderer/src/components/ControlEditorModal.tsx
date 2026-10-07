@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { FLOW_ACTION_CATALOG, GLIDE_ZONE_LABELS, SYSTEM_COMMAND_CATALOG, glideZoneForSlot } from '@shared/constants'
 import { useGlideStore } from '../stores/glideStore'
 import type { Control, ControlAction, Macro } from '@shared/types'
@@ -8,6 +8,9 @@ import { PrimaryButton } from './Button'
 import { FIELD_INPUT, FIELD_LABEL } from '../lib/surfaces'
 import { defaultActionForType, type SelectableActionType } from '../lib/actions'
 import { defaultLabelForAction } from '../lib/actionLabel'
+import { knownShortcutsFor } from '@shared/shortcuts'
+import { isMacRenderer } from '../lib/platform'
+import { formatShortcutCaption } from '../lib/describeAction'
 
 interface ControlEditorModalProps {
   applicationId: string
@@ -41,6 +44,15 @@ export function ControlEditorModal({
   const [action, setAction] = useState<ControlAction>(existing?.action ?? defaultActionForType('shortcut'))
   // The name follows the action (RUN, VOLUME MUTE, ...) until the user types one of their own.
   const [nameEdited, setNameEdited] = useState(false)
+  // Shortcuts people already know in this app (the library). "App shortcut" picks from them;
+  // "Keyboard shortcut" is only for recording your own.
+  const known = useMemo(() => knownShortcutsFor(applicationId, isMacRenderer ? 'mac' : 'windows'), [applicationId])
+  const knownIndex = (keys: string[]): number => known.findIndex((shortcut) => shortcut.keys.join('+') === keys.join('+'))
+  const [shortcutMode, setShortcutMode] = useState<'known' | 'manual'>(() =>
+    known.length > 0 && (action.type !== 'shortcut' || action.keys.length === 0 || knownIndex(action.keys) >= 0)
+      ? 'known'
+      : 'manual'
+  )
   const [macros, setMacros] = useState<Macro[]>([])
   const [testResult, setTestResult] = useState<{
     ok: boolean
@@ -66,7 +78,9 @@ export function ControlEditorModal({
   const saveBlocker = !label.trim()
     ? 'Give it a name to save.'
     : action.type === 'shortcut' && action.keys.length === 0
-      ? 'Record a shortcut to save.'
+      ? shortcutMode === 'known' && known.length > 0
+        ? 'Choose a shortcut to save.'
+        : 'Record a shortcut to save.'
       : action.type === 'macro' && !action.macroId
         ? 'Choose a workflow to save.'
         : null
@@ -74,12 +88,18 @@ export function ControlEditorModal({
   const changeAction = (next: ControlAction): void => {
     setAction(next)
     if (nameEdited) return
-    const suggested = defaultLabelForAction(next, macros)
+    const suggested = defaultLabelForAction(next, macros, known)
     if (suggested) setLabel(suggested)
   }
 
-  const handleActionTypeChange = (nextType: SelectableActionType): void => {
-    changeAction(defaultActionForType(nextType))
+  const handleActionTypeChange = (nextType: SelectableActionType | 'knownShortcut'): void => {
+    if (nextType === 'knownShortcut') {
+      setShortcutMode('known')
+      changeAction({ type: 'shortcut', keys: [] })
+    } else {
+      if (nextType === 'shortcut') setShortcutMode('manual')
+      changeAction(defaultActionForType(nextType))
+    }
     setTestResult(null)
   }
 
@@ -129,13 +149,10 @@ export function ControlEditorModal({
   }
 
   return (
-    <Modal onClose={onClose}>
-      <div className="mb-5">
-        <div className="text-[10px] uppercase tracking-widest text-neutral-600">
-          {applicationName}, {zoneLabel ? `${zoneLabel} zone` : `Control ${slot}`}
-        </div>
-        <h2 className="mt-1 font-display text-lg font-semibold text-neutral-100">Choose what this runs</h2>
-      </div>
+    <Modal onClose={onClose} titleId="control-editor-title">
+      <h2 id="control-editor-title" className="mb-5 font-display text-lg font-semibold text-neutral-100">
+        {zoneLabel ?? `Control ${slot}`} action
+      </h2>
 
       <div className="mb-4">
         <label className={FIELD_LABEL}>Name</label>
@@ -155,12 +172,13 @@ export function ControlEditorModal({
       <div className="mb-4">
         <label className={FIELD_LABEL}>Action type</label>
         <select
-          value={action.type}
-          onChange={(event) => handleActionTypeChange(event.target.value as SelectableActionType)}
+          value={action.type === 'shortcut' && shortcutMode === 'known' && known.length > 0 ? 'knownShortcut' : action.type}
+          onChange={(event) => handleActionTypeChange(event.target.value as SelectableActionType | 'knownShortcut')}
           className={FIELD_INPUT}
         >
           {/* A zone can hold an action this form can't build (a workflow's window switch). Show it as is so the select never lies. */}
           {!(action.type in ACTION_TYPE_LABELS) && <option value={action.type}>Other action (kept as is)</option>}
+          {known.length > 0 && <option value="knownShortcut">App shortcut</option>}
           {(Object.keys(ACTION_TYPE_LABELS) as SelectableActionType[]).map((type) => (
             <option key={type} value={type}>
               {ACTION_TYPE_LABELS[type]}
@@ -170,9 +188,25 @@ export function ControlEditorModal({
       </div>
 
       <div className="mb-5">
-        {action.type === 'shortcut' && (
-          <ShortcutRecorder value={action.keys} onChange={(keys) => changeAction({ type: 'shortcut', keys })} />
-        )}
+        {action.type === 'shortcut' &&
+          (shortcutMode === 'known' && known.length > 0 ? (
+            <select
+              value={knownIndex(action.keys) >= 0 ? String(knownIndex(action.keys)) : ''}
+              onChange={(event) => changeAction({ type: 'shortcut', keys: known[Number(event.target.value)].keys })}
+              className={FIELD_INPUT}
+            >
+              <option value="" disabled>
+                Choose a shortcut…
+              </option>
+              {known.map((shortcut, index) => (
+                <option key={shortcut.label} value={String(index)}>
+                  {shortcut.label} ({formatShortcutCaption(shortcut.keys)})
+                </option>
+              ))}
+            </select>
+          ) : (
+            <ShortcutRecorder value={action.keys} onChange={(keys) => changeAction({ type: 'shortcut', keys })} />
+          ))}
 
         {action.type === 'macro' &&
           (macros.length === 0 ? (
