@@ -12,7 +12,7 @@ import DownloadButtons from '../ui/DownloadButtons'
  */
 export default function Beta() {
   return (
-    <Section id="beta">
+    <Section id="beta" feature>
       <SectionIntro
         center
         title="Try the beta."
@@ -21,14 +21,14 @@ export default function Beta() {
 
       <Reveal delay={0.14}>
         <div className="mx-auto mt-10 max-w-2xl text-center">
-          <DownloadButtons />
+          <DownloadButtons onLight />
         </div>
       </Reveal>
 
       <Reveal delay={0.2}>
         <div className="mx-auto mt-12 max-w-md border-t border-base-800 pt-8 text-center">
           <p className="mb-4 text-sm text-base-400">Not ready to install? Get an email when something changes.</p>
-          <WaitlistForm submitLabel="Get updates" />
+          <WaitlistForm submitLabel="Get updates" onLight />
         </div>
       </Reveal>
     </Section>

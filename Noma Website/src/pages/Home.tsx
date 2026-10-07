@@ -7,7 +7,6 @@ import Holo from '../components/sections/Holo'
 import Adaptive from '../components/sections/Adaptive'
 import Privacy from '../components/sections/Privacy'
 import Beta from '../components/sections/Beta'
-import ScrollThread from '../components/visuals/ScrollThread'
 
 /**
  * 2026-10-06 redesign: what is Noma, how does it work, why is it useful, in
@@ -31,9 +30,7 @@ export default function Home() {
   return (
     <>
       <Hero />
-      {/* Everything after the hero sits on the thread (ScrollThread). */}
       <div className="relative">
-        <ScrollThread />
         <Demo />
         <Problem />
         <Flow />

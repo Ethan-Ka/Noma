@@ -43,3 +43,8 @@ export const GLASS_TOGGLE =
  *  only one should read as "selected," not "the page's main CTA." */
 export const GLASS_TOGGLE_ACTIVE =
   'border border-accent/35 bg-accent/[0.12] text-accent-bright shadow-[inset_0_1px_0_0_rgba(255,255,255,0.07)] backdrop-blur-lg transition-all duration-150 active:scale-95'
+
+/** The primary button on the light Try the beta panel (`.feature-panel`):
+ *  solid near-black, since a blue tint reads pale on the off-white. */
+export const SOLID_ON_LIGHT =
+  'border border-[#0b0b0e] bg-[#0b0b0e] text-white transition-colors hover:border-[#26262c] hover:bg-[#26262c]'

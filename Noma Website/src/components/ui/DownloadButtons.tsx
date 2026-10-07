@@ -3,7 +3,7 @@ import { SiApple } from 'react-icons/si'
 // simple-icons dropped the Windows mark after a takedown; Font Awesome's
 // brand set (same react-icons package) still has it.
 import { FaWindows } from 'react-icons/fa6'
-import { GLASS_ACCENT } from '../../lib/glass'
+import { GLASS_ACCENT, SOLID_ON_LIGHT } from '../../lib/glass'
 import { detectPlatform, useLatestDownloads } from '../../lib/downloads'
 
 /** "Oct 6", or "Oct 6, 2026" outside the current year. A recent date is a
@@ -23,7 +23,7 @@ const SECONDARY =
  * Mac user reading on a work PC). The Mac button is the Apple silicon build,
  * which is nearly every Mac sold since 2020; Intel gets a plain link below.
  */
-export default function DownloadButtons() {
+export default function DownloadButtons({ onLight = false }: { onLight?: boolean }) {
   const downloads = useLatestDownloads()
   const platform = useMemo(detectPlatform, [])
 
@@ -43,7 +43,7 @@ export default function DownloadButtons() {
             href={button.href}
             download
             className={`inline-flex items-center justify-center gap-2.5 rounded-full px-6 py-3 text-sm font-medium tracking-tight focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
-              button.id === primary ? GLASS_ACCENT : SECONDARY
+              button.id === primary ? (onLight ? SOLID_ON_LIGHT : GLASS_ACCENT) : SECONDARY
             }`}
           >
             <button.Logo aria-hidden className="h-4 w-4 shrink-0" />
