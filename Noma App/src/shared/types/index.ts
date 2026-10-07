@@ -977,7 +977,7 @@ export interface FlowApi {
    *  touchpad, settings, recent action results, never what was typed or
    *  clicked) for the tester to read and paste themselves. Never sent. */
   getDiagnosticsReport(): Promise<string>
-  /** Opens the issue page in the browser, with nothing attached. */
+  /** Opens the website's report form in the browser, with nothing attached. */
   openIssuePage(): Promise<void>
   /** Software updates. Updates are also checked on their own every few
    *  hours; checkForUpdates() just runs a check now. */
