@@ -11,6 +11,27 @@
         ],
         "createdAt": "2026-08-29T18:24:01.722Z",
         "reason": "pre-existing masked/vignetted grid (bg-grid-fade) confined to a panel behind the KeyboardVisual hardware illustration, reading as a schematic/blueprint backdrop for the hardware concept, not decorative texture on ordinary content; the unused flat bg-grid utility was removed as dead code"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "Marketing/grid.template.html"
+        ],
+        "createdAt": "2026-10-07T18:42:25.058Z",
+        "reason": "Claude triage: line is a CSS border-triangle arrowhead on the Glide swipe arrow (.swipe::after), not a card accent"
+      },
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-10-07T18:42:25.257Z",
+        "reason": "Claude triage: same brand body font, lowercase match in the Google Fonts URL"
+      },
+      {
+        "rule": "overused-font",
+        "value": "instrument serif",
+        "createdAt": "2026-10-07T18:42:25.545Z",
+        "reason": "Noma brand serif; the user picked Instrument Serif for the website's italic accent (2026-10-06, see memory noma-website-type-hierarchy)"
       }
     ]
   }

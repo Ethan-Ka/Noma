@@ -126,7 +126,18 @@ jobs:
         run: |
           set -euo pipefail
           VERSION=${GITHUB_REF_NAME#v}
-          put() { npx --yes wrangler@4 r2 object put "$R2_BUCKET/$2" --file "$1" --remote --cache-control "$3"; }
+          # Explicit types: R2 stores none for .dmg otherwise, and browsers
+          # handle an untyped download less predictably.
+          type_of() {
+            case "$1" in
+              *.exe) echo application/vnd.microsoft.portable-executable ;;
+              *.dmg) echo application/x-apple-diskimage ;;
+              *.zip) echo application/zip ;;
+              *.yml) echo text/yaml ;;
+              *) echo application/octet-stream ;;
+            esac
+          }
+          put() { npx --yes wrangler@4 r2 object put "$R2_BUCKET/$2" --file "$1" --remote --cache-control "$3" --content-type "$(type_of "$2")"; }
           shopt -s nullglob
           for f in dist/*.exe dist/*.dmg dist/*.zip dist/*.blockmap; do
             put "$f" "$(basename "$f")" "public, max-age=31536000, immutable"
