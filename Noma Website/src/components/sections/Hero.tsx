@@ -25,12 +25,13 @@ const CYCLE = ['vscode', 'chrome', 'claude', 'premiere']
  * One timeline for the headline and the control bar (2026-10-06): the end of
  * "adapting to ___" changes on the same beat as the controls, so the
  * headline itself adapts, without adding a second rhythm of motion. It
- * starts and rests longest on "you" (the line people should leave with;
- * also what the prerendered HTML and screen readers get), then names what
- * you're doing in each app as the bar switches to it.
+ * starts on "you" (also what the prerendered HTML and screen readers get),
+ * but only briefly: a long hold there kept visitors who scroll on quickly
+ * from ever seeing the demo. Then it names what you're doing in each app as
+ * the bar switches to it.
  */
 const STATES: { app: number; end: string; ms: number }[] = [
-  { app: 0, end: 'you', ms: 4200 },
+  { app: 0, end: 'you', ms: 1800 },
   { app: 0, end: 'your code', ms: 2400 },
   { app: 1, end: 'your browsing', ms: 2400 },
   { app: 2, end: 'your prompts', ms: 2400 },
