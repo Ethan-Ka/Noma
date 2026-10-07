@@ -1,14 +1,21 @@
 import { useState, type FormEvent } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { WAITLIST_ENDPOINT } from '../../data/config'
-import { GLASS_ACCENT } from '../../lib/glass'
+import { GLASS_ACCENT, SOLID_ON_LIGHT } from '../../lib/glass'
 import { submitForm } from '../../lib/submitForm'
 
 type Status = 'idle' | 'loading' | 'success' | 'error'
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-export default function WaitlistForm({ submitLabel = 'Join the Waitlist' }: { submitLabel?: string }) {
+export default function WaitlistForm({
+  submitLabel = 'Join the Waitlist',
+  onLight = false,
+}: {
+  submitLabel?: string
+  /** On the light Try the beta panel: a white field and a solid dark button. */
+  onLight?: boolean
+}) {
   const [email, setEmail] = useState('')
   const [status, setStatus] = useState<Status>('idle')
   const [message, setMessage] = useState('')
@@ -84,16 +91,16 @@ export default function WaitlistForm({ submitLabel = 'Join the Waitlist' }: { su
             setEmail(e.target.value)
             if (status === 'error') setStatus('idle')
           }}
-          className={`w-full rounded-lg border bg-white/5 px-4 py-3 text-sm text-base-50 placeholder:text-base-500 outline-none transition-colors focus:border-accent ${
-            status === 'error' ? 'border-error/60' : 'border-white/15'
-          }`}
+          className={`w-full rounded-lg border px-4 py-3 text-sm text-base-50 placeholder:text-base-500 outline-none transition-colors focus:border-accent ${
+            onLight ? 'bg-white' : 'bg-white/5'
+          } ${status === 'error' ? 'border-error/60' : onLight ? 'border-base-600' : 'border-white/15'}`}
         />
         <button
           type="submit"
           disabled={status === 'loading'}
-          className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-medium disabled:opacity-60 ${GLASS_ACCENT}`}
+          className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-lg px-6 py-3 text-sm font-medium disabled:opacity-60 ${onLight ? SOLID_ON_LIGHT : GLASS_ACCENT}`}
         >
-          {status === 'loading' && <span aria-hidden className="h-1.5 w-1.5 animate-pulse rounded-full bg-base-50" />}
+          {status === 'loading' && <span aria-hidden className="h-1.5 w-1.5 animate-pulse rounded-full bg-current" />}
           {status === 'loading' ? 'Joining…' : submitLabel}
         </button>
       </form>

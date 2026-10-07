@@ -212,6 +212,28 @@
        cost scroll smoothness, since it's redone as the panels move. */
   }
 
+  /* Try the beta's panel (2026-10-07, the user's pick "A: light panel"):
+     the one section meant to stand out, so it's off-white on the dark page.
+     It flips the gray scale inside itself by redefining the theme's color
+     variables, so every text-base-* / border-base-* utility in the section
+     turns dark-on-light without per-element overrides. 50-500 are text
+     (500 is 5:1 on the panel), 600-800 are borders. No glow. */
+  .feature-panel {
+    --color-base-50: #0b0b0e;
+    --color-base-100: #16161b;
+    --color-base-200: #26262d;
+    --color-base-300: #3a3a42;
+    --color-base-400: #52525b;
+    --color-base-500: #62626b;
+    --color-base-600: #c4c4cc;
+    --color-base-700: #d0d0d7;
+    --color-base-800: #d6d6dc;
+    color-scheme: light;
+    background: #ececef;
+    border: 1px solid rgb(255 255 255 / 0.9);
+    box-shadow: 0 40px 90px -50px rgb(0 0 0 / 0.85);
+  }
+
   /* Browsers without graphics acceleration (html.no-gpu, lib/gpu.ts): no
      backdrop blur anywhere (it would be redone on the CPU every frame) and a
      slightly more solid fill instead. On this
@@ -228,81 +250,7 @@
     backdrop-filter: none !important;
   }
 
-  /* The thread down the page (ScrollThread.tsx + a .thread-node per
-     section). Wide screens only: the line sits in the middle of the margin
-     beside the 76rem section panels. The light is sticky, so it rides down
-     the line at screen height with no JavaScript; nodes fill in as their
-     section arrives (view-timeline, compositor opacity only). */
-  .thread-track,
-  .thread-node {
-    display: none;
-  }
-  @media (min-width: 1280px) {
-    .thread-track {
-      display: block;
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: calc((100% - 76rem) / 4);
-      width: 1px;
-      pointer-events: none;
-      background: linear-gradient(
-        to bottom,
-        transparent,
-        rgb(255 255 255 / 0.1) 3%,
-        rgb(255 255 255 / 0.1) 97%,
-        transparent
-      );
-    }
-    .thread-light {
-      position: sticky;
-      top: 22vh;
-      height: 28vh;
-      width: 1px;
-      background: linear-gradient(to bottom, transparent, rgb(139 171 255 / 0.85));
-    }
-    .thread-light::after {
-      content: '';
-      position: absolute;
-      bottom: -3px;
-      left: -3px;
-      width: 7px;
-      height: 7px;
-      border-radius: 9999px;
-      background: var(--color-accent-bright);
-      box-shadow: 0 0 0 4px rgb(76 126 255 / 0.14);
-    }
-    .thread-node {
-      display: block;
-      position: absolute;
-      z-index: 1;
-      top: 96px;
-      left: calc((100% - 76rem) / 4 - 4px);
-      width: 9px;
-      height: 9px;
-      border-radius: 9999px;
-      border: 1px solid rgb(255 255 255 / 0.22);
-      background: #05060b;
-    }
-    .thread-node::after {
-      content: '';
-      position: absolute;
-      inset: 1.5px;
-      border-radius: 9999px;
-      background: var(--color-accent-bright);
-      opacity: 0;
-    }
-    @supports (animation-timeline: view()) {
-      .thread-node::after {
-        animation: thread-node-on linear both;
-        animation-timeline: view();
-        animation-range: entry 0% cover 30%;
-      }
-    }
-  }
-  @keyframes thread-node-on {
-    to { opacity: 1; }
-  }
+
 
   /* An abstract touchpad swipe: a single flat stroke is drawn along its path
      from the edge, holds, then fades as a whole before the next pass. Only

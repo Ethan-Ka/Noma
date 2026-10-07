@@ -8,9 +8,10 @@ import Reveal from './Reveal'
  *
  * Headlines are Sora at medium weight with -0.02em tracking (2026-10-06,
  * the user's pick over the earlier semibold at -0.035/-0.04em, which read
- * as cramped and heavy), in one colour, with the two lines set close. The
- * word a headline is about is wrapped in <Em> by the caller (Instrument
- * Serif italic), chosen per headline rather than styling a whole line.
+ * as cramped and heavy), in one colour, with the two lines set close.
+ * Section headlines are plain Sora (2026-10-07): the Instrument Serif italic
+ * accent word on every headline read as an AI-template tell, so the serif
+ * is kept for the hero line only.
  */
 export default function SectionIntro({
   title,

@@ -21,12 +21,12 @@ export default function Contact() {
   return (
     <PageShell
       eyebrow="Contact"
-      title="Talk to us."
+      title="Get in touch."
       width="max-w-lg"
       center
       intro={
         <p className="mx-auto mt-4 max-w-sm text-balance text-base text-base-400">
-          We&rsquo;re a small team building Noma. A real person reads every email.
+          Noma is built by one person, and I read every email myself.
         </p>
       }
     >

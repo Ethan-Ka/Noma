@@ -1,6 +1,5 @@
 import Section from '../layout/Section'
 import SectionIntro from '../ui/SectionIntro'
-import Em from '../ui/Em'
 import Reveal from '../ui/Reveal'
 import WorkflowDemo from '../visuals/WorkflowDemo'
 import ScreenRecording from '../visuals/ScreenRecording'
@@ -15,14 +14,13 @@ export default function Demo() {
     <Section id="demo">
       <SectionIntro
         center
-        title="You work."
-        second={<>Noma <Em>notices.</Em></>}
-        line="Screenshot the bug, paste it into Claude, commit the fix. By the third time, Noma has seen the pattern."
+        title="Here’s Noma catching a workflow."
+        line="Screenshot the bug, paste it into Claude, commit the fix. The third time, Noma recognizes the sequence and offers to save it."
       />
       <Reveal delay={0.1}>
         <WorkflowDemo className="mt-14" />
       </Reveal>
-      <p className="mt-5 text-center text-sm text-base-500">A product demonstration. The notice is Noma&rsquo;s own.</p>
+      <p className="mt-5 text-center text-sm text-base-500">Recreated for this page. The notice is drawn the way the app shows it.</p>
       <ScreenRecording className="mt-14" caption="A screen recording of the Noma beta." />
     </Section>
   )

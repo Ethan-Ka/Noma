@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import Section from '../layout/Section'
 import SectionIntro from '../ui/SectionIntro'
-import Em from '../ui/Em'
 import Reveal from '../ui/Reveal'
 import AdaptiveSurface from '../visuals/AdaptiveSurface'
 import FlowSuggestion from '../visuals/FlowSuggestion'
@@ -21,8 +20,8 @@ export default function Flow() {
   return (
     <Section id="flow">
       <SectionIntro
-        title={<>Stop <Em>repeating</Em> yourself.</>}
-        line="Noma notices what you do again and again across your apps, and offers to turn it into one press. Try it."
+        title="Turn a repeated workflow into one press."
+        line="When Noma sees the same steps across your apps a few times, it asks whether you want them on a single control. It never saves one without asking. Try it below."
       />
 
       <div className="mt-14 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-start lg:gap-12">

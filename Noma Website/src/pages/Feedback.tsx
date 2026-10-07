@@ -71,8 +71,8 @@ export default function Feedback() {
       width="max-w-xl"
       intro={
         <p className="mt-4 max-w-md text-balance text-base text-base-400">
-          Noma is in beta, so things will break. Tell us what happened and we&rsquo;ll fix it. A real person reads every
-          report.
+          Noma is in beta, so things will break. Tell me what happened and I&rsquo;ll fix it. I read every report
+          myself.
         </p>
       }
     >
@@ -90,8 +90,8 @@ export default function Feedback() {
               <p className="mt-4 font-display text-xl font-semibold text-base-50">Thanks, it&rsquo;s sent.</p>
               <p className="mx-auto mt-2 max-w-sm text-sm text-base-400">
                 {email
-                  ? 'We’ll reply to your email if we need more detail, or once it’s fixed.'
-                  : 'You didn’t leave an email, so we won’t be able to reply, but we’ll still look into it.'}
+                  ? 'I’ll reply to your email if I need more detail, or once it’s fixed.'
+                  : 'You didn’t leave an email, so I won’t be able to reply, but I’ll still look into it.'}
               </p>
               <button
                 type="button"

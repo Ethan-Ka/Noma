@@ -1,6 +1,5 @@
 import Section from '../layout/Section'
 import SectionIntro from '../ui/SectionIntro'
-import Em from '../ui/Em'
 import Reveal from '../ui/Reveal'
 import WaitlistForm from '../ui/WaitlistForm'
 import DownloadButtons from '../ui/DownloadButtons'
@@ -13,24 +12,23 @@ import DownloadButtons from '../ui/DownloadButtons'
  */
 export default function Beta() {
   return (
-    <Section id="beta">
+    <Section id="beta" feature>
       <SectionIntro
         center
-        title="Help build the computer"
-        second={<>that <Em>adapts to you.</Em></>}
-        line="Noma is in beta and free to use."
+        title="Try the beta."
+        line="It’s free. Use it for a week on your real work, then tell me what it got wrong. That feedback decides what gets built next."
       />
 
       <Reveal delay={0.14}>
         <div className="mx-auto mt-10 max-w-2xl text-center">
-          <DownloadButtons />
+          <DownloadButtons onLight />
         </div>
       </Reveal>
 
       <Reveal delay={0.2}>
         <div className="mx-auto mt-12 max-w-md border-t border-base-800 pt-8 text-center">
           <p className="mb-4 text-sm text-base-400">Not ready? Get an email when something changes.</p>
-          <WaitlistForm submitLabel="Get updates" />
+          <WaitlistForm submitLabel="Get updates" onLight />
         </div>
       </Reveal>
     </Section>

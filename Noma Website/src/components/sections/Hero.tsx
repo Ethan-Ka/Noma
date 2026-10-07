@@ -46,6 +46,7 @@ export default function Hero() {
   const [state, setState] = useState(0)
   const measureRef = useRef<HTMLSpanElement>(null)
   const [widths, setWidths] = useState<Record<string, number> | null>(null)
+  const [returned, setReturned] = useState(false)
 
   useEffect(() => {
     if (reduceMotion) return
@@ -72,6 +73,38 @@ export default function Hero() {
     const timer = setTimeout(() => setState((s) => (s + 1) % STATES.length), STATES[state].ms)
     return () => clearTimeout(timer)
   }, [state, reduceMotion])
+
+  // The page notices the visitor doing the thing Noma notices (2026-10-07):
+  // leave for another tab or app and come back, and the caption says so,
+  // while the bar moves on to the next app. None of the sites we compared
+  // against react to the visitor; this is the product's idea, done live.
+  useEffect(() => {
+    let leftAt = 0
+    let clear: ReturnType<typeof setTimeout> | undefined
+    const onVisibility = () => {
+      if (document.hidden) {
+        leftAt = Date.now()
+        return
+      }
+      if (!leftAt || Date.now() - leftAt < 800) return
+      leftAt = 0
+      setReturned(true)
+      if (!reduceMotion) {
+        setState((s) => {
+          let next = (s + 1) % STATES.length
+          while (STATES[next].app === STATES[s].app) next = (next + 1) % STATES.length
+          return next
+        })
+      }
+      clearTimeout(clear)
+      clear = setTimeout(() => setReturned(false), 6000)
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      clearTimeout(clear)
+    }
+  }, [reduceMotion])
 
   const index = STATES[state].app
   const end = STATES[state].end
@@ -159,7 +192,7 @@ export default function Hero() {
               href="#demo"
               className="inline-flex items-center gap-2 rounded-full border border-base-600 px-6 py-3 text-sm font-medium tracking-tight text-base-200 transition-colors hover:border-base-400 hover:text-base-50"
             >
-              See how it works
+              Watch it adapt
               <span aria-hidden className="text-base-400">↓</span>
             </SiteLink>
           </motion.div>
@@ -189,12 +222,26 @@ export default function Hero() {
 
           <ControlBar appId={CYCLE[index]} />
 
-          <p className="relative mt-5 text-center text-sm text-base-400">
+          <p className="relative mt-5 text-center text-sm text-base-400" aria-live="polite">
             <span
               aria-hidden
               className="pointer-events-none absolute left-1/2 top-1/2 -z-10 h-20 w-[30rem] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(ellipse_closest-side,rgb(4_5_10/0.95),rgb(4_5_10/0.8)_50%,transparent)]"
             />
-            Switch apps and the controls follow.
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={returned ? 'returned' : 'idle'}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.25 }}
+                className={`inline-flex items-center gap-2 ${returned ? 'text-accent-bright' : ''}`}
+              >
+                {returned && <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-accent" />}
+                {returned
+                  ? 'You just switched apps. Noma would have switched your controls too.'
+                  : 'Switch apps and the controls follow.'}
+              </motion.span>
+            </AnimatePresence>
           </p>
         </motion.div>
       </div>
