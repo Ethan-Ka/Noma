@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { motion, useReducedMotion } from 'framer-motion'
+import { useEffect, useRef, useState } from 'react'
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import ControlBar from '../visuals/ControlBar'
 import SiteLink from '../layout/SiteLink'
 import { GLASS_ACCENT } from '../../lib/glass'
@@ -18,23 +18,62 @@ import { appProfiles } from '../../data/appProfiles'
  * the application above them changes.
  */
 
-/** The cycle leads with the two applications most people have open at once,
- *  then the one that makes the point hardest: the same four keys, in a tool
- *  that has nothing in common with the other two. */
+/** The apps the control bar cycles through. */
 const CYCLE = ['vscode', 'chrome', 'claude', 'premiere']
-const DWELL_MS = 2600
+
+/**
+ * One timeline for the headline and the control bar (2026-10-06): the end of
+ * "adapting to ___" changes on the same beat as the controls, so the
+ * headline itself adapts, without adding a second rhythm of motion. It
+ * starts and rests longest on "you" (the line people should leave with;
+ * also what the prerendered HTML and screen readers get), then names what
+ * you're doing in each app as the bar switches to it.
+ */
+const STATES: { app: number; end: string; ms: number }[] = [
+  { app: 0, end: 'you', ms: 4200 },
+  { app: 0, end: 'your code', ms: 2400 },
+  { app: 1, end: 'your browsing', ms: 2400 },
+  { app: 2, end: 'your prompts', ms: 2400 },
+  { app: 3, end: 'your edits', ms: 2400 },
+]
+
+/** Each distinct ending, measured once so the slot can glide between widths. */
+const ENDINGS = [...new Set(STATES.map((s) => s.end))]
 
 export default function Hero() {
   const reduceMotion = useReducedMotion()
-  const [index, setIndex] = useState(0)
+  const [state, setState] = useState(0)
+  const measureRef = useRef<HTMLSpanElement>(null)
+  const [widths, setWidths] = useState<Record<string, number> | null>(null)
 
   useEffect(() => {
-    // Reduced motion gets a single, static state rather than a slower loop:
-    // the request is for less movement, not for the same movement delayed.
     if (reduceMotion) return
-    const timer = setInterval(() => setIndex((i) => (i + 1) % CYCLE.length), DWELL_MS)
-    return () => clearInterval(timer)
+    const measure = () => {
+      const box = measureRef.current
+      if (!box) return
+      const next: Record<string, number> = {}
+      box.querySelectorAll<HTMLElement>('[data-end]').forEach((el) => {
+        next[el.dataset.end!] = el.getBoundingClientRect().width
+      })
+      setWidths(next)
+    }
+    measure()
+    // Re-measure once the serif has loaded and whenever the size steps change.
+    document.fonts?.ready.then(measure)
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
   }, [reduceMotion])
+
+  useEffect(() => {
+    // Reduced motion gets a single, static state ("adapting to you", VS
+    // Code's controls) rather than a slower loop.
+    if (reduceMotion) return
+    const timer = setTimeout(() => setState((s) => (s + 1) % STATES.length), STATES[state].ms)
+    return () => clearTimeout(timer)
+  }, [state, reduceMotion])
+
+  const index = STATES[state].app
+  const end = STATES[state].end
 
   return (
     <section id="top" className="relative overflow-hidden">
@@ -50,6 +89,7 @@ export default function Hero() {
             className="pointer-events-none absolute -inset-x-24 -inset-y-16 -z-10 bg-[radial-gradient(ellipse_closest-side,rgb(4_5_10/0.82),rgb(4_5_10/0.55)_55%,transparent)]"
           />
           <motion.h1
+            aria-label="Your computer, adapting to you."
             initial={reduceMotion ? false : { opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
@@ -60,7 +100,43 @@ export default function Hero() {
             {/* Two typefaces: Sora for the subject, Instrument Serif italic
                 for the promise, in Noma Blue's light tint (the hero only;
                 section headlines keep both lines white). */}
-            <span className={`${SERIF_LINE} leading-none text-accent-bright`}>adapting to you.</span>
+            <span aria-hidden className={`${SERIF_LINE} leading-none text-accent-bright`}>
+              adapting to{' '}
+              {/* Below md the longest endings don't fit beside "adapting
+                  to", so there the ending always gets its own line. */}
+              <br className="md:hidden" />
+              {/* The ending sits in a slot whose width glides from one
+                  ending's width to the next, so the centred line slides to
+                  its new position instead of jumping (the user disliked the
+                  jump). Widths are measured from the hidden copies below,
+                  in the real font; until then the slot is just its text. */}
+              <motion.span
+                initial={false}
+                animate={widths ? { width: widths[end] } : undefined}
+                transition={{ duration: 0.6, ease: [0.65, 0, 0.35, 1] }}
+                className="relative inline-block whitespace-nowrap text-left"
+              >
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={end}
+                    className="inline-block"
+                    initial={{ opacity: 0, y: 10, filter: 'blur(6px)' }}
+                    animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                    exit={{ opacity: 0, y: -8, filter: 'blur(6px)' }}
+                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    {end}.
+                  </motion.span>
+                </AnimatePresence>
+              </motion.span>
+              <span ref={measureRef} className="pointer-events-none invisible absolute left-0 top-0">
+                {ENDINGS.map((e) => (
+                  <span key={e} data-end={e} className="block w-max whitespace-nowrap">
+                    {e}.
+                  </span>
+                ))}
+              </span>
+            </span>
           </motion.h1>
 
           <motion.p
@@ -101,7 +177,8 @@ export default function Hero() {
           className="mx-auto mt-14 max-w-3xl sm:mt-16"
         >
           {/* The app in front, as a dock-like row: the visitor sees the app
-              change first and the controls follow, which is the product. */}
+              change first and the controls follow, which is the product.
+              Driven by the same timeline as the headline's last words. */}
           <div className="mb-4 flex items-center justify-center gap-2" aria-hidden>
             {CYCLE.map((id, i) => (
               <span
