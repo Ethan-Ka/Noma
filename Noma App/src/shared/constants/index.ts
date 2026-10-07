@@ -39,7 +39,7 @@ export const IPC_CHANNELS = {
   DEVICE_LOG_ENTRY: 'flow:device-log-entry',
   GET_EXECUTION_STATUS: 'flow:get-execution-status',
   UPDATE_CONTROL: 'flow:update-control',
-  RESET_CONTROL_TO_DEFAULT: 'flow:reset-control-to-default',
+  CLEAR_CONTROL: 'flow:clear-control',
   TEST_CONTROL_ACTION: 'flow:test-control-action',
   GET_MACROS: 'flow:get-macros',
   GET_ALL_APPLICATIONS: 'flow:get-all-applications',

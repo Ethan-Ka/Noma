@@ -115,6 +115,7 @@ function isRunnable(step: MacroStep): boolean {
     case 'click':
       return step.target !== ''
     case 'delay':
+    case 'none':
       return false
     default:
       return true

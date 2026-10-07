@@ -4,3 +4,6 @@
 # OS / editor cruft
 .DS_Store
 Thumbs.db
+
+# Local PR draft
+pull-request.txt

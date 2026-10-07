@@ -310,6 +310,9 @@ async function executeMacroStep(
   visitedMacroIds: Set<string>
 ): Promise<ExecutionResult> {
   switch (step.type) {
+    case 'none':
+      return { ok: true }
+
     case 'delay':
       return (await waitUnlessCancelled(Math.max(0, step.ms)))
         ? { ok: true }
@@ -505,6 +508,9 @@ export async function executeControlAction(
           : { ok: false, reason: 'Could not deliver the close message to the target window' }
       }
       return { ok: false, reason: `flowAction "${action.action}" is not implemented yet` }
+
+    case 'none':
+      return { ok: false, reason: 'Nothing is assigned to this zone' }
 
     case 'launchApplication':
       return { ok: false, reason: `${action.type} execution is not implemented yet` }

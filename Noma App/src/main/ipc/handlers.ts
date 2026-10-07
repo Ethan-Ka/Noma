@@ -48,7 +48,7 @@ import {
 } from '../database/repositories/macrosRepository'
 import { getControlsReferencingMacro } from '../database/repositories/controlsRepository'
 import { assignSuggestionToControl } from '../applications/suggestionResolution'
-import { updateControl, resetControlToDefault } from '../applications/controlEditing'
+import { updateControl, clearControl } from '../applications/controlEditing'
 import {
   createProfileForApplication,
   deleteApplicationProfile,
@@ -202,8 +202,8 @@ export function registerIpcHandlers(
     }
   )
 
-  ipcMain.handle(IPC_CHANNELS.RESET_CONTROL_TO_DEFAULT, (_event, applicationId: string, slot: number) => {
-    const profile = resetControlToDefault(applicationId, slot)
+  ipcMain.handle(IPC_CHANNELS.CLEAR_CONTROL, (_event, applicationId: string, slot: number) => {
+    const profile = clearControl(applicationId, slot)
     if (profile) onProfileUpdated(applicationId)
     return profile
   })

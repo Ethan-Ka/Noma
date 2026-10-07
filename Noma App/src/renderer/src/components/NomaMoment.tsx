@@ -341,7 +341,7 @@ export function NomaMoment({
                       className="rounded-md border border-base-700 px-2 py-2 text-center text-xs text-neutral-500 transition-colors hover:border-violet hover:text-neutral-100"
                     >
                       <div className="text-[10px] text-neutral-500">{zone ? GLIDE_ZONE_LABELS[zoneCount][zone] : `Control ${slot}`}</div>
-                      <div className="mt-0.5 truncate text-neutral-100">{control?.label ?? '–'}</div>
+                      <div className="mt-0.5 truncate text-neutral-100">{control?.label || '–'}</div>
                     </button>
                   )
                 })}

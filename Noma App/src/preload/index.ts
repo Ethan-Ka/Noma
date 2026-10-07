@@ -92,8 +92,7 @@ const flowApi: FlowApi = {
 
   updateControl: (applicationId, slot, label, action) =>
     ipcRenderer.invoke(IPC_CHANNELS.UPDATE_CONTROL, applicationId, slot, label, action),
-  resetControlToDefault: (applicationId, slot) =>
-    ipcRenderer.invoke(IPC_CHANNELS.RESET_CONTROL_TO_DEFAULT, applicationId, slot),
+  clearControl: (applicationId, slot) => ipcRenderer.invoke(IPC_CHANNELS.CLEAR_CONTROL, applicationId, slot),
   testControlAction: (action) => ipcRenderer.invoke(IPC_CHANNELS.TEST_CONTROL_ACTION, action),
   getMacros: () => ipcRenderer.invoke(IPC_CHANNELS.GET_MACROS),
   getAllApplications: () => ipcRenderer.invoke(IPC_CHANNELS.GET_ALL_APPLICATIONS),

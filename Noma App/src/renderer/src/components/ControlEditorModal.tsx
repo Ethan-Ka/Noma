@@ -14,8 +14,9 @@ interface ControlEditorModalProps {
   slot: number
   control: Control | undefined
   onClose: () => void
-  /** Called after a successful save/reset so the caller can refresh. */
-  onSaved: () => void
+  /** Called after a successful save/reset so the caller can refresh. The modal
+   *  waits for it before closing, so reopening never shows the old control. */
+  onSaved: () => void | Promise<void>
 }
 
 const ACTION_TYPE_LABELS: Record<SelectableActionType, string> = {
@@ -33,8 +34,10 @@ export function ControlEditorModal({
   onClose,
   onSaved
 }: ControlEditorModalProps) {
-  const [label, setLabel] = useState(control?.label ?? '')
-  const [action, setAction] = useState<ControlAction>(control?.action ?? defaultActionForType('shortcut'))
+  // An empty zone opens as a blank form, not as a hidden "none" action.
+  const existing = control && control.action.type !== 'none' ? control : undefined
+  const [label, setLabel] = useState(existing?.label ?? '')
+  const [action, setAction] = useState<ControlAction>(existing?.action ?? defaultActionForType('shortcut'))
   const [macros, setMacros] = useState<Macro[]>([])
   const [testResult, setTestResult] = useState<{
     ok: boolean
@@ -56,6 +59,15 @@ export function ControlEditorModal({
     (action.type !== 'shortcut' || action.keys.length > 0) &&
     (action.type !== 'macro' || action.macroId.length > 0)
 
+  // Why Save is off, so a disabled button is never a mystery.
+  const saveBlocker = !label.trim()
+    ? 'Give it a name to save.'
+    : action.type === 'shortcut' && action.keys.length === 0
+      ? 'Record a shortcut to save.'
+      : action.type === 'macro' && !action.macroId
+        ? 'Choose a workflow to save.'
+        : null
+
   const handleActionTypeChange = (nextType: SelectableActionType): void => {
     setAction(defaultActionForType(nextType))
     setTestResult(null)
@@ -72,26 +84,37 @@ export function ControlEditorModal({
   const handleSave = async (): Promise<void> => {
     setIsSaving(true)
     setSaveError(null)
-    const result = await window.flow.updateControl(applicationId, slot, label.trim(), action)
-    setIsSaving(false)
-    if (result) {
-      onSaved()
-      onClose()
-    } else {
-      setSaveError(`No profile configured for ${applicationName} yet. Nothing to save this into.`)
+    try {
+      const result = await window.flow.updateControl(applicationId, slot, label.trim(), action)
+      if (result) {
+        await onSaved()
+        onClose()
+      } else {
+        setSaveError(`No profile configured for ${applicationName} yet. Nothing to save this into.`)
+      }
+    } catch {
+      setSaveError('Could not save this. Try again.')
+    } finally {
+      setIsSaving(false)
     }
   }
 
-  const handleReset = async (): Promise<void> => {
+  // Empties just this zone; nothing else in the profile changes.
+  const handleClear = async (): Promise<void> => {
     setIsSaving(true)
     setSaveError(null)
-    const result = await window.flow.resetControlToDefault(applicationId, slot)
-    setIsSaving(false)
-    if (result) {
-      onSaved()
-      onClose()
-    } else {
-      setSaveError(`No default to reset to for ${applicationName}.`)
+    try {
+      const result = await window.flow.clearControl(applicationId, slot)
+      if (result) {
+        await onSaved()
+        onClose()
+      } else {
+        setSaveError(`No profile configured for ${applicationName} yet. Nothing to clear.`)
+      }
+    } catch {
+      setSaveError('Could not clear this. Try again.')
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -123,6 +146,8 @@ export function ControlEditorModal({
           onChange={(event) => handleActionTypeChange(event.target.value as SelectableActionType)}
           className={FIELD_INPUT}
         >
+          {/* A zone can hold an action this form can't build (a workflow's window switch). Show it as is so the select never lies. */}
+          {!(action.type in ACTION_TYPE_LABELS) && <option value={action.type}>Other action (kept as is)</option>}
           {(Object.keys(ACTION_TYPE_LABELS) as SelectableActionType[]).map((type) => (
             <option key={type} value={type}>
               {ACTION_TYPE_LABELS[type]}
@@ -227,6 +252,8 @@ export function ControlEditorModal({
         </div>
       )}
 
+      {saveBlocker && !saveError && <p className="mb-4 text-xs text-neutral-500">{saveBlocker}</p>}
+
       {saveError && (
         <div className="mb-4 rounded-md border border-white/10 px-3 py-2 text-xs text-neutral-400">{saveError}</div>
       )}
@@ -234,11 +261,11 @@ export function ControlEditorModal({
       <div className="flex items-center justify-between">
         <button
           type="button"
-          onClick={handleReset}
-          disabled={isSaving}
+          onClick={handleClear}
+          disabled={isSaving || !existing}
           className="text-xs text-neutral-600 hover:text-neutral-400"
         >
-          Reset to default
+          Clear zone
         </button>
         <div className="flex gap-2">
           <button

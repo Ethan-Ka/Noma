@@ -23,6 +23,8 @@ export interface Application {
 }
 
 export type ControlAction =
+  /** An empty zone: nothing assigned, nothing runs. What "Clear" in the control editor leaves behind. */
+  | { type: 'none' }
   | { type: 'shortcut'; keys: string[] }
   | { type: 'macro'; macroId: string }
   | { type: 'launchApplication'; applicationId: string }
@@ -802,7 +804,7 @@ export interface FlowApi {
   ): Promise<ApplicationProfile | null>
   /** Restores a control to its original seed configuration. Returns null
    *  if this application was never seeded — there's nothing to reset to. */
-  resetControlToDefault(applicationId: string, slot: number): Promise<ApplicationProfile | null>
+  clearControl(applicationId: string, slot: number): Promise<ApplicationProfile | null>
   /** Runs a control action once, against whatever the last known real
    *  application was, without saving it to any control. Same execution
    *  path and same safety rules (closed vocabulary, blocklist, fail-closed

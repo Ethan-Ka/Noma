@@ -13,7 +13,7 @@ type StepType = MacroStep['type']
 // from a captured workflow step, so it isn't hand-authored here either.
 // 'focusApplication' is selectable: it runs for real and has an application
 // picker below.
-type SelectableStepType = Exclude<StepType, 'launchApplication' | 'click'>
+type SelectableStepType = Exclude<StepType, 'launchApplication' | 'click' | 'none'>
 
 const STEP_TYPE_LABELS: Record<SelectableStepType, string> = {
   shortcut: 'Keyboard shortcut',
@@ -26,6 +26,8 @@ const STEP_TYPE_LABELS: Record<SelectableStepType, string> = {
 
 export function defaultStepForType(type: StepType): MacroStep {
   switch (type) {
+    case 'none':
+      return { type: 'none' }
     case 'shortcut':
       return { type: 'shortcut', keys: [] }
     case 'delay':

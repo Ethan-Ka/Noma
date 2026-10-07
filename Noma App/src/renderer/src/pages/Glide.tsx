@@ -69,6 +69,13 @@ export function Glide() {
     [apps]
   )
 
+  // Read the zone fresh from the saved profile each time the editor opens, so
+  // it can never show a control from before the last save.
+  const openZone = async (slot: number): Promise<void> => {
+    if (appId) setProfile(await window.flow.getProfileForApplication(appId))
+    setEditingSlot(slot)
+  }
+
   const setUpApp = async (): Promise<void> => {
     if (!app) return
     await window.flow.createProfileForApplication(app, app.name)
@@ -144,7 +151,7 @@ export function Glide() {
               zoneCount={zoneCount}
               controls={profile.controls}
               flashingZone={flashing}
-              onEditZone={setEditingSlot}
+              onEditZone={(slot) => void openZone(slot)}
               centerLabel={app.name}
             />
           ) : (
@@ -245,12 +252,13 @@ export function Glide() {
 
       {editingSlot !== null && app && profile && (
         <ControlEditorModal
+          key={`${app.id}:${editingSlot}`}
           applicationId={app.id}
           applicationName={app.name}
           slot={editingSlot}
           control={profile.controls.find((control) => control.slot === editingSlot)}
           onClose={() => setEditingSlot(null)}
-          onSaved={() => void loadProfile()}
+          onSaved={loadProfile}
         />
       )}
     </div>

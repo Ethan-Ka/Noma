@@ -15,6 +15,8 @@ import { useStoreSync } from '../lib/useStoreSync'
 
 function describeAction(action: ControlAction): string {
   switch (action.type) {
+    case 'none':
+      return 'none'
     case 'shortcut':
       return `shortcut: ${action.keys.join('+')}`
     case 'macro':

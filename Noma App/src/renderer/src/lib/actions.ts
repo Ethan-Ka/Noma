@@ -6,7 +6,7 @@ import type { ControlAction } from '@shared/types'
 // and 'click' do execute, but only ever come from an accepted learned-workflow
 // suggestion / captured step; there's no picker to hand-author them. So the
 // action-type pickers (ControlEditorModal, ModuleConfigModal) leave all three out.
-export type SelectableActionType = Exclude<ControlAction['type'], 'launchApplication' | 'focusApplication' | 'click'>
+export type SelectableActionType = Exclude<ControlAction['type'], 'launchApplication' | 'focusApplication' | 'click' | 'none'>
 
 export function defaultActionForType(type: SelectableActionType): ControlAction {
   switch (type) {

@@ -1,12 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Application, Macro, MacroStep } from '@shared/types'
 import { MacroStepRow, defaultStepForType } from './MacroStepRow'
 import { GhostButton, PrimaryButton } from './Button'
 import { FIELD_LABEL } from '../lib/surfaces'
 
+/** The editable fields. A draft is the unsaved version of these. */
+export interface MacroDraft {
+  name: string
+  actions: MacroStep[]
+  enabled: boolean
+}
+
 interface MacroEditorProps {
   /** null means "unsaved new macro"; Save calls createMacro instead of updateMacro. */
   macro: Macro | null
+  /** Unsaved edits to restore when this editor opens, so switching to another
+   *  macro and back doesn't lose work. */
+  draft?: MacroDraft
+  /** Reports the current unsaved edits, or null once they match what's saved. */
+  onDraftChange?: (draft: MacroDraft | null) => void
   applications: Application[]
   allMacros: Macro[]
   onSaved: (macro: Macro) => void
@@ -19,7 +31,7 @@ interface MacroEditorProps {
 // refuses it), so it is never offered. See ControlEditorModal.tsx, which
 // applies the same rule. 'click' targets only come from captured workflow
 // steps, never hand-authored.
-type NewStepType = Exclude<MacroStep['type'], 'launchApplication' | 'click'>
+type NewStepType = Exclude<MacroStep['type'], 'launchApplication' | 'click' | 'none'>
 
 const STEP_TYPES_FOR_NEW_STEP: NewStepType[] = ['shortcut', 'delay', 'systemCommand', 'flowAction', 'focusApplication', 'macro']
 
@@ -32,10 +44,19 @@ const NEW_STEP_LABELS: Record<NewStepType, string> = {
   macro: '+ Run macro'
 }
 
-export function MacroEditor({ macro, applications, allMacros, onSaved, onDeleted, onDiscardNew }: MacroEditorProps) {
-  const [name, setName] = useState(macro?.name ?? 'New Macro')
-  const [actions, setActions] = useState<MacroStep[]>(macro?.actions ?? [])
-  const [enabled, setEnabled] = useState(macro?.enabled ?? true)
+export function MacroEditor({
+  macro,
+  draft,
+  onDraftChange,
+  applications,
+  allMacros,
+  onSaved,
+  onDeleted,
+  onDiscardNew
+}: MacroEditorProps) {
+  const [name, setName] = useState(draft?.name ?? macro?.name ?? 'New Macro')
+  const [actions, setActions] = useState<MacroStep[]>(draft?.actions ?? macro?.actions ?? [])
+  const [enabled, setEnabled] = useState(draft?.enabled ?? macro?.enabled ?? true)
   const [assignments, setAssignments] = useState<
     Array<{
       applicationId: string
@@ -55,17 +76,21 @@ export function MacroEditor({ macro, applications, allMacros, onSaved, onDeleted
   const [isSaving, setIsSaving] = useState(false)
   const [deleteConfirming, setDeleteConfirming] = useState(false)
 
-  // Re-seed local edit state whenever the selected macro changes (including
-  // switching to/from "new macro" mode); otherwise the previous macro's
-  // in-progress edits would leak into the next one.
+  // The parent remounts this editor per macro (by key), so the edit state
+  // above starts from that macro's draft or saved values. Report edits upward
+  // while they differ from what's saved, and clear them once they match
+  // (after Save, or after undoing back to the saved version).
+  const onDraftChangeRef = useRef(onDraftChange)
+  onDraftChangeRef.current = onDraftChange
+  const savedName = macro?.name ?? 'New Macro'
+  const savedActions = macro?.actions ?? []
+  const savedEnabled = macro?.enabled ?? true
   useEffect(() => {
-    setName(macro?.name ?? 'New Macro')
-    setActions(macro?.actions ?? [])
-    setEnabled(macro?.enabled ?? true)
-    setTestResult(null)
-    setDeleteConfirming(false)
-    setAssignError(null)
-  }, [macro?.id])
+    const isDirty =
+      name !== savedName || enabled !== savedEnabled || JSON.stringify(actions) !== JSON.stringify(savedActions)
+    onDraftChangeRef.current?.(isDirty ? { name, actions, enabled } : null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name, actions, enabled, savedName, savedEnabled, JSON.stringify(savedActions)])
 
   useEffect(() => {
     if (!macro) {

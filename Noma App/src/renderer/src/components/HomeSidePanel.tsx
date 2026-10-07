@@ -64,7 +64,7 @@ export function HomeSidePanel({
                 <div key={slot} className="flex items-baseline justify-between gap-3 text-sm">
                   <span className="shrink-0 text-xs text-holo-muted">{name}</span>
                   <span className={`truncate ${control?.label ? 'text-holo-text' : 'text-holo-muted'}`}>
-                    {control?.label ?? 'Empty'}
+                    {control?.label || 'Empty'}
                   </span>
                 </div>
               )
