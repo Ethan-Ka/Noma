@@ -7,6 +7,10 @@
  * the next version's notes before releasing.
  */
 export const RELEASE_NOTES: Record<string, string[]> = {
+  '0.1.11': [
+    'Updates now come straight from nomashift.com.',
+    'Report a problem now opens the report form on nomashift.com.'
+  ],
   '0.1.10': [
     'Noma has a new app icon, matching the one on nomashift.com.',
     'Found a bug or have an idea? Tell us at nomashift.com/feedback.'
