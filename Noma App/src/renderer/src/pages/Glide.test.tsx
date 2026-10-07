@@ -8,7 +8,8 @@ import { Glide } from './Glide'
 const CODE = { id: 'code', name: 'Visual Studio Code', processName: 'Code.exe' }
 
 /** A tiny in-memory stand-in for the main process: one profile, saved edits stick. */
-function backend() {
+function backend(edgeSwipe: { supported: boolean; enabled: boolean } = { supported: false, enabled: false }) {
+  let edge = edgeSwipe
   let controls: Control[] = [
     { id: 'c1', slot: 1, label: 'RUN', action: { type: 'shortcut', keys: ['Control', 'F5'] } },
     { id: 'c2', slot: 2, label: 'DEBUG', action: { type: 'shortcut', keys: ['F5'] } },
@@ -31,6 +32,11 @@ function backend() {
       listApplicationProfileSummaries: vi.fn(async () => [{ application: CODE, hasProfile: true }]),
       getProfileForApplication: vi.fn(async () => profile()),
       getHoloTouchCheckLast: vi.fn(async () => null),
+      getMacEdgeSwipe: vi.fn(async () => edge),
+      setMacEdgeSwipe: vi.fn(async (enabled: boolean) => {
+        edge = { ...edge, enabled }
+        return edge
+      }),
       getMacros: vi.fn(async () => []),
       updateControl: vi.fn(async (_app: string, slot: number, label: string, action: Control['action']) => {
         controls = controls.map((c) => (c.slot === slot ? { ...c, label, action } : c))
@@ -95,5 +101,33 @@ describe('Glide: editing a zone', () => {
 
     fireEvent.click(await lowerLeft())
     expect(await screen.findByDisplayValue('CHANGED')).toBeInTheDocument()
+  })
+
+})
+
+describe('Glide: the macOS right-edge swipe', () => {
+  it('offers to turn it off on macOS, and says so once it is off', async () => {
+    window.flow = backend({ supported: true, enabled: true })
+    render(<Glide />)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Turn it off' }))
+
+    expect(window.flow.setMacEdgeSwipe).toHaveBeenCalledWith(false)
+    expect(await screen.findByText(/Turned off/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Turn back on' })).toBeInTheDocument()
+  })
+
+  it('shows nothing when the system gesture is already off, or off macOS', async () => {
+    window.flow = backend({ supported: true, enabled: false })
+    const { unmount } = render(<Glide />)
+    await lowerLeft()
+    expect(screen.queryByText(/Notification Center/)).not.toBeInTheDocument()
+    unmount()
+
+    window.flow = backend({ supported: false, enabled: false })
+    render(<Glide />)
+    await lowerLeft()
+    expect(screen.queryByText(/Notification Center/)).not.toBeInTheDocument()
+    expect(window.flow.setMacEdgeSwipe).not.toHaveBeenCalled()
   })
 })

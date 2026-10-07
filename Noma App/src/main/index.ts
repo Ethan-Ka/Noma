@@ -68,6 +68,7 @@ import { CaptureService } from './workflow/captureService'
 import { ClickCaptureService } from './workflow/clickCaptureService'
 import { createClickInspector } from './workflow/uiaInspector'
 import { GlideController } from './holo/glideController'
+import { getMacEdgeSwipe, setMacEdgeSwipe } from './holo/macEdgeSwipe'
 import { latestTouchCheckAt, openRecordingsFolder } from './holo/recordingStore'
 import { insertWorkflowEvent } from './database/repositories/workflowEventsRepository'
 import { getClickCaptureEnabled, getWorkflowMonitoringEnabled } from './database/repositories/settingsRepository'
@@ -544,6 +545,8 @@ app.whenReady().then(() => {
   initWhatsNew()
   ipcMain.handle(IPC_CHANNELS.HOLO_OPEN_RECORDINGS, () => openRecordingsFolder())
   ipcMain.handle(IPC_CHANNELS.GLIDE_GET_STATE, () => glide.getState())
+  ipcMain.handle(IPC_CHANNELS.MAC_EDGE_SWIPE_GET, () => getMacEdgeSwipe())
+  ipcMain.handle(IPC_CHANNELS.MAC_EDGE_SWIPE_SET, (_event, enabled: boolean) => setMacEdgeSwipe(enabled === true))
   ipcMain.handle(IPC_CHANNELS.GLIDE_SET_ENABLED, (_event, enabled: boolean) => glide.setEnabled(enabled === true))
   ipcMain.handle(IPC_CHANNELS.GLIDE_SET_ZONE_COUNT, (_event, zoneCount: HoloTrackpadZoneCount) =>
     glide.setZoneCount(zoneCount === 2 ? 2 : 4)

@@ -1,5 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import type { ApplicationProfile, ApplicationProfileSummary, HoloTrackpadZoneCount } from '@shared/types'
+import type {
+  ApplicationProfile,
+  ApplicationProfileSummary,
+  HoloTrackpadZoneCount,
+  MacEdgeSwipeState
+} from '@shared/types'
 import type { GlideZoneName } from '@shared/constants'
 import { useGlideStore } from '../stores/glideStore'
 import { useFlowStore } from '../stores/flowStore'
@@ -30,11 +35,15 @@ export function Glide() {
   const [profile, setProfile] = useState<ApplicationProfile | null | undefined>(undefined)
   const [editingSlot, setEditingSlot] = useState<number | null>(null)
   const [flashing, setFlashing] = useState<GlideZoneName | null>(null)
+  // macOS opens Notification Center on a swipe from the right edge, which fights Glide's right zones.
+  const [edgeSwipe, setEdgeSwipe] = useState<MacEdgeSwipeState | null>(null)
+  const [edgeSwipeJustOff, setEdgeSwipeJustOff] = useState(false)
 
   useEffect(() => {
     void refresh()
     void refreshContext()
     void window.flow.listApplicationProfileSummaries().then(setApps)
+    void window.flow.getMacEdgeSwipe().then((value) => setEdgeSwipe(value ?? null))
     return subscribeToContext()
   }, [refresh, refreshContext, subscribeToContext])
 
@@ -76,6 +85,13 @@ export function Glide() {
     setEditingSlot(slot)
   }
 
+  const toggleEdgeSwipe = async (): Promise<void> => {
+    if (!edgeSwipe) return
+    const next = await window.flow.setMacEdgeSwipe(!edgeSwipe.enabled)
+    setEdgeSwipe(next)
+    setEdgeSwipeJustOff(!next.enabled)
+  }
+
   const setUpApp = async (): Promise<void> => {
     if (!app) return
     await window.flow.createProfileForApplication(app, app.name)
@@ -104,6 +120,24 @@ export function Glide() {
           </div>
         )}
       </header>
+
+      {/* macOS only: `supported` is false on every other system, so nothing shows there. */}
+      {edgeSwipe?.supported && state?.enabled && (edgeSwipe.enabled || edgeSwipeJustOff) && (
+        <div className="mb-8 flex items-center justify-between gap-4 rounded-lg border border-base-700 bg-base-900 px-4 py-3 text-sm text-neutral-300">
+          <p>
+            {edgeSwipe.enabled
+              ? 'macOS opens Notification Center when a swipe starts at the right edge. That clashes with Glide’s right zones.'
+              : 'Turned off. If a right-edge swipe still opens it, log out and back in.'}
+          </p>
+          <button
+            type="button"
+            onClick={() => void toggleEdgeSwipe()}
+            className="shrink-0 rounded-md border border-white/10 px-3 py-1.5 text-xs font-medium text-neutral-200 hover:border-accent-muted"
+          >
+            {edgeSwipe.enabled ? 'Turn it off' : 'Turn back on'}
+          </button>
+        </div>
+      )}
 
       {(isChanging || status.tone === 'problem') && (
         <div

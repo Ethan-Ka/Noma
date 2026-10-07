@@ -80,6 +80,8 @@ export const IPC_CHANNELS = {
   GLIDE_GET_STATE: 'flow:glide-get-state',
   GLIDE_SET_ENABLED: 'flow:glide-set-enabled',
   GLIDE_SET_ZONE_COUNT: 'flow:glide-set-zone-count',
+  MAC_EDGE_SWIPE_GET: 'flow:mac-edge-swipe-get',
+  MAC_EDGE_SWIPE_SET: 'flow:mac-edge-swipe-set',
   GLIDE_STATE_CHANGED: 'flow:glide-state-changed',
   GLIDE_ACTIVITY: 'flow:glide-activity',
   ACTION_RUN_STATE: 'flow:action-run-state',

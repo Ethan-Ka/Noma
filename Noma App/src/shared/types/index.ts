@@ -63,6 +63,12 @@ export type ControlAction =
    */
   | { type: 'click'; target: string; applicationId?: string }
 
+/** The macOS right-edge swipe (Notification Center): `supported` is false off macOS. */
+export interface MacEdgeSwipeState {
+  supported: boolean
+  enabled: boolean
+}
+
 export interface Control {
   id: string
   /** 1-based physical slot position (maps to a control on the keyboard/module). */
@@ -957,6 +963,9 @@ export interface FlowApi {
   /** Glide: the trackpad swipe-in. On/off and zone count are stored by main
    *  and take effect immediately, with or without this window open. */
   getGlideState(): Promise<GlideState>
+  /** macOS only: whether the system's swipe-in-from-the-right-edge gesture (Notification Center) is on, which clashes with Glide's right zones. */
+  getMacEdgeSwipe(): Promise<MacEdgeSwipeState>
+  setMacEdgeSwipe(enabled: boolean): Promise<MacEdgeSwipeState>
   setGlideEnabled(enabled: boolean): Promise<GlideState>
   setGlideZoneCount(zoneCount: HoloTrackpadZoneCount): Promise<GlideState>
   onGlideState(callback: (state: GlideState) => void): () => void
