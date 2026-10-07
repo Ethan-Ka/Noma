@@ -6,10 +6,10 @@ import { useReducedMotion } from 'framer-motion'
  * flagship product demo, the adaptive-workflow section): a tall wrapper
  * holds a panel that's `position: fixed` while the visitor scrolls through
  * it, then hands off to `position: absolute` (anchored to the wrapper's
- * bottom) once scrolled past — computed via a plain `getBoundingClientRect()`
+ * bottom) once scrolled past. Computed via a plain `getBoundingClientRect()`
  * scroll listener (rAF-throttled), not CSS `position: sticky` (Lenis's root
  * scroll mode sets `overflow: hidden auto` on `<html>`/`<body>`, which breaks
- * native sticky — see noma-website-project memory) and not Framer Motion's
+ * native sticky. See noma-website-project memory) and not Framer Motion's
  * `useScroll` either (its clamped-at-edges semantics make "not reached yet"
  * and "scrolled past" ambiguous; a manual rect check isn't).
  *
@@ -20,7 +20,7 @@ import { useReducedMotion } from 'framer-motion'
  * of a `fixed` panel silently renders past the screen edge with no
  * scrollbar to reveal it. `contentScale` is measured (not guessed from a
  * breakpoint) and shrinks the whole stack uniformly from the top down
- * whenever it doesn't fit, so short windows get a smaller — but complete —
+ * whenever it doesn't fit, so short windows get a smaller (but complete)
  * sequence instead of one with its bottom missing. Attach `contentRef` to
  * the element that should shrink and `panelRef` to its fixed/absolute
  * ancestor (the one carrying the top/bottom padding to clear the floating
@@ -63,7 +63,7 @@ export function usePinnedScroll({ scrollVh = 3, minContentScale = 0.62 }: { scro
         const panelStyle = getComputedStyle(panelEl)
         const available = vh - (parseFloat(panelStyle.paddingTop) || 0) - (parseFloat(panelStyle.paddingBottom) || 0)
         // Undo whatever scale is currently applied to recover the stack's
-        // true, unscaled height — getBoundingClientRect reports the
+        // true, unscaled height. getBoundingClientRect reports the
         // post-transform size, so dividing it back out is what makes this
         // converge to a stable value instead of ratcheting every frame.
         const naturalHeight = contentEl.getBoundingClientRect().height / (contentScaleRef.current || 1)
@@ -96,7 +96,7 @@ export function usePinnedScroll({ scrollVh = 3, minContentScale = 0.62 }: { scro
 }
 
 /** Piecewise-linear interpolation helper shared by every stage-driven value
- *  (camera zoom, counters, etc.) in a pinned scene — given `progress` and a
+ *  (camera zoom, counters, etc.) in a pinned scene. Given `progress` and a
  *  stage's own `[start, end)` bounds, returns 0-1 how far through that one
  *  stage the visitor currently is. */
 export function stageLocalT(progress: number, start: number, end: number) {

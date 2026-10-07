@@ -8,7 +8,7 @@ import { MoveScene, NoticeScene, StepWindow, WorkScene, ZoneScene } from '../vis
  * How it works, played by scrolling (2026-10-06, after raisedhand.ai): on
  * wide screens the four steps scroll past on the left while a Noma window
  * stays pinned on the right and plays whichever step is in the middle of
- * the screen. On phones each step simply has its own window under it.
+ * the screen. On phones each step has its own window under it.
  * Pinning is CSS sticky, which needs html/body to use overflow-x: clip,
  * not hidden (see index.css).
  */

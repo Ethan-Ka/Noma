@@ -3,7 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import ControlBar from '../visuals/ControlBar'
 import SiteLink from '../layout/SiteLink'
 import { GLASS_ACCENT } from '../../lib/glass'
-import DotField from '../visuals/DotField'
+import SwipeTrail from '../visuals/SwipeTrail'
 import { SERIF_LINE } from '../../lib/type'
 import AppIcon from '../visuals/AppIcon'
 import { appProfiles } from '../../data/appProfiles'
@@ -12,7 +12,7 @@ import { appProfiles } from '../../data/appProfiles'
  * The claim, and the proof of it, in one screen.
  *
  * The headline is deliberately short enough to read in the time the surface
- * below takes to change once — because the surface is the argument and the
+ * below takes to change once; because the surface is the argument and the
  * words are only the caption. Someone who never reads a line should still
  * understand the product from watching four controls rewrite themselves when
  * the application above them changes.
@@ -78,17 +78,11 @@ export default function Hero() {
 
   return (
     <section id="top" className="relative overflow-hidden">
-      <DotField className="absolute inset-0 h-full w-full" />
+      <SwipeTrail className="absolute inset-0" />
       <div aria-hidden className="hero-glow pointer-events-none absolute inset-x-0 top-0 h-[70vh]" />
 
       <div className="relative mx-auto max-w-6xl px-6 pb-24 pt-36 sm:px-8 sm:pt-44 md:pb-32">
         <div className="relative mx-auto max-w-3xl text-center">
-          {/* A soft dark backing behind the copy, so the dot field never
-              sits under the words. Darkening only, no colour. */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -inset-x-24 -inset-y-16 -z-10 bg-[radial-gradient(ellipse_closest-side,rgb(4_5_10/0.82),rgb(4_5_10/0.55)_55%,transparent)]"
-          />
           <motion.h1
             aria-label="Your computer, adapting to you."
             initial={reduceMotion ? false : { opacity: 0, y: 18 }}

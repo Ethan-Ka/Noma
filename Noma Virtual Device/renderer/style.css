@@ -1,9 +1,9 @@
 /* Same near-black/accent-blue palette Noma App and the website share
-   (#4c7eff signature brand blue) — hand-copied since there's no shared
+   (#4c7eff signature brand blue). Hand-copied since there's no shared
    package between the three projects; keep in sync by eye if it changes. */
 /* OLED-specific tokens below (--oled-*) are copied exactly from Noma
    Website's KeyboardVisual.tsx (the SVG illustration's own fill/stroke
-   values) rather than reusing the general UI palette above — that's the
+   values) rather than reusing the general UI palette above. That's the
    whole point of matching the site's look, not an inconsistency. */
 :root {
   color-scheme: dark;
@@ -57,7 +57,7 @@ body {
   align-items: center;
   justify-content: space-between;
   /* The whole bar is the window's drag handle (there's no native OS
-     title bar — see main.js's `frame: false`); the close button carves
+     title bar; see main.js's `frame: false`). The close button carves
      itself back out as non-drag below so it stays clickable. */
   -webkit-app-region: drag;
   cursor: move;
@@ -67,12 +67,12 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
-  /* No fixed width — grows as the wordmark reveals on hover, shrinks back
+  /* No fixed width. Grows as the wordmark reveals on hover, shrinks back
      when it doesn't. .titlebar's `space-between` just gives the room. */
 }
 
 .brand-mark {
-  /* The actual Noma logo mark (the "N" glyph), not the wordmark — same
+  /* The actual Noma logo mark (the "N" glyph), not the wordmark. Same
      transparent asset the Website/App use, hand-copied since there's no
      shared package between the projects. Height-constrained since the
      source PNG isn't square (2602x1673). */
@@ -85,7 +85,7 @@ body {
 }
 
 .brand-word-wrap {
-  /* Collapsed to nothing until `.brand` is hovered — `max-width` (not
+  /* Collapsed to nothing until `.brand` is hovered. `max-width` (not
      `width`) is what's animated here specifically because CSS can't
      transition to/from `width: auto`, and the wordmark's rendered width
      depends on its aspect ratio, not a value we want to hardcode twice. */
@@ -102,7 +102,7 @@ body {
 
 .brand:hover .brand-word-wrap {
   /* Comfortably above the wordmark's real rendered width (~78px at this
-     height) — just a cap for the max-width transition, not the actual size. */
+     height). Just a cap for the max-width transition, not the actual size. */
   max-width: 96px;
   opacity: 0.85;
   transform: translateX(0);
@@ -137,7 +137,7 @@ body {
 }
 
 .oled-appname {
-  /* The app-context label "etched" just above the screen — same
+  /* The app-context label "etched" just above the screen. Same
      placement/treatment as KeyboardVisual.tsx's <text> above its OLED
      strip (fontSize 9, letterSpacing 0.8, fill #3a3a41, uppercase). */
   font-size: 9px;
@@ -154,7 +154,7 @@ body {
   position: relative;
   flex: 0 0 auto;
   /* Exact screen fill/stroke from KeyboardVisual.tsx's <rect> (fill
-     #050506, stroke #4c7eff at 30% opacity, 1.25px, rx 9) — not this
+     #050506, stroke #4c7eff at 30% opacity, 1.25px, rx 9). Not this
      app's general dark-panel tokens. */
   background: var(--oled-bg);
   border: 1.25px solid var(--oled-stroke);
@@ -168,7 +168,7 @@ body {
 
 .oled-dot {
   /* The small solid dot in the screen's top-right corner
-     (KeyboardVisual.tsx's <circle>, r 2.3, fill accent) — there it's
+     (KeyboardVisual.tsx's <circle>, r 2.3, fill accent). There it's
      decorative; here it doubles as the actual connection indicator,
      since this device is the real thing, not an illustration. */
   position: absolute;
@@ -202,8 +202,8 @@ body {
 
 .oled-status {
   /* Same two-tier "readout" treatment KeyboardVisual.tsx uses for its
-     recognized-pattern moment (a bold colored label + a small dim sub-
-     label below it) — repurposed here for the one thing that actually
+     recognized-pattern moment (a bold colored label plus a small dim sub-
+     label below it). Repurposed here for the one thing that actually
      needs top billing on a real device: connection state. */
   font-size: 14px;
   font-weight: 600;
@@ -226,14 +226,14 @@ body {
 
 .oled-line.warn {
   /* A press was refused/failed (e.g. a permanently-blocked shortcut like
-     Ctrl+Q) — same warn color the connection-waiting state uses, so
+     Ctrl+Q). Same warn color the connection-waiting state uses, so
      "something needs your attention" reads consistently everywhere on
      this screen. */
   color: var(--warn);
 }
 
 .buttons {
-  /* One seamless module, not 4 separate floating tiles — same idea as
+  /* One unified module, not 4 separate floating tiles. Same idea as
      KeyboardVisual.tsx's OLED screen, where the 4 controls live inside
      ONE bordered rect divided by thin lines, not 4 separate boxes. The
      border/radius/background live here, on the outer container; each
@@ -268,7 +268,7 @@ body {
 }
 
 .control-btn:not(:first-child) {
-  /* The separator between cells — matches KeyboardVisual.tsx's own
+  /* The separator between cells. Matches KeyboardVisual.tsx's own
      inter-cell <line> (stroke #1c1c21) rather than a generic UI border. */
   border-top: 1px solid #1c1c21;
 }
@@ -292,8 +292,8 @@ body {
 
 .control-btn.failed {
   /* The press reached Noma App but was refused or failed for real (e.g. a
-     control mapped to Ctrl+Q — permanently blocked, since it can quit an
-     application) — a longer, distinctly-colored flash so it doesn't read
+     control mapped to Ctrl+Q: permanently blocked, since it can quit an
+     application). A longer, distinctly-colored flash so it doesn't read
      as just another ordinary press. See app.js's applyActionResult(). */
   background-color: rgba(209, 139, 76, 0.16);
 }
@@ -309,7 +309,7 @@ body {
 
 .control-icon {
   /* Same monoline glyph set as the website's OLED cells
-     (oledIcons.js, ported from OledIcon.tsx) — color comes from
+     (oledIcons.js, ported from OledIcon.tsx). Color comes from
      `.control-btn`'s own `color` via `currentColor`, so it's blue
      normally and dims along with everything else when disabled. */
   display: block;
@@ -325,7 +325,7 @@ body {
 }
 
 .control-label {
-  /* Deliberately its own color, not inherited blue — matches
+  /* Deliberately its own color, not inherited blue. Matches
      KeyboardVisual.tsx's cells, where the icon is blue but the label
      text underneath it is a plain light gray. */
   color: var(--oled-label);

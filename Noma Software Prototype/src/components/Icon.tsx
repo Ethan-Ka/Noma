@@ -1,7 +1,7 @@
 import type { SVGProps } from 'react'
 
 /**
- * Small chrome icons (close, drag handle, reorder chevrons) — same monoline
+ * Small chrome icons (close, drag handle, reorder chevrons): same monoline
  * stroke language as ControlIcon.tsx, kept separate because these are UI
  * chrome rather than control glyphs. Exists so no UI element falls back to
  * a bare Unicode glyph (✕, ⋮⋮, ▲▼) standing in for a real icon.

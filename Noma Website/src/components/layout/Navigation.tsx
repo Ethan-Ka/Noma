@@ -7,7 +7,7 @@ import SiteLink from './SiteLink'
 
 // Four, matching the page's three pillars plus the one section that shows
 // the adaptation happening. Every href is a section id that exists on
-// `Home` — checked against it, not inherited from an older page.
+// `Home`, checked against it, not inherited from an older page.
 const links = [
   { label: 'How it works', href: '#how' },
   { label: 'Flow', href: '#flow' },
@@ -16,7 +16,7 @@ const links = [
 ]
 
 /**
- * Floating liquid-glass pill — kept by explicit request as the one
+ * Floating liquid-glass pill; kept by explicit request as the one
  * deliberately decorative material on an otherwise restrained page. See
  * `lib/glass.ts` for the shared recipe this and the site's buttons share.
  * Every href goes through `SiteLink` now that routing exists, so these

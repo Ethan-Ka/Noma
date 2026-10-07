@@ -20,7 +20,7 @@ interface SiteLinkProps {
  *
  * - A bare `#hash`: on the homepage, stays a plain `<a href="#hash">` so
  *   Lenis's own `anchors` option (see `App.tsx`) keeps intercepting it
- *   exactly as it did before routing existed — that's tuned smooth-scroll
+ *   exactly as it did before routing existed. That's tuned smooth-scroll
  *   behavior worth not disturbing. Anywhere else, becomes a router `Link`
  *   to `/#hash`: it routes home first, then `ScrollToHash` (`App.tsx`)
  *   finishes the scroll once the target section exists in the DOM.

@@ -6,11 +6,11 @@ import { getEffectiveOrder, maybeShowFeedbackNudge, useNomaStore } from '../stor
 import type { ControlDef } from '../data/appProfiles'
 
 /**
- * The hero. This is the first thing anyone sees — a working simulation of
+ * The hero. This is the first thing anyone sees. A working simulation of
  * the physical hardware, not a page describing it. The sell is Noma
  * recognizing a pattern (what you're doing inside the app, or which apps
- * you keep moving between) and visibly changing the interface around it —
- * not a suggestion you have to act on. Copy stays minimal: the keyboard is
+ * you keep moving between) and visibly changing the interface around it.
+ * Not a suggestion you have to act on. Copy stays minimal: the keyboard is
  * the pitch.
  */
 export function Workspace() {
@@ -44,7 +44,7 @@ export function Workspace() {
         <PatternRecognition currentAppId={currentAppId} detectedActivity={detectedActivity} recognizedWorkflow={recognizedWorkflow} />
       </div>
 
-      {/* A soft product-shot glow behind the chassis — the same restrained
+      {/* A soft product-shot glow behind the chassis. The same restrained
           treatment the Website's own hardware illustration uses (a single
           low-opacity accent wash, not a colorful blob). */}
       <div className="relative">

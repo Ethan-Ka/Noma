@@ -1,4 +1,4 @@
-// Demo data for the Virtual Keyboard mockup in AppPreview.tsx — a plausible
+// Demo data for the Virtual Keyboard mockup in AppPreview.tsx. A plausible
 // shortcut per control so pressing a tile has something real to flash on the
 // keyboard grid below it. Mirrors the shape of the actual app's `Control` /
 // `ControlAction` types (src/shared/types in Noma App) closely enough that
@@ -13,7 +13,7 @@ const KEY_ABBREVIATIONS: Record<string, string> = {
   Backquote: '`',
 }
 
-/** e.g. ['Control', 'Shift', 'F'] -> "Ctrl+Shift+F" — same abbreviation
+/** e.g. ['Control', 'Shift', 'F'] -> "Ctrl+Shift+F". Same abbreviation
  *  rules the real app's control tiles use for a shortcut's caption. */
 export function formatShortcutCaption(keys: string[]): string {
   return keys.map((key) => KEY_ABBREVIATIONS[key] ?? key).join('+')

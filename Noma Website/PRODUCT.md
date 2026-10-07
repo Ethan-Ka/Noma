@@ -1,4 +1,4 @@
-# Noma — product truth
+# Noma: product truth
 
 Captured for the 2026-09-24 website redesign. This file is what is *true*;
 `src/index.css` and the components own how it looks.
@@ -15,15 +15,15 @@ The claim is **not** "AI productivity". It is **your computer adapts to you**.
 
 Noma is one product with three parts. The website must carry all three.
 
-1. **The software (Flow)** — real and working today. Detects the foreground
+1. **The software (Flow)**: real and working today. Detects the foreground
    application, swaps four contextual controls, captures workflow metadata,
    recognises repeated patterns, and proposes them. Windows.
-2. **Glide** (formerly Holo) — swipe a finger onto the trackpad from the empty palm-rest
+2. **Glide** (formerly Holo): swipe a finger onto the trackpad from the empty palm-rest
    space either side of it, level with its upper or lower half: four
    controls, the same four slots as the keyboard. Read from the laptop's own precision touchpad
    (Windows), so the adaptive interface needs no purchase at all. No
    microphone. Free, in the beta.
-3. **The device** — a physical surface whose controls and display change
+3. **The device**: a physical surface whose controls and display change
    because Flow noticed something, rather than because someone configured a
    profile. **Prototype stage: firmware is written against a documented
    protocol, no board has been assembled.** The site must say so.
@@ -34,14 +34,14 @@ Noma is one product with three parts. The website must carry all three.
 - That there is a downloadable installer today. The beta CTA collects an
   email; it does not link to a build that does not exist.
 - Anything about reading what you type. Flow records *which* shortcut in
-  *which* app in *what order* — never content. This is a real constraint in
+  *which* app in *what order*; never content. This is a real constraint in
   the product, not a marketing line.
 
 ## Audience and job
 
 Someone who lives in a handful of applications and switches between them all
 day: developers, editors, designers, people running Claude Code beside an
-editor beside a browser. They should finish the page thinking *"wait — my
+editor beside a browser. They should finish the page thinking *"wait, my
 computer could actually do that?"*, then ask for the beta.
 
 ## The one story the whole site tells
@@ -53,5 +53,5 @@ is the visual. No abstract renders, no stock imagery, no decorative 3D.
 
 ## Voice
 
-Plain, specific, quiet. Never "unlock", "supercharge", "AI-powered",
-"work smarter". Noma states what it did; it does not sell.
+Plain, specific, quiet. Never "AI-powered" or marketing flourish.
+Noma states what it did; it does not sell.

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-/** Shared heading + prose block for `Privacy.tsx` and `Terms.tsx` — each
+/** Shared heading + prose block for `Privacy.tsx` and `Terms.tsx`, each
  *  repeats this same pattern six-plus times, so it's worth a real
  *  component rather than copy-pasted markup. */
 export default function LegalSection({ title, children }: { title: string; children: ReactNode }) {

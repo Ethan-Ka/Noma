@@ -18,21 +18,18 @@ export default function Beta() {
         center
         title="Help build the computer"
         second={<>that <Em>adapts to you.</Em></>}
-        line="Noma is in beta and free to use. Install it, use it for real, and help shape what comes next."
+        line="Noma is in beta and free to use."
       />
 
       <Reveal delay={0.14}>
         <div className="mx-auto mt-10 max-w-2xl text-center">
           <DownloadButtons />
-          <p className="mx-auto mt-5 max-w-md text-balance text-sm leading-relaxed text-base-300">
-            Noma records which shortcut, in which app, in what order. Never what you type.
-          </p>
         </div>
       </Reveal>
 
       <Reveal delay={0.2}>
         <div className="mx-auto mt-12 max-w-md border-t border-base-800 pt-8 text-center">
-          <p className="mb-4 text-sm text-base-400">Not ready to install? Get an email when something changes.</p>
+          <p className="mb-4 text-sm text-base-400">Not ready? Get an email when something changes.</p>
           <WaitlistForm submitLabel="Get updates" />
         </div>
       </Reveal>

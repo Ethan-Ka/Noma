@@ -12,7 +12,7 @@ interface PatternRecognitionProps {
 /**
  * The actual selling point, said in plain language: Noma noticing what
  * you're doing inside an app (detectedActivity) and noticing a pattern
- * across apps (recognizedWorkflow) — always visible, no accept/reject
+ * across apps (recognizedWorkflow). Always visible, no accept/reject
  * loop attached to it. This is the headline; the keyboard emphasizing the
  * relevant keys underneath is the proof.
  */
@@ -20,12 +20,12 @@ export function PatternRecognition({ currentAppId, detectedActivity, recognizedW
   const app = appProfiles[currentAppId]
 
   const state = detectedActivity
-    ? { key: `activity:${detectedActivity.id}`, active: true, text: `Pattern recognized — ${detectedActivity.label} in ${app.shortName}` }
+    ? { key: `activity:${detectedActivity.id}`, active: true, text: `Pattern recognized: ${detectedActivity.label} in ${app.shortName}` }
     : recognizedWorkflow
       ? {
           key: `workflow:${recognizedWorkflow.a}:${recognizedWorkflow.b}`,
           active: true,
-          text: `Workflow recognized — you move between ${appProfiles[recognizedWorkflow.a].shortName} and ${appProfiles[recognizedWorkflow.b].shortName}`,
+          text: `Workflow recognized: you move between ${appProfiles[recognizedWorkflow.a].shortName} and ${appProfiles[recognizedWorkflow.b].shortName}`,
         }
       : { key: 'idle', active: false, text: 'Noma is watching for patterns in how you work.' }
 

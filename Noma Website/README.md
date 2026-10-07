@@ -1,7 +1,7 @@
-# Noma — Marketing Website
+# Noma: Marketing Website
 
 The public marketing site for Noma, an adaptive computer interface. This is a
-standalone project — it does not depend on the Noma desktop app's source, only
+standalone project; it does not depend on the Noma desktop app's source, only
 echoes its visual language.
 
 ## Stack
@@ -21,9 +21,9 @@ src/
     ui/           Button, ControlChip, WaitlistForm, Reveal (scroll-in animation)
     visuals/      KeyboardVisual (the keyboard SVG, reused across Hero/ProductDemo/
                    Hardware), ModuleEnclosure (module cards + the attach animation),
-                   AppIcon (real brand icons — Problem/Applications/Glide's marketing
+                   AppIcon (real brand icons: Problem/Applications/Glide's marketing
                    chips), appGlyphIcons/DemoAppIcon (the app's own hand-drawn glyph
-                   icons — used only inside AppPreview's demo, to stay faithful to how
+                   icons. Used only inside AppPreview's demo to stay faithful to how
                    the real app looks; don't mix the two), demoSurfaces (the app's
                    liquid-glass recipe, re-themed for the AppPreview demo only)
     sections/     One component per landing-page section
@@ -33,12 +33,12 @@ src/
   data/
     appProfiles.ts   Shared VS Code / Chrome / Claude / GitHub / etc. control sets +
                       brand colors, reused across most sections
-    config.ts        Waitlist endpoint — see "Before shipping" below
-  App.tsx          Assembles all sections in order — see its own top-of-file comment
+    config.ts        Waitlist endpoint: see "Before shipping" below
+  App.tsx          Assembles all sections in order. See its own top-of-file comment
                     for the full-redesign (2026-09-16) section order and what got retired
 ```
 
-Each section is a self-contained component — reorder, remove, or restyle one
+Each section is a self-contained component; reorder, remove, or restyle one
 without touching the others.
 
 ## Develop
@@ -59,7 +59,7 @@ npm run preview
 
 Hosted on [Vercel](https://vercel.com), connected to the `awnsh/Noma` GitHub repo
 with **Root Directory** set to `Noma Website`. Every push to `main` that touches
-this folder redeploys automatically — no config file needed, Vercel auto-detects
+this folder redeploys automatically; no config file needed, Vercel auto-detects
 the Vite preset.
 
 ## Screen recording slot
@@ -75,7 +75,7 @@ Until the .mp4 exists and loads, the slot is hidden and takes no space.
 
 ## Before shipping
 
-- **Waitlist isn't connected yet.** `src/data/config.ts` has a `WAITLIST_ENDPOINT` constant — create a free form at [formspree.io](https://formspree.io), paste its endpoint in, done. Until then the form renders normally but shows a "not connected yet" notice on submit instead of sending anywhere.
-- `KeyboardVisual` is an abstract, hand-drawn SVG concept, not a CAD render — replace it once real hardware imagery exists.
+- **Waitlist isn't connected yet.** `src/data/config.ts` has a `WAITLIST_ENDPOINT` constant: create a free form at [formspree.io](https://formspree.io), paste its endpoint in, done. Until then the form renders normally but shows a "not connected yet" notice on submit instead of sending anywhere.
+- `KeyboardVisual` is an abstract, hand-drawn SVG concept, not a CAD render. Replace it once real hardware imagery exists.
 - Social links (YouTube, TikTok, LinkedIn) are placeholder `#` hrefs, as are the footer's GitHub/Privacy/Terms links.
-- "Try Glide Free" (Hero, Nav, Glide, CTA) currently routes to the waitlist section (`#cta`) rather than a real download — there's no public Glide distribution yet. Point it at the real thing once one exists.
+- "Try Glide Free" (Hero, Nav, Glide, CTA) currently routes to the waitlist section (`#cta`) rather than a real download. There's no public Glide distribution yet. Point it at the real thing once one exists.

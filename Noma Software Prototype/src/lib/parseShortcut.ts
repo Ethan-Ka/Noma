@@ -1,8 +1,8 @@
 /**
  * Turns a display shortcut string (e.g. "Ctrl+Shift+F") into the canonical
  * key names HardwareKeyboard.tsx's layout data uses, so pressing a contextual
- * control can flash the literal keys on the decorative base keyboard —
- * the same "physical keys stay, their meaning doesn't" idea the Noma App's
+ * control can flash the literal keys on the decorative base keyboard.
+ * The same "physical keys stay, their meaning doesn't" idea the Noma App's
  * real KeyboardLayout.tsx demonstrates with captured shortcuts.
  */
 const TOKEN_MAP: Record<string, string> = {

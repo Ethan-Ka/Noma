@@ -9,7 +9,7 @@
 
 /*
  * Palette ported verbatim from the Noma Website (src/index.css's @theme) and
- * the Noma App (tailwind.config.js) — this prototype is a third,
+ * the Noma App (tailwind.config.js). This prototype is a third,
  * independent project, so the tokens are duplicated by hand rather than
  * shared, same as those two already do with each other. Do not invent new
  * colors here; extend this block instead. See DESIGN.md.
@@ -28,23 +28,23 @@
   --color-base-100: #eaeaec;
   --color-base-50: #f7f7f8;
 
-  /* Signature brand blue — the one color that means "this is the interface,
+  /* Signature brand blue: the one color that means "this is the interface,
      active or ready to be pressed." Never repurposed. */
   --color-accent: #4c7eff;
   --color-accent-bright: #8babff;
   --color-accent-dim: #3150a4;
   --color-accent-950: #0a0f1f;
 
-  /* Reserved for a real physical hardware contact in the eventual product —
-     kept here for continuity with the brand, unused as decoration. */
+  /* Reserved for a real physical hardware contact in the eventual product.
+     Kept here for continuity with the brand, unused as decoration. */
   --color-gold: #cda15a;
   --color-gold-bright: #e8c383;
   --color-gold-dim: #6b5730;
   --color-gold-950: #1a1409;
 
-  /* Flow violet — Noma's own noticing-and-suggesting layer, wherever it
+  /* Flow violet: Noma's own noticing-and-suggesting layer, wherever it
      shows up. Never used for the resulting interface change itself (that
-     stays blue) — only for Noma proposing something. */
+     stays blue). Only for Noma proposing something. */
   --color-flow: #a78bd1;
   --color-flow-bright: #c4aee0;
   --color-flow-dim: #5c4a78;
@@ -79,7 +79,7 @@
     color: var(--color-base-950);
   }
 
-  /* Themed scrollbars — the parts of a page you didn't draw still carry
+  /* Themed scrollbars: the parts of a page you didn't draw still carry
      the design. An unstyled OS scrollbar over the keyboard's horizontal
      scroll fallback or the Validation Mode panel's lists would be the
      cheapest tell that this was assembled, not built. */

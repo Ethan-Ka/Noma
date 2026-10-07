@@ -1,6 +1,6 @@
 interface ArrowProps {
   className?: string
-  /** Rotates the whole glyph — 90 for a downward arrow on stacked layouts. */
+  /** Rotates the whole glyph. 90 for a downward arrow on stacked layouts. */
   rotate?: number
 }
 

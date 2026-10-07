@@ -16,7 +16,8 @@ import { appProfiles } from '../../data/appProfiles'
  * there, the workflows repeated, and which suggestions get kept or
  * dismissed (Flow's learned filter trains on exactly that).
  *
- * The picker advances on its own until the first click, then stops for good.
+ * The picker advances on its own until the first hover, focus or click, then
+ * stops for good. Hovering an app previews its controls on the right.
  */
 
 const APPS = ['vscode', 'chrome', 'claude', 'figma', 'premiere', 'spotify']
@@ -75,6 +76,8 @@ export default function Adaptive() {
                     type="button"
                     role="tab"
                     aria-selected={isActive}
+                    onMouseEnter={() => choose(id)}
+                    onFocus={() => choose(id)}
                     onClick={() => choose(id)}
                     className={`flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-colors duration-200 ${
                       isActive

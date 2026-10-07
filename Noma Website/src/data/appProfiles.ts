@@ -3,7 +3,7 @@ export interface AppProfile {
   name: string
   shortName: string
   controls: string[]
-  /** The app's own identifying color — shown as a small dot wherever it's named,
+  /** The app's own identifying color. Shown as a small dot wherever it's named,
    *  and used to tint its icon (see `AppIcon.tsx`) wherever a real brand mark is
    *  rendered. Makes "every application is different" legible at a glance instead
    *  of every environment reading as the same gray card. */
@@ -13,8 +13,8 @@ export interface AppProfile {
 // Shared control-set definitions, reused across the Problem, How-Noma-Works,
 // and Interactive Demo sections so the product story stays consistent.
 // The Problem section's orbit deliberately spans as many different domains
-// (code, video, CAD, browsing, design, photo, 3D, chat, music) as colors —
-// the point is that these have nothing in common except that they all live
+// (code, video, CAD, browsing, design, photo, 3D, chat, music) as colors.
+// The point is that these have nothing in common except that they all live
 // on the same four physical keys.
 export const appProfiles: Record<string, AppProfile> = {
   vscode: {

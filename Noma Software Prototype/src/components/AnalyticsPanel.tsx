@@ -10,7 +10,7 @@ function formatDuration(ms: number): string {
   return minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`
 }
 
-/** Section labels: Inter, not mono — mono here is reserved for the actual
+/** Section labels: Inter, not mono. Mono here is reserved for the actual
  *  numeric readouts (counts, timestamps), which genuinely are technical/
  *  measurement content per DESIGN.md; a label like "Most-used controls"
  *  isn't, so it doesn't wear the mono costume. */
@@ -26,11 +26,11 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 /**
- * Validation Mode (brief section 12) — hidden by design: no nav entry,
+ * Validation Mode (brief section 12): hidden by design. No nav entry,
  * reachable only via Ctrl+Shift+V or the quiet dot in the footer (see
  * App.tsx). Reads straight from lib/analytics.ts's localStorage-backed
  * event log, so it reflects every session on this machine, not just the
- * current one — the intended way to read results back after 20-30 people
+ * current one. The intended way to read results back after 20-30 people
  * have each tried the prototype on the same laptop.
  */
 export function AnalyticsPanel({ onClose }: { onClose: () => void }) {

@@ -1,4 +1,4 @@
-# Playwright MCP session artifacts (screenshots, console logs) — never intentional commits
+# Playwright MCP session artifacts (screenshots, console logs), never intentional commits
 .playwright-mcp/
 
 # OS / editor cruft

@@ -84,11 +84,11 @@ export function registerIpcHandlers(
    *  currently focused. */
   onProfileUpdated: (applicationId: string) => void,
   /** The last known real (non-Flow) foreground window handle, for
-   *  "Test" in the Control Mapping Editor — same targeting as a real
+   *  "Test" in the Control Mapping Editor; same targeting as a real
    *  press. */
   getTargetWindowHandle: () => number | null,
   /** Re-runs pattern detection -> suggestion generation and pushes the
-   *  pending list to the renderer — the same function called after every
+   *  pending list to the renderer: the same function called after every
    *  real captured event (main/index.ts's `refreshSuggestions`), reused
    *  here so Demo Mode's simulated events flow through the identical
    *  pipeline. */
@@ -330,7 +330,7 @@ export function registerIpcHandlers(
 
   ipcMain.handle(IPC_CHANNELS.DELETE_ALL_DATA, async () => {
     // A factory reset invalidates the live capture hook's premise (its
-    // "enabled" setting row no longer exists) — stop it explicitly rather
+    // "enabled" setting row no longer exists); stop it explicitly rather
     // than leaving it running against a settings table that now says off.
     captureService.stop()
     clickCaptureService.stop()

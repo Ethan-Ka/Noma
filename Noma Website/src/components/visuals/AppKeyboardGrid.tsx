@@ -1,10 +1,10 @@
-// Ported from the real app's KeyboardLayout.tsx (src/renderer/src/components) —
-// same row/key data, re-themed onto this project's own color tokens instead of
+// Ported from the real app's KeyboardLayout.tsx (src/renderer/src/components).
+// Same row/key data, re-themed onto this project's own color tokens instead of
 // the app's. Kept a straight port rather than a redesign so this stays a
 // faithful copy of the actual UI, not a reinterpretation of it.
 //
 // Every key width is a responsive pair ("mobile sm:desktop") rather than one
-// fixed size — a real 65% key field is ~500px wide at full size, which never
+// fixed size. A real 65% key field is ~500px wide at full size, which never
 // fits a phone screen. Shrinking every key ~30% and stacking the arrow
 // cluster below the main rows (instead of beside them) on mobile keeps the
 // whole board inside a phone viewport with no horizontal scroll; `sm:` and up
@@ -13,7 +13,7 @@
 interface LayoutKey {
   name?: string
   label?: string
-  /** A literal, static Tailwind width class pair ("mobile sm:desktop") — not
+  /** A literal, static Tailwind width class pair ("mobile sm:desktop"). Not
    *  computed, so the JIT compiler can see both halves in this file's source. */
   width?: string
 }
@@ -92,7 +92,7 @@ interface AppKeyboardGridProps {
 
 /**
  * The decorative full keyboard the real app's Virtual Keyboard page frames
- * its 4 contextual control tiles with — not interactive on its own, but it
+ * its 4 contextual control tiles with. Not interactive on its own, but it
  * reacts: keys flash briefly when a control tile fires (see AppPreview.tsx).
  */
 export default function AppKeyboardGrid({ flashingKeys = new Set() }: AppKeyboardGridProps) {
@@ -104,8 +104,8 @@ export default function AppKeyboardGrid({ flashingKeys = new Set() }: AppKeyboar
       </div>
       {/* Arrow cluster stacks below the main rows on mobile (fits a phone
           width with no scroll) and sits beside them from `sm:` up, exactly
-          as before. Key gaps are tighter than the row-stacking gap on mobile
-          — every pixel of horizontal gap gets multiplied by ~13 keys/row. */}
+          as before. Key gaps are tighter than the row-stacking gap on mobile.
+          Every pixel of horizontal gap gets multiplied by ~13 keys/row. */}
       <div className="flex flex-col items-center gap-2 overflow-x-auto sm:flex-row sm:items-start sm:justify-center sm:gap-4">
         <div className="flex flex-col items-center gap-0.5 sm:gap-1.5">
           {ROWS.map((row, index) => (

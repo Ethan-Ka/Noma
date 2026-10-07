@@ -6,7 +6,7 @@ import { getSeedDefaultControl } from '../database/seed'
 /**
  * Backs the Control Mapping Editor. Deliberately scoped to applications
  * that already have a profile (seeded, or previously created by accepting
- * a suggestion) — same as `suggestionResolution.ts`, this never creates a
+ * a suggestion); same as `suggestionResolution.ts`, this never creates a
  * profile from nothing. Configuring a control on a brand-new, never-seen
  * application is a real gap (there's no path today to bootstrap a profile
  * for an arbitrary app), left as a clean next increment rather than

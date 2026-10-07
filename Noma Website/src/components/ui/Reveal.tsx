@@ -16,7 +16,7 @@ interface RevealProps {
  * bottom margin), so content is already settled by the time it's read;
  * an earlier version waited until it was 10% inside the screen, which left
  * items near the bottom edge (e.g. a fourth column) still faded. With
- * prefers-reduced-motion, content is simply there: no fade, no movement.
+ * prefers-reduced-motion, content is there: no fade, no movement.
  */
 export default function Reveal({ children, className, delay = 0, y = 14, as = 'div' }: RevealProps) {
   const reduceMotion = useReducedMotion()

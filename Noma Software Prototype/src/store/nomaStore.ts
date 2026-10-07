@@ -11,8 +11,8 @@ interface Customization {
   removed: string[]
 }
 
-/** A recognized cross-app pattern — "you move between these two workflows
- *  a lot" — the other half of the core selling point alongside intra-app
+/** A recognized cross-app pattern: "you move between these two workflows
+ *  a lot". The other half of the core selling point alongside intra-app
  *  activity recognition (detectActivity.ts). Purely observational: unlike
  *  the earlier suggestion/pin mechanic, nothing needs to be accepted for
  *  this to be true or to show up. */
@@ -22,18 +22,18 @@ export interface RecognizedWorkflow {
   recognizedAt: number
 }
 
-/** How many presses of an app's on-deck controls are kept as "recent" —
- *  the window detectActivity.ts reads from. Short enough that switching
+/** How many presses of an app's on-deck controls are kept as "recent".
+ *  The window detectActivity.ts reads from. Short enough that switching
  *  topics within an app is reflected quickly, long enough that a single
  *  press can't look like a pattern. */
 const RECENT_PRESSES_WINDOW = 6
-/** Same idea for cross-app switching: how many times the same two apps
+/** Same idea for cross-app switching. How many times the same two apps
  *  have to be traded between before Noma calls it a recognized workflow. */
 const WORKFLOW_SWITCH_THRESHOLD = 3
 
-/** Session-only state resets naturally on reload — the intended way to
+/** Session-only state resets naturally on reload. The intended way to
  *  hand this prototype to the next test participant. Only analytics
- *  events/sessions/survey responses (lib/analytics.ts, localStorage)
+ *  events, sessions, and survey responses (lib/analytics.ts, localStorage)
  *  accumulate across reloads, which is the point of Validation Mode. */
 
 function emptyCustomization(): Record<AppId, Customization> {
@@ -48,8 +48,8 @@ function emptyRecentPresses(): Record<AppId, string[]> {
   return result
 }
 
-/** Guards selectApp's queued setTimeouts against a rapid second switch —
- *  without this, clicking through several apps quickly could let a stale
+/** Guards selectApp's queued setTimeouts against a rapid second switch.
+ *  Without this, clicking through several apps quickly could let a stale
  *  callback from an earlier switch stomp the transition phase of a switch
  *  that started after it. Plain module state, not store state: it's an
  *  internal sequencing guard, not something any component should render
@@ -132,7 +132,7 @@ export const useNomaStore = create<NomaState>((set, get) => ({
 
     // Cross-app pattern: repeatedly trading the same two apps is a
     // workflow in its own right, independent of anything happening inside
-    // either one — the other half of "pattern recognition across
+    // either one. The other half of "pattern recognition across
     // workflows," alongside detectActivity's intra-app half below.
     let nextWorkflow = get().recognizedWorkflow
     let nextWorkflowPairs = recognizedWorkflowPairs
@@ -145,7 +145,7 @@ export const useNomaStore = create<NomaState>((set, get) => ({
       })
     }
 
-    // The header/base keyboard switch to the new app immediately — only the
+    // The header/base keyboard switch to the new app immediately. Only the
     // contextual control grid lags behind, showing "Switching context…" /
     // "Adapting controls…" before revealing the new controls. See
     // HardwareKeyboard.tsx: it keys off `transitionPhase`, not `currentAppId`, to
@@ -159,7 +159,7 @@ export const useNomaStore = create<NomaState>((set, get) => ({
       recognizedWorkflow: nextWorkflow,
       recognizedWorkflowPairs: nextWorkflowPairs,
       // Re-detect immediately using whatever history this app already has
-      // from earlier in the session — switching back to an app you were
+      // from earlier in the session. Switching back to an app you were
       // just debugging in should still read as "debugging," not reset.
       detectedActivity: detectActivity(appProfiles[appId].activities, recentPresses[appId]),
     })
@@ -185,7 +185,7 @@ export const useNomaStore = create<NomaState>((set, get) => ({
 
     set({ recentPresses: { ...recentPresses, [appId]: nextWindow }, detectedActivity: nextActivity })
 
-    // Only log the moment recognition actually changes — not on every
+    // Only log the moment recognition actually changes. Not on every
     // subsequent press that continues to match the same activity.
     if (nextActivity && nextActivity.id !== detectedActivity?.id) {
       logEvent(sessionId, 'pattern_recognized', {
@@ -276,7 +276,7 @@ export const useNomaStore = create<NomaState>((set, get) => ({
 }))
 
 /** Trips the feedback nudge once per session, after the visitor has shown
- *  real engagement (visited 3+ apps) rather than on a blind timer — see
+ *  real engagement (visited 3+ apps) rather than on a blind timer. See
  *  Workspace.tsx's effect that calls this. */
 export function maybeShowFeedbackNudge(): void {
   const state = useNomaStore.getState()

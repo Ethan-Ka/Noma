@@ -1,8 +1,8 @@
 // A faithful interactive recreation of the real app's Macro Studio page
-// (src/renderer/src/pages/MacroStudio.tsx + MacroEditor.tsx) — same
+// (src/renderer/src/pages/MacroStudio.tsx + MacroEditor.tsx). Same
 // sidebar-list-plus-editor shape, driven by local state instead of the real
 // app's window.flow IPC (see AppPreview.tsx's doc comment). "Save" just
-// commits the draft back into this session's macro list — there's no
+// commits the draft back into this session's macro list. There's no
 // database to write to in a marketing mockup, but every other interaction
 // (add/reorder/delete a step, record a real shortcut, rename, enable/disable,
 // create a new macro from scratch) is the real editor's own behavior.
@@ -22,7 +22,7 @@ export default function MacroStudioDemo() {
 
   const selected = macros.find((m) => m.id === selectedId) ?? null
 
-  // Local draft state, re-seeded whenever the selected macro changes — mirrors
+  // Local draft state, re-seeded whenever the selected macro changes. Mirrors
   // the real MacroEditor's "don't leak edits between macros" effect.
   const [name, setName] = useState(selected?.name ?? '')
   const [enabled, setEnabled] = useState(selected?.enabled ?? true)

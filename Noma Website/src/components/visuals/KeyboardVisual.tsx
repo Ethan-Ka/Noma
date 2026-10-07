@@ -21,23 +21,23 @@ interface KeyboardVisualProps {
   glow?: boolean
   float?: boolean
   className?: string
-  /** Crops the illustration to just the OLED screen, enlarged — the chassis, keys, and
+  /** Crops the illustration to just the OLED screen, enlarged. The chassis, keys, and
    *  pin connectors are omitted rather than shrunk offscreen. Used where the screen's
    *  content changing is the point, e.g. the interactive demo. */
   oledOnly?: boolean
   /** Labels (matching entries in `controls`) to render in Flow violet instead
-   *  of the default accent — Noma recognizing a specific pattern among the
+   *  of the default accent. Noma recognizing a specific pattern among the
    *  controls already on screen, rather than a controls list. Never used to
    *  swap which controls are shown, only to call out ones already there. */
   emphasizedLabels?: string[]
   /** Makes each screen cell a real clickable control instead of a display
-   *  label — for callers where each of the four cells is its own whole
+   *  label. For callers where each of the four cells is its own whole
    *  workflow (one press, the whole thing runs), and clicking one is the
    *  point rather than a swap-the-whole-screen toggle living outside the
    *  board. Omit (the default) everywhere else, where the cells are pure
    *  illustration. */
   onControlClick?: (label: string) => void
-  /** Hides the magnetic pin-connector strips on the chassis edges — default
+  /** Hides the magnetic pin-connector strips on the chassis edges. Default
    *  `true` (existing behavior) for callers still describing the modular
    *  concept; the 2026 ground-up redesign explicitly doesn't mention or
    *  imply modular add-ons anywhere, so every section built for it passes
@@ -48,30 +48,30 @@ interface KeyboardVisualProps {
   /**
    * A 0-1 scroll-progress `MotionValue` (e.g. Hero.tsx's own `scrollYProgress`)
    * that makes a random key flash "pressed" as the visitor scrolls down past
-   * this board — the keyboard visibly typing on its own, tied to the actual
+   * this board. The keyboard visibly typing on its own, tied to the actual
    * scroll gesture rather than a background timer that runs regardless of
    * whether anyone's looking. Scrolling back up never triggers a press; see
    * the doc comment above the subscription below for the accumulator this
-   * relies on. Omit (the default) for every non-scroll-driven usage — the
+   * relies on. Omit (the default) for every non-scroll-driven usage. The
    * Hardware section's static board, the interactive demo's oledOnly crop,
-   * etc. — where a key spontaneously lighting up would be a non-sequitur.
+   * etc. Where a key spontaneously lighting up would be a non-sequitur.
    */
   typingProgress?: MotionValue<number>
 }
 
 /** How much forward scroll progress (of the 0-1 range typingProgress
- *  reports) it takes to trigger the next key-press — small enough that
+ *  reports) it takes to trigger the next key-press. Small enough that
  *  keys visibly type at a natural cadence across a normal scroll past the
  *  board, large enough that it doesn't fire on every animation frame. */
 const SCROLL_TYPE_STEP = 0.035
-/** How long a "pressed" key stays visually down before releasing — quick
+/** How long a "pressed" key stays visually down before releasing. Quick
  *  enough to read as a real keystroke, not a slow fade. */
 const KEY_PRESS_MS = 200
 
 const VB_W = 1000
 const VB_H = 460
 
-// Chassis — a regular compact 65%-style board, not a wide accessory slab.
+// Chassis: a regular compact 65%-style board, not a wide accessory slab.
 const CH_X = 30
 const CH_Y = 50
 const CH_W = 940
@@ -87,10 +87,10 @@ const IN_BOTTOM = CH_Y + CH_H - 34
 const ROW_H = 52
 const ROW_GAP = 8
 
-// Vertical screen: narrow, ~1 key wide, 4 keys tall — sits where the nav
+// Vertical screen: narrow, ~1 key wide, 4 keys tall. Sits where the nav
 // cluster normally would, immediately right of the main block, ending flush
 // above the arrow keys. Widened from 70→92 units alongside the label/readout
-// font-size bump below — real feedback was that the OLED's control labels
+// font-size bump below. Real feedback was that the OLED's control labels
 // and readout were too small to read; this shaves a few percent off the main
 // key field's width (negligible) to give the text more room instead of just
 // growing it into a cramped strip.
@@ -103,7 +103,7 @@ const KEY_X = IN_X
 const KEY_Y = IN_Y
 const KEY_W = SCR_X - 16 - KEY_X
 
-// Tight crop around just the screen, used by `oledOnly` — enough headroom above
+// Tight crop around just the screen, used by `oledOnly`. Enough headroom above
 // for the app-name label, breathing room to the sides and below.
 const OLED_CROP_X = SCR_X - 26
 const OLED_CROP_Y = SCR_Y - 32
@@ -156,7 +156,7 @@ const SCR_CELL_GAP = 4
 const SCR_CELL_H = (SCR_H - SCR_CELL_GAP * 3) / 4
 const screenCells = [0, 1, 2, 3].map((i) => ({ y: SCR_Y + i * (SCR_CELL_H + SCR_CELL_GAP), h: SCR_CELL_H }))
 
-// Pin-connector docking points — visible magnetic contacts, not hidden grooves.
+// Pin-connector docking points: visible magnetic contacts, not hidden grooves.
 const rightPinX = CH_X + CH_W - 8
 const leftPinX = CH_X + 8
 const dockCenterY = SCR_Y + SCR_H / 2
@@ -168,7 +168,7 @@ const topPinOffsets = [-36, -18, 0, 18, 36]
 export const KEYBOARD_RIGHT_DOCK = { xPct: (rightPinX / VB_W) * 100, yPct: (dockCenterY / VB_H) * 100 }
 
 // Percentage position of the OLED screen's own center within the rendered
-// SVG — same "percent of VB_W/VB_H" technique as KEYBOARD_RIGHT_DOCK above,
+// SVG. Same "percent of VB_W/VB_H" technique as KEYBOARD_RIGHT_DOCK above,
 // so a consumer can use it as a CSS `transform-origin` to zoom the keyboard
 // toward the screen (the SVG's `h-auto w-full` sizing means these percentages
 // line up with the rendered box as long as nothing crops via `oledOnly`).
@@ -195,7 +195,7 @@ function PinStrip({
     <g>
       <rect x={x} y={y} width={w} height={h} rx={Math.min(w, h) / 2.4} fill="#050506" stroke="#232328" strokeWidth="1" />
       {pins.map((p, i) => (
-        // Gold, not the software's blue — this is a real physical/magnetic contact,
+        // Gold, not the software's blue. This is a real physical/magnetic contact,
         // and the pulse is current arriving through it: the cue that a module has
         // actually connected, not just moved into place.
         <motion.circle
@@ -218,10 +218,10 @@ function PinStrip({
 }
 
 /**
- * A conceptual, abstract representation of the Noma hardware — not a render of a
+ * A conceptual, abstract representation of the Noma hardware. Not a render of a
  * finished product. A regular compact 65% key field with one addition: a narrow
  * vertical OLED strip, about four keys tall, set where the nav cluster would
- * normally sit — flush with the top row, ending right above the arrow keys.
+ * normally sit: flush with the top row, ending right above the arrow keys.
  * Visible pin-connector strips on the left, right, and top edges are where
  * separate physical modules dock magnetically. Replace with real CAD renders
  * once they exist.
@@ -243,14 +243,14 @@ export default function KeyboardVisual({
   const reduceMotion = useReducedMotion()
   const uid = useId()
   const floatRef = useRef<HTMLDivElement>(null)
-  // Idle float only runs while the board is actually on screen — it costs nothing
+  // Idle float only runs while the board is actually on screen. It costs nothing
   // to look right at scroll-in and nothing to burn while scrolled away.
   const inView = useInView(floatRef, { margin: '-10% 0px -10% 0px' })
 
   // Scroll-driven random key presses. `typingProgress` is optional, but
-  // hooks can't be called conditionally — a local MotionValue that never
+  // hooks can't be called conditionally. A local MotionValue that never
   // updates stands in when the caller didn't pass one, so the subscription
-  // below is always wired up but simply never fires in that case.
+  // below is always wired up but never fires in that case.
   const noScrollProgress = useMotionValue(0)
   const scrollSource = typingProgress ?? noScrollProgress
   const [pressed, setPressed] = useState<{ index: number; token: number } | null>(null)
@@ -263,7 +263,7 @@ export default function KeyboardVisual({
     if (!typingProgress || reduceMotion || oledOnly) return
     const delta = latest - lastScrollProgress.current
     lastScrollProgress.current = latest
-    // Only forward scroll accumulates toward the next press — scrolling
+    // Only forward scroll accumulates toward the next press. Scrolling
     // back up resets it, so scrolling down through the same stretch again
     // later types a fresh key rather than staying silent because this
     // range already "used up" its trigger once.
@@ -278,7 +278,7 @@ export default function KeyboardVisual({
     setPressed({ index: Math.floor(Math.random() * totalMainKeys), token: pressTokenRef.current })
   })
 
-  // Releases a press automatically — checked against the token that
+  // Releases a press automatically. Checked against the token that
   // requested it, so a new press triggered before the old one finished
   // releasing can't have its own timeout clear the newer press instead.
   useEffect(() => {
@@ -343,7 +343,7 @@ export default function KeyboardVisual({
               {/* recessed control deck */}
               <rect x={IN_X - 14} y={IN_Y - 14} width={IN_RIGHT - IN_X + 28} height={IN_BOTTOM - IN_Y + 28} rx="16" fill="#000" opacity="0.16" />
 
-              {/* key field — the base rect's fill stays the static gradient
+              {/* key field. The base rect's fill stays the static gradient
                   (framer-motion can't smoothly interpolate to/from a
                   gradient url(), only between plain colors), so a "press"
                   is expressed as a tiny y-nudge on the key itself plus a
@@ -395,8 +395,8 @@ export default function KeyboardVisual({
           <rect x={SCR_X} y={SCR_Y} width={SCR_W} height={SCR_H} rx="9" fill="#050506" stroke="#4c7eff" strokeOpacity="0.3" strokeWidth="1.25" />
           <circle cx={SCR_X + SCR_W - 10} cy={SCR_Y + 10} r="2.3" fill="#4c7eff" />
 
-          {/* Screen content swaps with a brief scan-in rather than a jump cut —
-              this is the one moment on the page that has to read as the interface
+          {/* Screen content swaps with a brief scan-in rather than a jump cut.
+              This is the one moment on the page that has to read as the interface
               actually responding, since it's the literal product claim. */}
           <g clipPath={`url(#${uid}-screen-clip)`}>
             <AnimatePresence mode="wait">
@@ -437,8 +437,8 @@ export default function KeyboardVisual({
                     {screenCells.map((cell, i) => {
                       const label = controls[i]
                       if (!label) return null
-                      // Flow violet, not the interface's own accent blue —
-                      // this is Noma calling out a control it recognized as
+                      // Flow violet, not the interface's own accent blue.
+                      // This is Noma calling out a control it recognized as
                       // part of a pattern, same split as everywhere else the
                       // two colors sit next to each other (see DESIGN.md).
                       const isEmphasized = emphasizedLabels?.includes(label) ?? false

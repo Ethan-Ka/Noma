@@ -8,7 +8,7 @@ import { useGlideStore } from '../stores/glideStore'
 interface ControlTileProps {
   slot: number
   control: Control | undefined
-  /** The application this control's profile belongs to — every tile in a
+  /** The application this control's profile belongs to; every tile in a
    *  grid shares the same one, so its `AppIcon` is what gives the whole
    *  grid an immediate visual identity (see product brief section 11).
    *  Optional: callers outside an application-scoped grid (none today)
@@ -17,17 +17,17 @@ interface ControlTileProps {
 }
 
 /**
- * A single physical control, read-only — the Home/Controls page's "what
+ * A single physical control, read-only; the Home/Controls page's "what
  * does this button do" view. Deliberately tactile rather than a dashboard
  * tile: a small, bordered rectangle referencing the real hardware key, the
  * control's name as the one confident statement on it, and its real
  * shortcut (never an invented description) set in mono underneath. Solid
- * graphite material (Card fill + a real border), not translucent glass —
- * an earlier version had a colored blue glow on hover, which read as an
+ * graphite material (Card fill + a real border), not translucent glass.
+ * An earlier version had a colored blue glow on hover, which read as an
  * "AI-related" decoration rather than a physical control; the hover
  * feedback now is exactly what a real keycap gives: it lifts slightly, its
  * edge brightens a touch, nothing more. An empty slot stays flat, since
- * there's nothing to press yet — see VirtualControlButton for the
+ * there's nothing to press yet. See VirtualControlButton for the
  * interactive twin used on the Virtual Keyboard page.
  */
 export function ControlTile({ slot, control, application }: ControlTileProps) {

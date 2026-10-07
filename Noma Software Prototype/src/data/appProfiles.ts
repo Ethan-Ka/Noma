@@ -1,15 +1,15 @@
 export interface ControlDef {
   id: string
-  /** Displayed on the keycap — always short enough to fit. */
+  /** Displayed on the keycap. Always short enough to fit. */
   label: string
-  /** Mono caption under the label, e.g. a plausible shortcut. Cosmetic —
-   *  this prototype doesn't send real keystrokes (see PRODUCT.md brief:
+  /** Mono caption under the label, e.g. a plausible shortcut. Cosmetic.
+   *  This prototype doesn't send real keystrokes (see PRODUCT.md brief:
    *  this is a validation build, not the real, execution-backed app). */
   shortcut: string
 }
 
 /**
- * A recognizable sub-app activity — the core selling point this prototype
+ * A recognizable sub-app activity. The core selling point this prototype
  * exists to demonstrate: Noma doesn't just know "VS Code is focused," it
  * notices *what you're doing inside it* from which controls you reach for,
  * and narrates that back (see lib/detectActivity.ts). `signalControlIds`
@@ -27,7 +27,7 @@ export interface AppProfile {
   id: string
   name: string
   shortName: string
-  /** Used sparingly — a small identity dot next to the app's name, never a
+  /** Used sparingly. A small identity dot next to the app's name, never a
    *  fill. Omitted for apps with no single brand hue (Chrome, Word). */
   color?: string
   detailLabel: string
@@ -117,7 +117,7 @@ export const appProfiles: Record<AppId, AppProfile> = {
     shortName: 'Spotify',
     color: '#1db954',
     detailLabel: 'Now Playing',
-    detailValue: 'Weightless — Marconi Union',
+    detailValue: 'Weightless, Marconi Union',
     contextLine: "You're listening to music",
     controls: [
       { id: 'previous', label: 'Previous', shortcut: 'Ctrl+←' },

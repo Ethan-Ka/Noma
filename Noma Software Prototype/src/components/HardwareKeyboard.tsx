@@ -9,21 +9,21 @@ import type { TransitionPhase } from '../store/nomaStore'
 /**
  * The hero of the whole prototype: one physical keyboard, rendered as
  * software. Not a dashboard with a decorative keyboard graphic bolted on
- * top of it — every key here, static or adaptive, is the same size, same
+ * top of it. Every key here, static or adaptive, is the same size, same
  * material, same chassis. The only thing that's "app UI" is the thin
  * embedded screen; everything else is meant to read as hardware.
  *
  * Layout mirrors a real compact (TKL) board: the alpha block on the left
  * never changes. On the right, where a real TKL keyboard has its nav
  * cluster (Home/End/PgUp/PgDn/Insert/Delete) and arrow keys, this one has
- * Noma's adaptive module instead — same keycap size class as a real macro
+ * Noma's adaptive module instead. Same keycap size class as a real macro
  * pad attachment, not a bigger "app icon" tile. Everything here scales off
  * one `--key` CSS variable (see KEY_CSS below) so it stays proportional at
  * any size instead of the static/adaptive halves drifting apart.
  *
  * A violet ring on a key means the currently recognized activity is about
- * that control (see PatternRecognition.tsx / lib/detectActivity.ts) —
- * this is the payoff shot: Noma names what it noticed, and this is where
+ * that control (see PatternRecognition.tsx / lib/detectActivity.ts).
+ * This is the payoff shot: Noma names what it noticed, and this is where
  * that becomes a visible change to the interface, not just a sentence.
  */
 
@@ -193,7 +193,7 @@ export function HardwareKeyboard({ appId, order, emphasizedControlIds, transitio
       </span>
 
       <div style={KEY_CSS} className="flex w-fit items-start gap-[calc(var(--key)*0.35)] pt-6">
-        {/* The static half — never changes, regardless of app context. */}
+        {/* The static half: never changes, regardless of app context. */}
         <div className="flex flex-col gap-[calc(var(--key)*0.12)]">
           {ALPHA_ROWS.map((row, rowIndex) => (
             <div key={rowIndex} className="flex gap-[calc(var(--key)*0.12)]">
@@ -204,7 +204,7 @@ export function HardwareKeyboard({ appId, order, emphasizedControlIds, transitio
           ))}
         </div>
 
-        {/* The adaptive module — same chassis, same key material, occupying
+        {/* The adaptive module: same chassis, same key material, occupying
             exactly the footprint a nav cluster / numpad attachment would.
             This is the part that changes. */}
         <div className="flex flex-col gap-[calc(var(--key)*0.12)]">

@@ -3,7 +3,7 @@ import { GLASS_CARD } from '../lib/surfaces'
 const normalPoints = ['Static shortcuts', 'Same controls, every app', 'Manual configuration']
 const nomaPoints = ['Adapts to your workflow', 'Surfaces relevant controls', 'Learns what you use']
 
-/** Brief section 6 — a 15-second, concise comparison. Not a feature grid. */
+/** Brief section 6: a 15-second, concise comparison. Not a feature grid. */
 export function Compare() {
   return (
     <div className="mx-auto max-w-3xl px-6 py-14">

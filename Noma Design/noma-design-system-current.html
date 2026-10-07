@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Noma Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Sora:wght@400..700&display=swap" rel="stylesheet">
+<style>
+/* Tokens copied from Noma App/tailwind.config.js (v4, "restrained graphite hardware"). */
+:root {
+  --base-950:#08090a; --base-900:#0d0f11; --base-850:#111214; --base-800:#15171a; --base-700:#24262a; --base-600:#30333a;
+  --n-50:#ffffff; --n-100:#f5f5f7; --n-200:#d5d6db; --n-300:#adaeb8; --n-400:#96999f; --n-500:#75767e; --n-600:#656970; --n-700:#45474e;
+  --accent:#4c7eff; --accent-muted:#2f4f9e; --accent-subtle:rgba(76,126,255,.12);
+  --success:#4cbf82; --success-muted:rgba(76,191,130,.16);
+  --error:#e0685f; --error-muted:rgba(224,104,95,.16);
+  --gold:#c9a45f; --gold-muted:rgba(201,164,95,.18);
+  --violet:#8b6cff; --violet-muted:rgba(139,108,255,.16);
+  --holo-bg:#050506; --holo-muted:#83858d;
+  --font-display:"Sora","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+  --ease-out-expo:cubic-bezier(.16,1,.3,1); --ease-out-quart:cubic-bezier(.25,1,.5,1);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--base-950);color:var(--n-200);font:400 15px/1.55 var(--font-sans);-webkit-font-smoothing:antialiased}
+a{color:var(--accent)}
+code,.mono{font-family:var(--font-mono);font-size:.86em;color:var(--n-300)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+header.top{padding:72px 0 40px;border-bottom:1px solid var(--base-700)}
+header.top h1{font:600 36px/1.15 var(--font-display);color:var(--n-100);margin:0 0 12px}
+header.top p{margin:0;max-width:62ch;color:var(--n-400)}
+nav.toc{position:sticky;top:0;z-index:5;background:rgba(8,9,10,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--base-700)}
+nav.toc .wrap{display:flex;gap:4px;overflow-x:auto;padding-top:10px;padding-bottom:10px}
+nav.toc a{color:var(--n-400);text-decoration:none;font-size:13px;padding:5px 10px;border-radius:8px;white-space:nowrap}
+nav.toc a:hover{color:var(--n-100);background:var(--base-800)}
+section{padding:56px 0 8px}
+h2{font:600 22px/1.2 var(--font-display);color:var(--n-100);margin:0 0 6px}
+h3{font:600 15px/1.3 var(--font-display);color:var(--n-100);margin:32px 0 10px}
+.lead{margin:0 0 24px;color:var(--n-400);max-width:68ch}
+.eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--n-500)}
+.note{margin:14px 0 0;padding:12px 14px;border:1px solid var(--base-700);border-radius:10px;background:var(--base-850);color:var(--n-300);font-size:13.5px}
+.note b{color:var(--n-100)}
+.bad{color:var(--error)} .ok{color:var(--success)}
+.grid{display:grid;gap:12px}
+.g-6{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.g-3{grid-template-columns:repeat(auto-fill,minmax(300px,1fr))}
+.g-2{grid-template-columns:repeat(auto-fill,minmax(440px,1fr))}
+@media (max-width:520px){.g-2{grid-template-columns:1fr}.g-3{grid-template-columns:1fr}}
+.sw{border:1px solid var(--base-700);border-radius:12px;overflow:hidden;background:var(--base-850)}
+.sw .chip{height:64px}
+.sw .meta{padding:8px 10px;font-size:12px;color:var(--n-400)}
+.sw .meta b{display:block;color:var(--n-100);font-weight:500;font-size:12.5px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--base-700);vertical-align:top}
+th{font-weight:500;color:var(--n-400);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+td{color:var(--n-300)}
+.tablewrap{overflow-x:auto;border:1px solid var(--base-700);border-radius:12px;background:var(--base-850)}
+.tablewrap table{min-width:420px}
+.stage{border:1px solid var(--base-700);border-radius:14px;background:var(--base-950);padding:24px;position:relative;overflow:hidden}
+.stage.alt{background:var(--base-900)}
+.cap{font-size:12px;color:var(--n-500);margin-top:10px}
+.cap code{color:var(--n-400)}
+pre{margin:10px 0 0;padding:12px 14px;border:1px solid var(--base-700);border-radius:10px;background:var(--base-900);overflow-x:auto;font:400 12px/1.6 var(--font-mono);color:var(--n-300)}
+/* ---------- recreated Noma recipes (same values as surfaces.ts / components) ---------- */
+.card{border-radius:16px;border:1px solid var(--base-700);background:var(--base-850);box-shadow:0 10px 28px -16px rgba(0,0,0,.55)}
+.panel{border-radius:16px;border:1px solid var(--base-700);background:var(--base-800);box-shadow:0 24px 60px -20px rgba(0,0,0,.65)}
+.device{border-radius:16px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.035);backdrop-filter:blur(12px);box-shadow:0 10px 28px -16px rgba(0,0,0,.55)}
+.hero{border-radius:16px;border:1px solid var(--base-700);background:rgba(255,255,255,.025);backdrop-filter:blur(12px);box-shadow:0 20px 48px -20px rgba(0,0,0,.6)}
+.notice{border-radius:16px;border:1px solid rgba(255,255,255,.09);background:rgba(17,18,20,.82);backdrop-filter:blur(24px);box-shadow:0 24px 64px -24px rgba(0,0,0,.8)}
+.keycap{background-image:linear-gradient(to bottom,rgba(255,255,255,.05),rgba(255,255,255,.015));box-shadow:0 6px 18px -10px rgba(0,0,0,.55)}
+.tile{aspect-ratio:4/3;display:flex;flex-direction:column;justify-content:space-between;padding:16px;border-radius:16px;border:1px solid var(--base-700);background-color:var(--base-850);transition:all 150ms}
+.tile:hover{transform:translateY(-2px);border-color:var(--base-600)}
+.tile .zone{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--n-500)}
+.tile .lbl{font-size:14px;font-weight:500;letter-spacing:.025em;color:var(--n-100)}
+.tile .cp{margin-top:4px;font:400 12px var(--font-mono);color:var(--n-500)}
+.icon32{width:32px;height:32px;border-radius:7px;background:#1db954;display:grid;place-items:center;color:#000;font:700 14px var(--font-display)}
+.nav{display:flex;align-items:center;gap:10px;width:100%;padding:6px 10px;border-radius:10px;font-size:14px;text-align:left;border:1px solid transparent;background:none;color:var(--n-400);font-family:var(--font-sans);cursor:pointer;transition:color 150ms}
+.nav:hover{color:var(--n-100)}
+.nav.on{border-color:rgba(76,126,255,.25);background:rgba(76,126,255,.12);font-weight:500;color:var(--accent)}
+.nav svg{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.btn-p{border-radius:6px;border:1px solid var(--accent-muted);background:rgba(76,126,255,.1);padding:6px 12px;font:500 12px var(--font-sans);color:var(--accent);cursor:pointer;transition:transform 150ms,background-color 150ms}
+.btn-p:hover{background:rgba(76,126,255,.2)} .btn-p:active{transform:scale(.97)} .btn-p:disabled{opacity:.4;cursor:not-allowed}
+.btn-g{border-radius:6px;border:0;background:none;padding:6px 12px;font:400 12px var(--font-sans);color:var(--n-500);cursor:pointer}
+.btn-g:hover{color:var(--n-300)}
+.btn-d{border-radius:6px;border:1px solid rgba(224,104,95,.3);background:none;padding:6px 12px;font:500 12px var(--font-sans);color:var(--error);cursor:pointer}
+.btn-o{border-radius:6px;border:1px solid rgba(255,255,255,.1);background:none;padding:6px 12px;font:500 12px var(--font-sans);color:var(--n-200);cursor:pointer}
+.field-l{display:block;margin-bottom:6px;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--n-500)}
+.field-i{width:100%;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:var(--base-950);padding:8px 12px;font:400 14px var(--font-sans);color:var(--n-100)}
+.field-i::placeholder{color:var(--n-500)}
+.toggle{display:flex;align-items:center;width:44px;height:24px;flex:none;border-radius:999px;border:1px solid rgba(255,255,255,.15);background:var(--base-800);padding:2px;cursor:pointer;transition:background-color 200ms,border-color 200ms}
+.toggle i{width:16px;height:16px;border-radius:50%;background:var(--n-500);transition:transform 200ms var(--ease-out-quart),background-color 200ms}
+.toggle[aria-checked=true]{border-color:var(--accent-muted);background:rgba(76,126,255,.3)}
+.toggle[aria-checked=true] i{transform:translateX(22px);background:var(--accent)}
+.tag{display:inline-block;border-radius:4px;border:1px solid var(--base-600);padding:1px 6px;font-size:10px;color:var(--n-400)}
+.beta{font-size:12px;color:var(--n-500)}
+.link{font-size:12px;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;font-family:var(--font-sans)}
+.link:hover{opacity:.8}
+.empty b{display:block;font-size:16px;font-weight:500;color:var(--n-100)}
+.empty p{margin:6px 0 0;max-width:28rem;font-size:14px;line-height:1.6;color:var(--n-600)}
+.scrim{background:rgba(0,0,0,.5);backdrop-filter:blur(2px);padding:32px 16px;display:grid;place-items:center;border-radius:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.zonerow{display:flex;align-items:baseline;justify-content:space-between;gap:12px;font-size:14px}
+.zonerow span:first-child{font-size:12px;color:var(--holo-muted)} .zonerow span:last-child{color:var(--n-100)}
+.demo{display:inline-block;width:150px;padding:18px;text-align:center;font-size:12px;color:var(--n-300);border-radius:12px;border:1px solid var(--base-700);background:var(--base-850)}
+@keyframes fi{from{opacity:0}to{opacity:1}}
+@keyframes ri{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes si{from{opacity:0;transform:translateY(8px) scale(.97)}to{opacity:1;transform:none}}
+@keyframes fo{from{opacity:1}to{opacity:0}}
+@keyframes so{from{opacity:1;transform:none}to{opacity:0;transform:translateY(6px) scale(.98)}}
+@keyframes po{from{opacity:1;transform:none}to{opacity:0;transform:translateY(4px)}}
+.a-fi{animation:fi 180ms var(--ease-out-quart) both}.a-ri{animation:ri 220ms var(--ease-out-expo) both}.a-si{animation:si 240ms var(--ease-out-expo) both}
+.a-fo{animation:fo 160ms ease-in both}.a-so{animation:so 160ms cubic-bezier(.4,0,1,1) both}.a-po{animation:po 120ms ease-in both}
+.bar{height:8px;border-radius:4px;background:var(--base-700);overflow:hidden}.bar i{display:block;height:100%}
+footer{padding:56px 0 80px;color:var(--n-500);font-size:13px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <div class="eyebrow">Noma App, v0.1.10</div>
+  <h1>Noma design system, as it exists today</h1>
+  <p>"Restrained graphite hardware": solid graphite surfaces, one blue accent, real application icons, dark only. This page records the system as built, with its flaws, so a revamp starts from fact. Every value comes from <code>tailwind.config.js</code>, <code>lib/surfaces.ts</code>, <code>styles/globals.css</code> and the components themselves.</p>
+</div></header>
+<nav class="toc"><div class="wrap">
+  <a href="#color">Color</a><a href="#contrast">Contrast</a><a href="#type">Type</a><a href="#surfaces">Surfaces</a><a href="#shape">Radius and shadow</a><a href="#components">Components</a><a href="#layout">Layout</a><a href="#motion">Motion</a><a href="#issues">Known issues</a>
+</div></nav>
+<main class="wrap">
+
+<section id="color">
+  <h2>Color</h2>
+  <p class="lead">Tokens are named for roles in Tailwind (<code>bg-base-850</code>, <code>text-neutral-400</code>, <code>text-accent</code>). There is no light theme.</p>
+  <h3>Surfaces: <code>base</code></h3>
+  <div class="grid g-6" id="sw-base"></div>
+  <h3>Text: <code>neutral</code></h3>
+  <div class="grid g-6" id="sw-neutral"></div>
+  <h3>Accent and status</h3>
+  <div class="grid g-6" id="sw-status"></div>
+  <h3>Holo (device surface group)</h3>
+  <div class="grid g-6" id="sw-holo"></div>
+  <p class="note"><b>Meaning of accent.</b> Blue carries active nav, primary buttons, links, selected state, completed checks and Flow suggestions. <b>Gold</b> is reserved for real hardware contact. <b>Violet</b> is defined but referenced by nothing in the UI.</p>
+</section>
+
+<section id="contrast">
+  <h2>Contrast</h2>
+  <p class="lead">Measured WCAG ratios for how the text tokens are really used. AA needs 4.5:1 for body text and 3:1 for large text and non-text UI.</p>
+  <div class="tablewrap"><table id="contrast-table"><thead><tr><th>Token</th><th>Used for</th><th>on base-950</th><th>on base-850 (card)</th><th>on base-800 (modal)</th></tr></thead><tbody></tbody></table></div>
+  <p class="note"><b>Findings.</b> <code>neutral-500</code> (captions, field labels, eyebrows) is under 4.5:1 on cards. <code>neutral-600</code> (empty-state hints, section subtitles) is about 3.4:1, which fails body-text AA. White text on the accent fill is 3.66:1. Card borders (<code>base-700</code> on <code>base-850</code>) are 1.24:1 and input borders (<code>white/10</code>) are similar, so inputs fail the 3:1 non-text rule.</p>
+</section>
+
+<section id="type">
+  <h2>Typography</h2>
+  <p class="lead">Three self-hosted fonts via Fontsource: Sora (display), Inter (UI, 400/500/600), JetBrains Mono (400/500). Sizes are not tokens; the theme defines none, so they are Tailwind defaults plus inline pixel values.</p>
+  <div class="grid g-3">
+    <div class="stage"><div class="eyebrow">Display, Sora</div><div style="font:600 30px/1.2 var(--font-display);color:var(--n-100);margin-top:8px">Glide is ready.</div></div>
+    <div class="stage"><div class="eyebrow">UI, Inter</div><div style="font:500 20px/1.3 var(--font-sans);color:var(--n-100);margin-top:8px">What each zone does</div></div>
+    <div class="stage"><div class="eyebrow">Technical, JetBrains Mono</div><div style="font:400 18px/1.3 var(--font-mono);color:var(--n-100);margin-top:8px">Ctrl+F5, Meta+Shift+F</div></div>
+  </div>
+  <h3>Roles as used</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Role</th><th>Sample</th><th>Classes</th></tr></thead>
+    <tbody>
+      <tr><td>Home greeting title</td><td><span style="font:600 30px/1.2 var(--font-display);color:var(--n-100)">Glide is ready.</span></td><td><code>font-display text-3xl font-semibold text-neutral-100</code></td></tr>
+      <tr><td>Page title</td><td><span style="font:600 24px/1.2 var(--font-display);color:var(--n-100)">Workflows</span></td><td><code>font-display text-2xl font-semibold</code> (Settings, Activity: <code>text-xl</code>)</td></tr>
+      <tr><td>Section heading</td><td><span style="font:600 18px/1.3 var(--font-display);color:var(--n-100)">Your workflows</span></td><td><code>font-display text-lg font-semibold text-neutral-100</code></td></tr>
+      <tr><td>Body</td><td><span style="font-size:14px;color:var(--n-400)">Repeat the same shortcut sequence about three times.</span></td><td><code>text-sm text-neutral-400</code></td></tr>
+      <tr><td>Hint, subtitle</td><td><span style="font-size:14px;color:var(--n-600)">They appear once Noma has something to put on them.</span></td><td><code>text-sm text-neutral-600</code></td></tr>
+      <tr><td>Small text</td><td><span style="font-size:12px;color:var(--n-500)">Last used 4m ago</span></td><td><code>text-xs text-neutral-500</code></td></tr>
+      <tr><td>Eyebrow, field label</td><td><span class="eyebrow">Glide zones</span></td><td><code>text-[10px] uppercase tracking-widest text-neutral-500</code> (also <code>text-[11px]</code>, <code>text-xs</code>)</td></tr>
+      <tr><td>Control label</td><td><span style="font-size:14px;font-weight:500;letter-spacing:.025em;color:var(--n-100)">TERMINAL</span></td><td><code>text-sm font-medium tracking-wide</code>, 12 characters max</td></tr>
+      <tr><td>Shortcut caption</td><td><span class="mono" style="color:var(--n-500)">Ctrl+F5</span></td><td><code>font-mono text-xs text-neutral-500</code></td></tr>
+      <tr><td>Button, tab</td><td><span style="font:500 12px var(--font-sans);color:var(--accent)">Save</span></td><td><code>text-xs font-medium</code></td></tr>
+    </tbody></table></div>
+</section>
+
+<section id="surfaces">
+  <h2>Surfaces</h2>
+  <p class="lead">Defined in <code>lib/surfaces.ts</code>. The default is solid; glass survives in four named places.</p>
+  <div class="grid g-3">
+    <div><div class="stage"><div class="card" style="padding:20px"><div class="eyebrow">CARD</div><div style="color:var(--n-100);margin-top:6px;font-size:14px">Default solid surface</div></div></div><div class="cap"><code>CARD</code>: base-850 fill, base-700 border, 16px radius, soft shadow. Settings, panels, onboarding.</div></div>
+    <div><div class="stage"><div class="panel" style="padding:20px"><div class="eyebrow">MODAL PANEL</div><div style="color:var(--n-100);margin-top:6px;font-size:14px">Elevated solid</div></div></div><div class="cap"><code>GLASS_PANEL</code> (the name is wrong: it is solid): base-800 fill, heavier shadow, scales in.</div></div>
+    <div><div class="stage" style="background:radial-gradient(circle at 30% 20%,#1b1d22,#08090a)"><div class="device" style="padding:20px"><div class="eyebrow">NOMA DEVICE</div><div style="color:var(--n-100);margin-top:6px;font-size:14px">Device glass</div></div></div><div class="cap"><code>DEVICE_GLASS_CARD</code>: white/3.5% fill, blur 12px. Home's Noma Device card only.</div></div>
+    <div><div class="stage" style="background:radial-gradient(circle at 70% 30%,#20232a,#08090a)"><div class="hero" style="padding:20px"><div class="eyebrow">HERO CARD</div><div style="color:var(--n-100);margin-top:6px;font-size:14px">Suggestion card</div></div></div><div class="cap"><code>HERO_CARD</code>: white/2.5% fill, base-700 border, blur 12px.</div></div>
+    <div><div class="stage" style="background:linear-gradient(135deg,#2a2d35,#0d0f11)"><div class="notice" style="padding:20px"><div class="eyebrow">NOTICE</div><div style="color:var(--n-100);margin-top:6px;font-size:14px">Floating on the desktop</div></div></div><div class="cap"><code>NOTICE_GLASS</code>: rgba(17,18,20,.82), blur 24px. The Noma Notice window.</div></div>
+    <div><div class="stage"><div class="tile keycap" style="max-width:180px"><span class="zone">Upper left</span><span class="lbl">RUN</span></div></div><div class="cap"><code>KEYCAP_SHADOW</code>: top-lit white gradient (5% to 1.5%) on a card, used by control tiles.</div></div>
+  </div>
+  <h3>Modal scrim</h3>
+  <div class="scrim"><div class="panel" style="padding:20px;width:260px"><div style="font:600 17px var(--font-display);color:var(--n-100)">Panel on scrim</div><div style="font-size:13px;color:var(--n-400);margin-top:4px">black/50 wash, 2px blur.</div></div></div>
+</section>
+
+<section id="shape">
+  <h2>Radius and shadow</h2>
+  <p class="lead">Neither is a token. These are the values in use and where.</p>
+  <div class="grid g-2">
+    <div class="tablewrap"><table><thead><tr><th>Radius</th><th>Used on</th></tr></thead><tbody>
+      <tr><td><code>rounded-md</code> 6px</td><td>Buttons, inputs, selects</td></tr>
+      <tr><td><code>rounded-lg</code> 8px</td><td>Nav rows, banners</td></tr>
+      <tr><td><code>rounded-xl</code> 12px</td><td>Smaller panels, rows</td></tr>
+      <tr><td><code>rounded-2xl</code> 16px</td><td>Cards, modals, control tiles</td></tr>
+      <tr><td><code>rounded-full</code></td><td>Toggle, pills, dots</td></tr>
+      <tr><td><code>rounded</code> 4px</td><td>Tags</td></tr>
+    </tbody></table></div>
+    <div class="tablewrap"><table><thead><tr><th>Shadow</th><th>Value</th></tr></thead><tbody>
+      <tr><td>Card</td><td><code>0 10px 28px -16px rgb(0 0 0 / .55)</code></td></tr>
+      <tr><td>Keycap</td><td><code>0 6px 18px -10px rgb(0 0 0 / .55)</code></td></tr>
+      <tr><td>Hero</td><td><code>0 20px 48px -20px rgb(0 0 0 / .6)</code></td></tr>
+      <tr><td>Modal panel</td><td><code>0 24px 60px -20px rgb(0 0 0 / .65)</code></td></tr>
+      <tr><td>Notice</td><td><code>0 24px 64px -24px rgb(0 0 0 / .8)</code></td></tr>
+    </tbody></table></div>
+  </div>
+</section>
+
+<section id="components">
+  <h2>Components</h2>
+  <p class="lead">Recreated here from the real class strings. Interactive states work.</p>
+
+  <h3>Navigation row</h3>
+  <div class="stage" style="max-width:260px;background:var(--base-950)"><div class="grid" style="gap:4px">
+    <button class="nav on"><svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v8a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1v-8"/></svg>Home</button>
+    <button class="nav"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>Glide</button>
+    <button class="nav"><svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M9.5 15.5C7.5 14.2 6.5 12.6 6.5 10.5a5.5 5.5 0 0 1 11 0c0 2.1-1 3.700-3 5-.4.3-.6.7-.6 1.200v.3h-4.800v-.3c0-.5-.2-.9-.6-1.200Z"/></svg>Workflows</button>
+  </div><div class="cap">Active: accent text, accent/12% fill, accent/25% border. Inactive: neutral-400, transparent border. Icons are 16px strokes.</div></div>
+
+  <h3>Buttons</h3>
+  <div class="stage"><div class="row">
+    <button class="btn-p">Save</button><button class="btn-p" disabled>Save</button><button class="btn-o">Duplicate</button><button class="btn-g">Cancel</button><button class="btn-d">Delete all data</button><button class="link">Zones and actions →</button>
+  </div><div class="cap">Primary (accent outline, tinted), primary disabled (40%), outline, ghost, destructive, text link. Only primary and ghost are shared components; the rest are repeated class strings.</div></div>
+
+  <h3>Fields</h3>
+  <div class="stage" style="max-width:420px">
+    <label class="field-l" for="n">Name</label>
+    <input id="n" class="field-i" placeholder="e.g. RUN" maxlength="12" style="margin-bottom:16px">
+    <label class="field-l" for="s">Action type</label>
+    <input id="s" class="field-i" value="Shortcut">
+    <div class="cap"><code>FIELD_LABEL</code> + <code>FIELD_INPUT</code>: base-950 fill, white/10 border. Focus uses the browser default; there is no designed focus ring.</div>
+  </div>
+
+  <h3>Toggle</h3>
+  <div class="stage"><div class="row">
+    <button class="toggle" role="switch" aria-checked="true" aria-label="on" onclick="this.setAttribute('aria-checked',this.getAttribute('aria-checked')!=='true')"><i></i></button>
+    <button class="toggle" role="switch" aria-checked="false" aria-label="off" onclick="this.setAttribute('aria-checked',this.getAttribute('aria-checked')!=='true')"><i></i></button>
+  </div><div class="cap">44 by 24 track, 16px thumb, 22px travel, 200ms.</div></div>
+
+  <h3>Control tile (keycap)</h3>
+  <div class="stage"><div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr));gap:12px">
+    <div class="tile keycap"><div style="display:flex;justify-content:space-between"><span class="zone">Upper left</span><span style="color:var(--n-500);font-size:14px">⌘</span></div><div class="icon32">S</div><div><div class="lbl">RUN</div><div class="cp">Ctrl+F5</div></div></div>
+    <div class="tile keycap"><div style="display:flex;justify-content:space-between"><span class="zone">Upper right</span></div><div class="icon32">S</div><div><div class="lbl">DEBUG</div><div class="cp">F5</div></div></div>
+    <div class="tile keycap"><div style="display:flex;justify-content:space-between"><span class="zone">Lower left</span></div><div class="icon32">S</div><div><div class="lbl">TERMINAL</div><div class="cp">Ctrl+`</div></div></div>
+    <div class="tile keycap"><div style="display:flex;justify-content:space-between"><span class="zone">Lower right</span></div><div class="icon32">S</div><div><div class="lbl" style="color:var(--n-500)">–</div></div></div>
+  </div><div class="cap">4:3, 16px radius, 10px zone eyebrow, real app icon (green placeholder here), 14px label, mono caption. Hover lifts 2px.</div></div>
+
+  <h3>Zone list (Home side panel)</h3>
+  <div class="stage" style="background:var(--holo-bg);max-width:320px"><div class="grid" style="gap:6px">
+    <div class="zonerow"><span>Upper left</span><span>RUN</span></div><div class="zonerow"><span>Upper right</span><span>DEBUG</span></div><div class="zonerow"><span>Lower left</span><span>TERMINAL</span></div><div class="zonerow"><span style="color:var(--holo-muted)">Lower right</span><span style="color:var(--holo-muted)">Empty</span></div>
+  </div></div>
+
+  <h3>Empty state</h3>
+  <div class="stage"><div class="empty"><b>No activity yet.</b><p>Noma logs what it notices and creates here.</p></div><div class="cap">Optional title, hint in neutral-600.</div></div>
+
+  <h3>Tag and Beta label</h3>
+  <div class="stage"><div class="row"><span class="tag">Demo</span><span class="beta">Beta</span></div></div>
+
+  <h3>Modal</h3>
+  <div class="scrim"><div class="panel" style="width:100%;max-width:420px;padding:24px">
+    <div class="eyebrow">Visual Studio Code, lower right zone</div>
+    <div style="font:600 18px var(--font-display);color:var(--n-100);margin:4px 0 18px">Choose what this runs</div>
+    <label class="field-l">Name</label><input class="field-i" value="MUTE" style="margin-bottom:20px">
+    <div class="row" style="justify-content:flex-end"><button class="btn-g">Cancel</button><button class="btn-p">Save</button></div>
+  </div></div>
+</section>
+
+<section id="layout">
+  <h2>Layout</h2>
+  <p class="lead">No layout tokens. Each page picks its own container and rhythm, which is how the headers drifted.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Page</th><th>Container</th><th>Title</th></tr></thead>
+    <tbody>
+      <tr><td>Home</td><td><code>max-w-5xl px-12 py-16</code>, content column <code>max-w-2xl</code> plus a 288px side panel</td><td><code>text-3xl</code></td></tr>
+      <tr><td>Workflows</td><td><code>max-w-3xl px-12 py-16</code></td><td><code>text-2xl</code></td></tr>
+      <tr><td>Settings</td><td><code>max-w-3xl px-10 py-10</code></td><td><code>text-xl</code></td></tr>
+      <tr><td>Glide</td><td>wide, own header with the on/off toggle</td><td><code>text-2xl</code></td></tr>
+      <tr><td>Macro Studio</td><td>two-pane: 288px list and editor</td><td><code>text-xl</code> in the list pane</td></tr>
+    </tbody></table></div>
+  <p class="note"><b>Section spacing</b> is <code>mb-8</code>, <code>mb-10</code>, <code>mb-12</code> or <code>mb-14</code> depending on the page. Sidebar width is fixed; window background is <code>base-950</code> with one very low-opacity cool wash.</p>
+</section>
+
+<section id="motion">
+  <h2>Motion</h2>
+  <p class="lead">Defined in <code>globals.css</code> and <code>motion-content.css</code>. Transform and opacity only, everything off under reduced motion.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Token</th><th>Duration, curve</th><th>Used for</th></tr></thead>
+    <tbody>
+      <tr><td><code>noma-fade-in</code></td><td>180ms, ease-out-quart</td><td>Modal scrim</td></tr>
+      <tr><td><code>noma-rise-in</code></td><td>220ms, ease-out-expo, +6px</td><td>Page entry, list items (staggered 40ms)</td></tr>
+      <tr><td><code>noma-scale-in</code></td><td>240ms, ease-out-expo, 0.97 and +8px</td><td>Modal panel</td></tr>
+      <tr><td><code>noma-fade-out</code>, <code>noma-scale-out</code></td><td>160ms, ease-in</td><td>Modal exit</td></tr>
+      <tr><td><code>noma-page-out</code></td><td>120ms, ease-in, +4px</td><td>Page exit</td></tr>
+      <tr><td><code>noma-collapse</code></td><td>180ms grid rows plus 150ms fade</td><td>Hide a card</td></tr>
+      <tr><td><code>noma-press</code></td><td>150ms, scale 0.98 on press</td><td>Buttons</td></tr>
+      <tr><td>Easing variables</td><td><code>--ease-out-expo</code> cubic-bezier(.16,1,.3,1), <code>--ease-out-quart</code> cubic-bezier(.25,1,.5,1)</td><td>All enters</td></tr>
+    </tbody></table></div>
+  <div class="stage" style="margin-top:16px"><div class="row" id="motion-demo">
+    <button class="btn-o" data-a="a-fi">fade in</button><button class="btn-o" data-a="a-ri">rise in</button><button class="btn-o" data-a="a-si">scale in</button><button class="btn-o" data-a="a-fo">fade out</button><button class="btn-o" data-a="a-so">scale out</button><button class="btn-o" data-a="a-po">page out</button>
+  </div><div style="margin-top:20px"><div class="demo" id="demo-box">Click to replay</div></div></div>
+</section>
+
+<section id="issues">
+  <h2>Known issues</h2>
+  <p class="lead">What a revamp should resolve, from this audit.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Issue</th><th>Evidence</th></tr></thead>
+    <tbody>
+      <tr><td>Hint and caption text fails AA</td><td>neutral-600 is 3.4:1 and neutral-500 is 4.15:1 on the card fill.</td></tr>
+      <tr><td>Input and card borders are nearly invisible</td><td>1.24:1 for cards, similar for inputs; no designed focus ring.</td></tr>
+      <tr><td>Accent overloaded</td><td>Active, primary, link, selected, check and suggestion all use the same blue.</td></tr>
+      <tr><td>No size, radius or spacing tokens</td><td>Inline <code>text-[10px]</code>, <code>text-[11px]</code>; four radii; four section margins.</td></tr>
+      <tr><td>Page headers drifted</td><td>Title 20px to 30px, three container widths, two padding sets.</td></tr>
+      <tr><td>Uppercase 10px label does five jobs</td><td>Field label, card eyebrow, zone name, stat label, section tag.</td></tr>
+      <tr><td>Button variants mostly unshared</td><td>Only primary and ghost are components; outline, destructive and link are class strings.</td></tr>
+      <tr><td>Misleading names</td><td><code>GLASS_PANEL</code> is solid; <code>violet</code> is dead.</td></tr>
+      <tr><td>Inconsistent icons</td><td>Hand-drawn strokes, real app icons at varying sizes, a few remaining glyphs (✓ ✕ in Demo and Developer).</td></tr>
+      <tr><td>No shared loading or error pattern</td><td>Empty state is shared; loading and error text are per page.</td></tr>
+    </tbody></table></div>
+</section>
+</main>
+<footer><div class="wrap">Generated from the Noma App source. Colors and class strings are copied from <code>tailwind.config.js</code>, <code>lib/surfaces.ts</code>, <code>styles/globals.css</code> and the components under <code>src/renderer/src/components</code>.</div></footer>
+
+<script>
+function lum(h){h=h.replace('#','');const f=c=>{c/=255;return c<=.03928?c/12.92:Math.pow((c+.055)/1.055,2.4)};const r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);return .2126*f(r)+.7152*f(g)+.0722*f(b)}
+function cr(a,b){const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)}
+function sw(id,items){const el=document.getElementById(id);el.innerHTML=items.map(([n,h,u])=>`<div class="sw"><div class="chip" style="background:${h}"></div><div class="meta"><b>${n}</b>${h}${u?'<br>'+u:''}</div></div>`).join('')}
+sw('sw-base',[['base-950','#08090a','Page canvas'],['base-900','#0d0f11','Secondary flat panel'],['base-850','#111214','Card'],['base-800','#15171a','Elevated, input hover'],['base-700','#24262a','Border'],['base-600','#30333a','Strong border']]);
+sw('sw-neutral',[['neutral-100','#f5f5f7','Primary text'],['neutral-200','#d5d6db','Strong text'],['neutral-300','#adaeb8','Body'],['neutral-400','#96999f','Secondary text'],['neutral-500','#75767e','Captions, labels'],['neutral-600','#656970','Muted, hints'],['neutral-700','#45474e','Disabled, rules']]);
+sw('sw-status',[['accent','#4c7eff','Interactive, active'],['accent-muted','#2f4f9e','Accent border'],['success','#4cbf82','Success'],['error','#e0685f','Error, destructive'],['gold','#c9a45f','Hardware contact only'],['violet','#8b6cff','Defined, unused']]);
+sw('sw-holo',[['holo-bg','#050506','Device face'],['holo-muted','#83858d','Device secondary text'],['holo-text','#f5f5f7','Device text']]);
+const rows=[['neutral-100','Primary text','#f5f5f7'],['neutral-200','Strong text','#d5d6db'],['neutral-300','Body, lists','#adaeb8'],['neutral-400','Body text, nav, buttons','#96999f'],['neutral-500','Captions, labels, eyebrows','#75767e'],['neutral-600','Hints, subtitles, empty states','#656970'],['accent','Links, active nav, primary buttons','#4c7eff'],['success','Success','#4cbf82'],['error','Errors, destructive','#e0685f'],['gold','Hardware','#c9a45f']];
+const bg=['#08090a','#111214','#15171a'];
+document.querySelector('#contrast-table tbody').innerHTML=rows.map(([n,u,h])=>`<tr><td><code>${n}</code> ${h}</td><td>${u}</td>${bg.map(b=>{const r=cr(h,b);return `<td class="${r>=4.5?'ok':'bad'}">${r.toFixed(2)}${r>=4.5?'':' (fails)'}</td>`}).join('')}</tr>`).join('')+`<tr><td><code>white</code> on <code>accent</code> fill</td><td>Text on a solid accent</td><td colspan="3" class="${cr('#ffffff','#4c7eff')>=4.5?'ok':'bad'}">${cr('#ffffff','#4c7eff').toFixed(2)} (large text only)</td></tr>`;
+document.querySelectorAll('#motion-demo button').forEach(b=>b.addEventListener('click',()=>{const box=document.getElementById('demo-box');box.className='demo';void box.offsetWidth;box.classList.add(b.dataset.a);box.textContent=b.textContent}));
+</script>
+</body>
+</html>

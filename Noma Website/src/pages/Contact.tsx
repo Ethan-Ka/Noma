@@ -1,5 +1,7 @@
 import Reveal from '../components/ui/Reveal'
+import PageShell from '../components/ui/PageShell'
 import SiteLink from '../components/layout/SiteLink'
+import { CONTACT_EMAIL, LINK_CLASS, MAILTO } from '../data/config'
 import { GLASS } from '../lib/glass'
 
 // A real mailto link, not a fake form with nowhere to submit to. This
@@ -17,55 +19,53 @@ const REASONS = [
 
 export default function Contact() {
   return (
-    <div className="border-t border-base-800 bg-base-950 pb-24 pt-40 sm:pt-48">
-      <div className="mx-auto max-w-lg px-6 text-center sm:px-8">
-        <Reveal>
-          <p className="text-sm font-medium text-base-400">Contact</p>
-          <h1 className="mt-3 text-balance font-display text-[clamp(2rem,5vw,3rem)] font-medium leading-[1.1] tracking-[-0.02em] text-base-50">
-            Talk to us.
-          </h1>
-          <p className="mx-auto mt-4 max-w-sm text-balance text-base text-base-400">
-            We&rsquo;re a small team building Noma. A real person reads every email.
-          </p>
-        </Reveal>
+    <PageShell
+      eyebrow="Contact"
+      title="Talk to us."
+      width="max-w-lg"
+      center
+      intro={
+        <p className="mx-auto mt-4 max-w-sm text-balance text-base text-base-400">
+          We&rsquo;re a small team building Noma. A real person reads every email.
+        </p>
+      }
+    >
+      <Reveal delay={0.1}>
+        <div className={`mt-12 rounded-3xl px-8 py-12 ${GLASS}`}>
+          <a
+            href={MAILTO()}
+            className="text-balance font-display text-xl font-semibold text-base-50 transition-colors hover:text-accent-bright sm:text-2xl"
+          >
+            {CONTACT_EMAIL}
+          </a>
 
-        <Reveal delay={0.1}>
-          <div className={`mt-12 rounded-3xl px-8 py-12 ${GLASS}`}>
-            <a
-              href="mailto:hello@nomashift.com"
-              className="text-balance font-display text-xl font-semibold text-base-50 transition-colors hover:text-accent-bright sm:text-2xl"
-            >
-              hello@nomashift.com
-            </a>
-
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5 border-t border-white/10 pt-8">
-              {REASONS.map((r) => (
-                <a
-                  key={r.label}
-                  href={`mailto:hello@nomashift.com?subject=${encodeURIComponent(r.subject)}`}
-                  className="rounded-full border border-base-700 px-4 py-2 text-sm font-medium text-base-300 transition-colors hover:border-accent/40 hover:text-base-50"
-                >
-                  {r.label}
-                </a>
-              ))}
-            </div>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-2.5 border-t border-white/10 pt-8">
+            {REASONS.map((r) => (
+              <a
+                key={r.label}
+                href={MAILTO(r.subject)}
+                className="rounded-full border border-base-700 px-4 py-2 text-sm font-medium text-base-300 transition-colors hover:border-accent/40 hover:text-base-50"
+              >
+                {r.label}
+              </a>
+            ))}
           </div>
-        </Reveal>
+        </div>
+      </Reveal>
 
-        <Reveal delay={0.16}>
-          <p className="mt-10 text-sm text-base-500">
-            Found a bug in the app?{' '}
-            <SiteLink href="/feedback" className="text-accent-bright transition-colors hover:text-accent">
-              Report an issue
-            </SiteLink>
-            . Looking to join the waitlist instead?{' '}
-            <SiteLink href="#beta" className="text-accent-bright transition-colors hover:text-accent">
-              Sign up here
-            </SiteLink>
-            .
-          </p>
-        </Reveal>
-      </div>
-    </div>
+      <Reveal delay={0.16}>
+        <p className="mt-10 text-sm text-base-500">
+          Found a bug in the app?{' '}
+          <SiteLink href="/feedback" className={LINK_CLASS}>
+            Report an issue
+          </SiteLink>
+          . Looking to join the waitlist instead?{' '}
+          <SiteLink href="#beta" className={LINK_CLASS}>
+            Sign up here
+          </SiteLink>
+          .
+        </p>
+      </Reveal>
+    </PageShell>
   )
 }

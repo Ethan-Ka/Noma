@@ -2,7 +2,7 @@ import { SiGooglechrome, SiGithub, SiFigma, SiBlender, SiDiscord, SiSpotify, SiN
 import type { IconType } from 'react-icons'
 
 // Real brand marks, where the simple-icons set this project pulls from still
-// carries them — several were pulled from that set after trademark takedown
+// carries them. Several were pulled from that set after trademark takedown
 // requests (VS Code, the Adobe apps, plain Slack) and aren't available as a
 // clean single-color icon at all anymore, at any version.
 const REAL_ICONS: Record<string, IconType> = {
@@ -17,7 +17,7 @@ const REAL_ICONS: Record<string, IconType> = {
   youtube: SiYoutube,
 }
 
-// For everything else: a short letterform badge, not a traced logo — reads as
+// For everything else: a short letterform badge, not a traced logo. Reads as
 // "that app" at a glance next to the real marks above without reproducing a
 // trademark pixel-for-pixel. Terminal isn't a brand at all, so it gets a
 // generic prompt glyph instead of an initialism.

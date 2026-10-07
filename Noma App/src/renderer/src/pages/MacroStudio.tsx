@@ -1,18 +1,33 @@
-import { useEffect, useState } from 'react'
-import type { Application, Macro } from '@shared/types'
+import { useEffect, useMemo, useState } from 'react'
+import type { Macro } from '@shared/types'
 import { useMacrosStore } from '../stores/macrosStore'
+import { useUiStore } from '../stores/uiStore'
+import { useApplicationsStore } from '../stores/applicationsStore'
+import { useStoreSync } from '../lib/useStoreSync'
 import { MacroEditor } from '../components/MacroEditor'
+import { plural } from '../lib/plural'
 
 export function MacroStudio() {
   const { macros, isLoading, refresh } = useMacrosStore()
-  const [applications, setApplications] = useState<Application[]>([])
+  const { byId: applicationsById, refresh: refreshApplications } = useApplicationsStore()
+  const applications = useMemo(() => Object.values(applicationsById), [applicationsById])
   const [selectedMacroId, setSelectedMacroId] = useState<string | null>(null)
   const [isCreatingNew, setIsCreatingNew] = useState(false)
 
+  const pendingMacroId = useUiStore((state) => state.pendingMacroId)
+  const clearPendingMacro = useUiStore((state) => state.clearPendingMacro)
+
+  // Jump to a macro requested from elsewhere (Workflows) once macros load.
   useEffect(() => {
-    refresh()
-    window.flow.getAllApplications().then(setApplications)
-  }, [refresh])
+    if (!pendingMacroId || isLoading) return
+    if (macros.some((macro) => macro.id === pendingMacroId)) {
+      setIsCreatingNew(false)
+      setSelectedMacroId(pendingMacroId)
+    }
+    clearPendingMacro()
+  }, [pendingMacroId, isLoading, macros, clearPendingMacro])
+
+  useStoreSync({ refresh }, { refresh: refreshApplications })
 
   const selectedMacro = macros.find((macro) => macro.id === selectedMacroId) ?? null
   const applicationNameById = new Map(applications.map((application) => [application.id, application.name]))
@@ -77,8 +92,8 @@ export function MacroStudio() {
                     )}
                   </div>
                   <div className="text-[11px] text-neutral-600">
-                    {macro.actions.length} step{macro.actions.length === 1 ? '' : 's'}
-                    {/* Which application this macro was scoped to — set
+                    {macro.actions.length} {plural(macro.actions.length, 'step')}
+                    {/* Which application this macro was scoped to: set
                         automatically when Flow creates a macro from an
                         accepted sequence suggestion (suggestionResolution.ts),
                         or left unset for a macro built from scratch here. */}

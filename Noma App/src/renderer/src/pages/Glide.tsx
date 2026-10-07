@@ -98,61 +98,26 @@ export function Glide() {
         )}
       </header>
 
-      <div
-        className={`mb-8 rounded-lg border px-4 py-3 text-sm ${
-          status.tone === 'problem'
-            ? 'border-error/30 bg-error-muted text-neutral-100'
-            : status.tone === 'on'
-              ? 'border-accent/30 bg-accent/[0.06] text-neutral-100'
+      {(isChanging || status.tone === 'problem') && (
+        <div
+          className={`mb-8 rounded-lg border px-4 py-3 text-sm ${
+            status.tone === 'problem'
+              ? 'border-error/30 bg-error-muted text-neutral-100'
               : 'border-base-700 bg-base-900 text-neutral-400'
-        }`}
-        role="status"
-      >
-        {isChanging ? 'Starting…' : status.text}
-        {status.tone === 'off' && !unavailable && (
-          <span className="text-neutral-500"> · Turn it on to use it in any app. You can switch it off from the tray icon too.</span>
-        )}
-        {status.tone === 'on' && (
-          <span className="text-neutral-500"> · Switch it off here or from the tray icon at any time.</span>
-        )}
-      </div>
-
-      <section className="mb-10 rounded-2xl bg-holo-bg p-6">
-        <div className="grid items-center gap-6 sm:grid-cols-[1.1fr_1fr]">
-          <GlideGestureDemo className="w-full" />
-          <ul className="space-y-2.5 text-sm text-holo-text/90">
-            <li>
-              <span className="text-holo-text">Start on the palm rest,</span>{' '}
-              <span className="text-holo-muted">not on the trackpad, and flick inward in one quick move.</span>
-            </li>
-            <li>
-              <span className="text-holo-text">Which side and half</span>{' '}
-              <span className="text-holo-muted">you land in picks the action.</span>
-            </li>
-            <li>
-              <span className="text-holo-text">It never clicks.</span>{' '}
-              <span className="text-holo-muted">The pointer is put back where it was.</span>
-            </li>
-            <li>
-              <span className="text-holo-text">Ordinary use doesn&apos;t count:</span>{' '}
-              <span className="text-holo-muted">pointer moves, scrolling, a palm, two fingers, or typing just before.</span>
-            </li>
-            <li>
-              <span className="text-holo-text">Try it here safely.</span>{' '}
-              <span className="text-holo-muted">While Noma is in front a swipe only lights up its zone; nothing runs.</span>
-            </li>
-          </ul>
+          }`}
+          role="status"
+        >
+          {isChanging ? 'Starting…' : status.text}
         </div>
-      </section>
+      )}
 
       <section className="mb-10">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="font-display text-lg font-semibold text-neutral-100">What each zone does</h2>
-            <p className="mt-1 text-sm text-neutral-500">Every app has its own four. Click a zone to change it.</p>
-          </div>
+                      </div>
           <label className="flex items-center gap-2 text-sm text-neutral-400">
-            {app && <AppIcon applicationId={app.id} name={app.name} size={18} />}
+            {app && <AppIcon applicationId={app.id} name={app.name} size={24} fill />}
             <span className="sr-only">App</span>
             <select
               value={appId ?? ''}
@@ -231,6 +196,34 @@ export function Glide() {
         </div>
       </section>
 
+      <section className="mb-10 rounded-2xl bg-holo-bg p-6">
+        <div className="grid items-center gap-6 sm:grid-cols-[1.1fr_1fr]">
+          <GlideGestureDemo className="w-full" />
+          <ul className="space-y-2.5 text-sm text-holo-text/90">
+            <li>
+              <span className="text-holo-text">Start on the palm rest,</span>{' '}
+              <span className="text-holo-muted">not on the trackpad, and flick inward in one quick move.</span>
+            </li>
+            <li>
+              <span className="text-holo-text">Which side and half</span>{' '}
+              <span className="text-holo-muted">you land in picks the action.</span>
+            </li>
+            <li>
+              <span className="text-holo-text">It never clicks.</span>{' '}
+              <span className="text-holo-muted">The pointer is put back where it was.</span>
+            </li>
+            <li>
+              <span className="text-holo-text">Ordinary use doesn&apos;t count:</span>{' '}
+              <span className="text-holo-muted">pointer moves, scrolling, a palm, two fingers, or typing just before.</span>
+            </li>
+            <li>
+              <span className="text-holo-text">Try it here safely.</span>{' '}
+              <span className="text-holo-muted">While Noma is in front a swipe only lights up its zone; nothing runs.</span>
+            </li>
+          </ul>
+        </div>
+      </section>
+
       {!unavailable && (
         <details className="group mb-8 rounded-2xl bg-holo-bg p-6">
           <summary className="cursor-pointer list-none text-sm text-holo-text">
@@ -245,7 +238,7 @@ export function Glide() {
 
       <p className="max-w-2xl text-xs leading-relaxed text-neutral-600">
         Glide reads where your fingers are on the trackpad, in memory only, to recognise a swipe-in. Nothing is recorded
-        except during a touch check you start, and that stays on this computer. It also notices <em>when</em> a key is
+        except during a touch check you start. It also notices <em>when</em> a key is
         pressed (never which one), so a hand coming off the keyboard isn&apos;t mistaken for a swipe. Needs a Windows
         precision touchpad or a Mac trackpad; tested so far on one Windows laptop (ASUS ROG Zephyrus G14).
       </p>

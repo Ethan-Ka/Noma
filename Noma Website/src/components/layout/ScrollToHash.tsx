@@ -10,7 +10,7 @@ import { useLenis } from 'lenis/react'
  * once Home has mounted and the target section exists in the DOM. Goes
  * through the active Lenis instance when one exists, with the same -80
  * offset the homepage's own `anchors` config already uses, so a cross-page
- * anchor link lands in the same spot a same-page one would — and falls
+ * anchor link lands in the same spot a same-page one would, and falls
  * back to plain browser scrolling for reduced-motion visitors, who never
  * get a `ReactLenis` wrapper in the first place (see `App.tsx`).
  */
@@ -21,7 +21,7 @@ export default function ScrollToHash() {
   useEffect(() => {
     // A route change can swap in a page with a very different total
     // height (e.g. /contact, a few hundred pixels tall, to Home, tens of
-    // thousands tall thanks to its pinned-scroll sections) — Lenis caches
+    // thousands tall thanks to its pinned-scroll sections). Lenis caches
     // its scrollable height and doesn't know that changed until it
     // re-measures, so calling `scrollTo` immediately after navigating can
     // clamp to the *previous* page's height and land near the top no

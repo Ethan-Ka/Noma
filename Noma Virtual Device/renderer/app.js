@@ -1,14 +1,14 @@
-// Noma Virtual Device — renderer.
+// Noma Virtual Device: renderer.
 //
 // This is the whole app: connect to Noma App's local device transport
 // (docs/hardware-protocol.md, src/main/hardware/deviceTransportServer.ts
 // in the Noma App project), render whatever DEVICE_STATUS says, and
 // report BUTTON_PRESS when a button is clicked. No shortcut vocabulary,
-// no execution, no persistence — exactly the DEVICE side of that
+// no execution, no persistence. Exactly the DEVICE side of that
 // protocol, same as a real firmware module would be.
 
 // Must match Noma App's DEVICE_TRANSPORT_PORT
-// (Noma App/src/shared/constants/index.ts) — no shared package between
+// (Noma App/src/shared/constants/index.ts). No shared package between
 // the two projects, so this is a hand-kept-in-sync constant, same pattern
 // already used between the website and app for color tokens.
 const DEVICE_TRANSPORT_PORT = 47156
@@ -27,7 +27,7 @@ const oledStatusEl = document.getElementById('oled-status')
 const oledLineEl = document.getElementById('oled-line')
 const buttonsEl = document.getElementById('buttons')
 
-// 1-indexed by slot (1..SLOT_COUNT) — index 0 is always unused, so the
+// 1-indexed by slot (1..SLOT_COUNT). Index 0 is always unused, so the
 // array needs SLOT_COUNT+1 entries, not SLOT_COUNT.
 /** @type {Array<{id:string, slot:number, label:string} | undefined>} */
 let controlsBySlot = new Array(SLOT_COUNT + 1).fill(undefined)
@@ -36,7 +36,7 @@ let buttonsByControlId = new Map()
 let socket = null
 
 // What the OLED's bottom line reverts to once a failure message's timeout
-// clears — otherwise "reverting" would have nothing correct to revert to.
+// clears. Otherwise "reverting" would have nothing correct to revert to.
 let idleLineText = 'Idle'
 let lineRevertTimeout = null
 
@@ -49,7 +49,7 @@ function setConnectionState(state) {
     oledStatusEl.classList.add('connected')
     oledDotEl.classList.add('connected')
   } else if (state === 'waiting') {
-    oledStatusEl.textContent = 'noma not running — waiting…'
+    oledStatusEl.textContent = 'noma not running, waiting…'
     oledStatusEl.classList.add('waiting')
     oledDotEl.classList.add('waiting')
     oledAppnameEl.textContent = 'NOMA VIRTUAL DEVICE'
@@ -72,13 +72,13 @@ function renderButtons() {
 
     const slotLabel = document.createElement('span')
     slotLabel.className = 'control-slot'
-    slotLabel.textContent = String(slot) // a real key just has a position, not a full "Control N" caption
+    slotLabel.textContent = String(slot) // a real key just has a position, not a full "Control N" label
     slotLabel.title = `Control ${slot}`
     btn.appendChild(slotLabel)
 
     if (control) {
       // Same monoline glyph set the website's OLED cells use
-      // (oledIcons.js) — set via innerHTML because it's always one of
+      // (oledIcons.js). Set via innerHTML because it's always one of
       // our own fixed SVG strings keyed by a lowercase lookup, never
       // built from the control's label text itself.
       const icon = document.createElement('span')
@@ -101,9 +101,9 @@ function renderButtons() {
   }
 }
 
-/** Sets the OLED's bottom line as its normal, "nothing's wrong" content —
- *  remembered so a later failure message knows what to revert back to —
- *  and cancels any failure message currently showing. */
+/** Sets the OLED's bottom line as its normal, "nothing's wrong" content.
+ *  Remembered so a later failure message knows what to revert back to.
+ *  Cancels any failure message currently showing. */
 function setIdleLine(text) {
   idleLineText = text
   if (lineRevertTimeout !== null) {
@@ -117,8 +117,8 @@ function setIdleLine(text) {
 
 /**
  * A press was refused or failed for real (e.g. a control mapped to
- * Ctrl+Q — permanently blocked host-side since it can quit an
- * application, see Noma App's actionExecutor.ts BLOCKED_COMBOS) — without
+ * Ctrl+Q: permanently blocked host-side since it can quit an
+ * application; see Noma App's actionExecutor.ts BLOCKED_COMBOS). Without
  * this, a refused press looked identical to a button silently doing
  * nothing.
  * Flashes the specific button red and shows the reason on the OLED

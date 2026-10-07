@@ -1,5 +1,5 @@
-// Verbatim port of the real app's ShortcutRecorder.tsx (src/renderer/src/components) —
-// no IPC involved in the original at all, so nothing had to change here. A real
+// Verbatim port of the real app's ShortcutRecorder.tsx (src/renderer/src/components).
+// No IPC involved in the original at all, so nothing had to change here. A real
 // "press the keys you want" recorder, not a text field: click Record, press a
 // combo, it's captured with a plain DOM keydown listener (exactly like the app).
 

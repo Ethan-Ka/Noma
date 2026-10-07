@@ -3,9 +3,8 @@ import nomaWordmark from '../../assets/noma-wordmark.png'
 
 /**
  * The Noma wordmark drawn as a grid of small Noma Blue dots: the footer's
- * oversized closing mark, in the same dot language as the hero's field
- * (DotField.tsx). Sampled from the real wordmark image, so the letterforms
- * are exactly the logo's. Static and dim on purpose (2026-10-05: "a bit
+ * oversized closing mark. Sampled from the real wordmark image, so the
+ * letterforms are exactly the logo's. Static and dim on purpose (2026-10-05: "a bit
  * smaller... little dots in noma blue and darker").
  */
 

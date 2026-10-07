@@ -1,12 +1,12 @@
 /*
- * Noma Device Firmware — reference implementation of the HOST<->DEVICE
+ * Noma Device Firmware: reference implementation of the HOST<->DEVICE
  * protocol described in `Noma App/docs/hardware-protocol.md` (line-
  * delimited JSON over USB CDC serial, one JSON object per line, `\n`-
  * terminated). This talks directly to `SerialHardwareDevice`
- * (`Noma App/src/main/hardware/serialDevice.ts`) — same message names,
+ * (`Noma App/src/main/hardware/serialDevice.ts`). Same message names,
  * same payload shapes VirtualHardwareDevice already exercises in-process
  * today. See that file's own doc comment before changing message shapes
- * here; the two have to stay in sync by hand — there's no shared schema
+ * here; the two have to stay in sync by hand. There's no shared schema
  * between an Arduino sketch and the TypeScript app, same as the
  * hand-copied constants between Noma App and Noma Virtual Device.
  *
@@ -15,7 +15,7 @@
  * API, but there is no physical board in this repository's history to
  * verify pin choices, timing, or wiring against. Treat the pin
  * assignments below as a starting point to adapt to your actual build,
- * not a verified bill of materials — see the sibling README.md for the
+ * not a verified bill of materials. See the sibling README.md for the
  * parts list this was written against.
  *
  * Target: any ESP32 board with native USB (e.g. Seeed XIAO ESP32-S3,
@@ -51,8 +51,8 @@
 
 const uint8_t BUTTON_PINS[4] = { PIN_BTN_1, PIN_BTN_2, PIN_BTN_3, PIN_BTN_4 };
 const unsigned long DEBOUNCE_MS = 30;
-// Mirrors PROTOCOL_VERSION in Noma App/src/shared/constants/index.ts —
-// update both by hand if this ever changes.
+// Mirrors PROTOCOL_VERSION in Noma App/src/shared/constants/index.ts.
+// Update both by hand if this ever changes.
 const char* PROTOCOL_VERSION = "0.1.0";
 
 Adafruit_SSD1306 display(OLED_WIDTH, OLED_HEIGHT, &Wire, -1);
@@ -69,7 +69,7 @@ struct ControlSlot {
   String label;
 };
 ControlSlot controls[4];
-String statusLine = "Noma";  // displays["status"] — current app/context line
+String statusLine = "Noma";  // displays["status"]: current app/context line
 
 bool lastButtonState[4] = { HIGH, HIGH, HIGH, HIGH };
 unsigned long lastDebounceTime[4] = { 0, 0, 0, 0 };

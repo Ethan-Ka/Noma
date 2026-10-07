@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { WAITLIST_ENDPOINT } from '../../data/config'
 import { GLASS_ACCENT } from '../../lib/glass'
+import { submitForm } from '../../lib/submitForm'
 
 type Status = 'idle' | 'loading' | 'success' | 'error'
 
@@ -15,7 +16,7 @@ export default function WaitlistForm({ submitLabel = 'Join the Waitlist' }: { su
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
-    // honeypot — real visitors never fill this in
+    // honeypot: real visitors never fill this in
     const honeypot = (e.currentTarget.elements.namedItem('company') as HTMLInputElement | null)?.value
     if (honeypot) return
 
@@ -32,22 +33,12 @@ export default function WaitlistForm({ submitLabel = 'Join the Waitlist' }: { su
     }
 
     setStatus('loading')
-    try {
-      const res = await fetch(WAITLIST_ENDPOINT, {
-        method: 'POST',
-        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, _subject: 'New Noma waitlist signup' }),
-      })
-      if (res.ok) {
-        setStatus('success')
-      } else {
-        const data = await res.json().catch(() => null)
-        setStatus('error')
-        setMessage(data?.errors?.[0]?.message ?? 'Something went wrong. Try again in a moment.')
-      }
-    } catch {
+    const result = await submitForm(WAITLIST_ENDPOINT, { email, _subject: 'New Noma waitlist signup' })
+    if (result.ok) {
+      setStatus('success')
+    } else {
       setStatus('error')
-      setMessage('Something went wrong. Try again in a moment.')
+      setMessage((!result.network && result.error) || 'Something went wrong. Try again in a moment.')
     }
   }
 
@@ -121,10 +112,6 @@ export default function WaitlistForm({ submitLabel = 'Join the Waitlist' }: { su
           </motion.p>
         )}
       </AnimatePresence>
-
-      <p className="mt-3 text-xs text-base-500">
-        No spam. Just real updates as the hardware comes together.
-      </p>
     </div>
   )
 }

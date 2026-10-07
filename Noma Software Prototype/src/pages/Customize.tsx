@@ -6,14 +6,14 @@ import { GLASS_CARD } from '../lib/surfaces'
 import { appProfiles } from '../data/appProfiles'
 import { useNomaStore } from '../store/nomaStore'
 
-/** A section label — Inter, not mono. Mono is reserved for technical
+/** A section label. Inter, not mono. Mono is reserved for technical
  *  readouts (shortcuts, counts, timestamps) per DESIGN.md; a plain section
  *  heading like "Also Available" isn't technical content, so it shouldn't
  *  wear a mono costume. */
 const LABEL = 'text-[10px] font-medium uppercase tracking-widest text-base-500'
 
 /**
- * "Your Noma" (brief section 10) — deliberately not the primary experience.
+ * "Your Noma" (brief section 10). Deliberately not the primary experience.
  * Noma already decided a sensible default (Workspace); this is where a
  * visitor who wants control over that default gets it. Primary/pinned
  * controls are reorderable (drag, or the chevron buttons for touch/
@@ -88,7 +88,7 @@ export function Customize() {
 
       <div className={`mt-6 p-5 ${GLASS_CARD}`}>
         <div className="flex items-center justify-between">
-          <div className={LABEL}>Primary — drag to reorder</div>
+          <div className={LABEL}>Primary (drag to reorder)</div>
         </div>
         {pinnedControls.length === 0 ? (
           <p className="mt-3 text-sm text-base-600">

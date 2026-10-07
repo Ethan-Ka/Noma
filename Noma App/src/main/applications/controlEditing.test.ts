@@ -20,7 +20,7 @@ describe('updateControl', () => {
     expect(control?.label).toBe('Ctrl+S')
     expect(control?.action).toEqual({ type: 'shortcut', keys: ['Control', 'S'] })
 
-    // Persisted, not just returned — reading fresh confirms it stuck.
+    // Persisted, not returned; reading fresh confirms it stuck.
     const reread = getDatabase()
       .prepare(
         `SELECT label FROM controls WHERE profile_id = 'code-default' AND slot = 1`

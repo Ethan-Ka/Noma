@@ -1,5 +1,9 @@
 import type { PatternKind } from '../types'
 
+/** The four physical control slots on a Noma device. */
+export const CONTROL_SLOTS = [1, 2, 3, 4] as const
+export type ControlSlot = (typeof CONTROL_SLOTS)[number]
+
 /**
  * Every build people download is a beta until this flips. It drives the
  * "Beta" badge in the sidebar and on the welcome screen, the window title,

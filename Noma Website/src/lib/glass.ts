@@ -8,7 +8,7 @@
  * Shared "liquid glass" material, reused across the site's chrome: the
  * floating pill nav and every real button (CTAs, toggle pills). Brought
  * back by explicit user request even within the 2026 brand-identity pass,
- * which otherwise avoids decoration for its own sake — kept deliberately
+ * which otherwise avoids decoration for its own sake. Kept deliberately
  * restrained (one dark base, one accent tint, no rainbow/purple gradients)
  * so it reads as "the one Noma material," not "AI SaaS glassmorphism."
  *
@@ -24,7 +24,7 @@ export const GLASS =
 
 /**
  * Same glass family, tinted with the signature accent blue instead of near-
- * black — for the site's primary "Join the Waitlist" call-to-action and any
+ * black. For the site's primary "Join the Waitlist" call-to-action and any
  * other button that needs to read as the one thing to click, without
  * breaking from the glass material everything else on the bar uses.
  */
@@ -32,13 +32,13 @@ export const GLASS_ACCENT =
   'border border-accent/30 bg-accent/[0.14] text-base-50 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.07)] backdrop-blur-md transition-colors hover:border-accent/45 hover:bg-accent/[0.2]'
 
 /** The inactive state of a glass toggle pill (`KeyboardCloseup`'s preset
- *  buttons, the Context section's tabs) — the same neutral glass as
+ *  buttons, the Context section's tabs). The same neutral glass as
  *  `GLASS`, just lighter (`backdrop-blur-lg`, no saturation boost) since
  *  these are small repeated controls, not the one nav bar on the page. */
 export const GLASS_TOGGLE =
   'border border-white/[0.08] bg-base-950/40 text-base-400 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.05)] backdrop-blur-lg transition-all duration-150 hover:text-base-100 hover:border-white/20 active:scale-95'
 
-/** The active state of the same toggle pill — accent-tinted glass, dimmer
+/** The active state of the same toggle pill. Accent-tinted glass, dimmer
  *  than `GLASS_ACCENT` since several of these can be visible at once and
  *  only one should read as "selected," not "the page's main CTA." */
 export const GLASS_TOGGLE_ACTIVE =

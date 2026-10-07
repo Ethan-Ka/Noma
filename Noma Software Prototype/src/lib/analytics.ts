@@ -1,11 +1,11 @@
 /**
- * Validation Mode's data layer — section 12/13 of the prototype brief.
+ * Validation Mode's data layer (section 12/13 of the prototype brief).
  * Everything is local (localStorage), append-only, and namespaced under
  * `noma-proto:*` so it survives reloads/reopens on the same machine across
  * many test participants, which is the point: this prototype is meant to be
  * put in front of 20-30 people on the same laptop and read back afterward.
  *
- * No network calls, no account system — matches the Noma App's existing
+ * No network calls, no account system. Matches the Noma App's existing
  * "100% local" trust posture (see its PRODUCT.md) even though this is a
  * separate, disposable prototype rather than that real product.
  */
@@ -73,7 +73,7 @@ function writeJSON(key: string, value: unknown): void {
   try {
     window.localStorage.setItem(key, JSON.stringify(value))
   } catch {
-    // Storage full or unavailable (private browsing) — the prototype still
+    // Storage full or unavailable (private browsing). The prototype still
     // works in-memory for the current session, it just won't persist.
   }
 }

@@ -34,7 +34,7 @@ const columns: { title: string; links: { label: string; href: string }[] }[] = [
 
 /** Every href now goes through `SiteLink` (see that file), so the
  *  homepage-anchor links here keep working from `/contact`, `/privacy`,
- *  and `/terms` — not just from the page they were written for — and the
+ *  and `/terms`, not just from the page they were written for, and the
  *  `Privacy`/`Terms`/`Contact` links are now real routed pages instead of
  *  `#` placeholders or a bare `mailto:`. */
 export default function Footer() {
@@ -69,13 +69,13 @@ export default function Footer() {
         <p className="font-mono text-[11px] text-base-500">&copy; {new Date().getFullYear()} Noma</p>
       </div>
 
-      {/* The oversized, faded closing wordmark — the "big startup footer"
-          move (Linear/Stripe/Vercel etc.): huge, barely-there, emerging
+      {/* The oversized, faded closing wordmark: the "big startup footer"
+          move (Linear/Stripe/Vercel etc.). Huge, barely-there, emerging
           out of the footer above rather than starting on a hard edge, then
           cut clean by the container's own bottom edge. The wordmark's
           native aspect ratio is very wide/short (~7:1), so it has to be
           rendered noticeably wider than this wrapper to have any height
-          left to crop at all — `clamp()` keeps that relationship at every
+          left to crop at all. `clamp()` keeps that relationship at every
           viewport size instead of hand-tuning per breakpoint. */}
       {/* 2026-10-05: now drawn in Noma Blue dots (DotWordmark), about a
           quarter smaller, at the user's request. */}

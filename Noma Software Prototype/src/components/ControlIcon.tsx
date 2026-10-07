@@ -1,7 +1,7 @@
 import type { ReactElement } from 'react'
 
 /**
- * Minimal monoline glyphs for control tiles — same visual language as the
+ * Minimal monoline glyphs for control tiles: same visual language as the
  * Noma Website's OledIcon.tsx (24x24, stroke-based, no fills except where a
  * shape is naturally solid). Extended here to cover every control in
  * data/appProfiles.ts rather than just the website's handful.
@@ -174,8 +174,8 @@ const paths: Record<string, ReactElement> = {
 const fallback = <circle cx="12" cy="12" r="3" fill="currentColor" stroke="none" />
 
 /** A control's glyph, looked up by its label (case-insensitive). Falls back
- *  to a plain dot for anything not in the map above, rather than throwing —
- *  keeps this file additive as new controls get authored. */
+ *  to a plain dot for anything not in the map above, rather than throwing.
+ *  Keeps this file additive as new controls get authored. */
 export function ControlIcon({ label, className = '' }: { label: string; className?: string }) {
   const glyph = paths[label.toLowerCase()] ?? fallback
 

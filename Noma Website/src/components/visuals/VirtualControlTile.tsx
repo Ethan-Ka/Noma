@@ -1,11 +1,11 @@
-// Ported from the real app's VirtualControlButton.tsx (src/renderer/src/components) —
-// same structure and press behavior, re-themed onto this project's own color
+// Ported from the real app's VirtualControlButton.tsx (src/renderer/src/components).
+// Same structure and press behavior, re-themed onto this project's own color
 // tokens. The real one wires a click to `window.hardware.pressControl` (an
 // Electron IPC call); this one just fires the flash locally, which is the
 // entire difference between "real app" and "faithful demo of it." Updated
 // 2026-09-17 for the real app's v4 restrained-graphite system: a solid Card
 // surface at rest, not translucent glass. The blue flash on an actual press
-// stays — that's real interaction feedback, the one place a colored glow
+// stays. That's real interaction feedback, the one place a colored glow
 // still belongs, not ambient decoration.
 
 import { useState } from 'react'

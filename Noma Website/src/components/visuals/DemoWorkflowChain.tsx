@@ -5,7 +5,7 @@ import DemoAppIcon from './appGlyphIcons'
 export type DemoChainStep = { kind: 'app'; appId: string; label: string } | { kind: 'shortcut'; label: string }
 
 /**
- * Ported from the real app's `components/WorkflowChain.tsx` — updated
+ * Ported from the real app's `components/WorkflowChain.tsx`. Updated
  * 2026-09-17 for that component's own visual overhaul: real feedback there
  * was that a row of tiny icons embedded in a text sentence ("Google Chrome
  * → explorer → electron") had to be read, not recognized at a glance, even
@@ -14,7 +14,7 @@ export type DemoChainStep = { kind: 'app'; appId: string; label: string } | { ki
  * the action that happened there), and only a bare action with no
  * application context stays a small secondary pill. Distinct from this
  * site's own marketing `WorkflowChain.tsx` (Problem section), which is a
- * different component for a different job — don't confuse the two.
+ * different component for a different job. Don't confuse the two.
  */
 
 interface WorkflowNode {
@@ -23,7 +23,7 @@ interface WorkflowNode {
   label: string
   appId?: string
   /** A shortcut step immediately following this app step, folded into the
-   *  same node as its "what happened here" line — same convention the real
+   *  same node as its "what happened here" line. Same convention the real
    *  app's `WorkflowChain.tsx` uses. */
   action?: string
 }
@@ -47,14 +47,14 @@ function groupIntoNodes(steps: DemoChainStep[]): WorkflowNode[] {
   return nodes
 }
 
-// `icon` sits a couple px under `box` — `DemoAppIcon`'s `fill` prop (see
+// `icon` sits a couple px under `box`. `DemoAppIcon`'s `fill` prop (see
 // that file) is what makes the icon actually reach that close to `box`
 // without overflowing it, by dropping the default ~60% inset. `lg` matches
-// the real app's `WorkflowChain.tsx` size-for-size — that file's own
+// the real app's `WorkflowChain.tsx` size-for-size. That file's own
 // comment explains why 58/50, not 72/68: the real app's OS-extracted icons
 // are a 48x48 raster (a real ceiling, not a style choice), and displaying
 // one any larger upscales it into visible pixelation. This preview's own
-// icons are vector (real brand marks / letterform badges — see
+// icons are vector (real brand marks / letterform badges. See
 // `appGlyphIcons.tsx`) and wouldn't actually pixelate at 72/68, but it
 // stays sized identically to the app on purpose: this component's whole
 // job is looking like the real thing, not just avoiding its bugs.
@@ -75,10 +75,10 @@ export default function DemoWorkflowChain({ steps, size = 'md' }: { steps: DemoC
     <div className={`flex items-start overflow-x-auto overflow-y-hidden pb-1 ${compact ? 'gap-x-2' : dim.gap}`}>
       {nodes.map((node, index) => (
         // The arrow is a real sibling flex item, a separate array entry
-        // from the node column it follows — not nested inside that column
+        // from the node column it follows. Not nested inside that column
         // (an earlier version nested it, and the column's own `width`
         // didn't account for the arrow's, so it silently overflowed the
-        // column's right edge — see the real app's `WorkflowChain.tsx` for
+        // column's right edge. See the real app's `WorkflowChain.tsx` for
         // the same bug and fix).
         <Fragment key={node.key}>
           <motion.div
@@ -105,7 +105,7 @@ export default function DemoWorkflowChain({ steps, size = 'md' }: { steps: DemoC
             {node.kind === 'app' && (
               <>
                 {/* `text-left`, deliberately overriding the column's own
-                    `text-center` — see the real app's `WorkflowChain.tsx`
+                    `text-center`. See the real app's `WorkflowChain.tsx`
                     for the bug this avoids: centered text inside a
                     `truncate`d, narrower-than-content box clips from both
                     edges, silently dropping the string's own first letter

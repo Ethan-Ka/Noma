@@ -1,8 +1,8 @@
 // Ported from Noma Website's src/components/visuals/OledIcon.tsx and
-// src/data/appProfiles.ts's oledLabel() — the same monoline glyph set and
+// src/data/appProfiles.ts's oledLabel(). The same monoline glyph set and
 // short-label rules the website's OLED illustration uses, so a control's
 // icon/label here matches what it would look like there. Hand-copied
-// (JSX -> raw SVG markup strings) since there's no shared package between
+// (JSX to raw SVG markup strings) since there's no shared package between
 // the two projects and this one deliberately has no build step. Keep both
 // in sync by hand if the website's set changes.
 

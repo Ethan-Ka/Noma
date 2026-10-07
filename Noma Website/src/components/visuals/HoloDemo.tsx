@@ -11,11 +11,11 @@ import { appProfiles } from '../../data/appProfiles'
  * travel in from the edge before anything happens, and the button answers
  * the moment the swipe lands, the way it does in the real thing, where the
  * swipe is recognised once the finger has come far enough in. A finger
- * simply put down on the trackpad does nothing, which is why ordinary
+ * put down on the trackpad does nothing, which is why ordinary
  * trackpad use never sets it off.
  *
  * It runs on its own until the visitor picks a zone themselves, then hands
- * over for good — the same rule the Context section follows.
+ * over for good. The same rule the Context section follows.
  */
 
 /** The app whose controls the demo drives. Claude Code, because the rest of
@@ -25,7 +25,7 @@ const APP_ID = 'claude'
 
 /** The four swipe-in zones, matching the app's: each side of the trackpad
  *  split into an upper and a lower half, in slot order (upper left 1, upper
- *  right 2, lower left 3, lower right 4), so `control` is simply the slot's
+ *  right 2, lower left 3, lower right 4), so `control` is the slot's
  *  index in the app's control list. `from` and `to` are where the finger
  *  starts (on the palm rest) and ends (just inside the trackpad), as a share
  *  of the laptop's width; `y` is the height it travels at. Each zone is
@@ -38,7 +38,7 @@ const ZONES = [
   { where: 'lower right', position: 'right-[6%] top-[76.5%] h-[16.5%]', from: 82, to: 60, y: 85, arrow: '←', control: 3 },
 ]
 
-/** Keyboard rows, as key counts — enough to read as a laptop at a glance. */
+/** Keyboard rows, as key counts: enough to read as a laptop at a glance. */
 const KEY_ROWS = [13, 13, 12, 11]
 
 const CYCLE_MS = 2200

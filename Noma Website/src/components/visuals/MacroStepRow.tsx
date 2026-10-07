@@ -1,5 +1,5 @@
-// Simplified port of the real app's MacroStepRow.tsx (src/renderer/src/components) —
-// same timeline-rail layout and per-step-type editor, trimmed to the step types
+// Simplified port of the real app's MacroStepRow.tsx (src/renderer/src/components).
+// Same timeline-rail layout and per-step-type editor, trimmed to the step types
 // that don't need a cross-app picker list (see macroDemo.ts's doc comment).
 
 import {

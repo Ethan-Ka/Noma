@@ -14,8 +14,9 @@ import { useEffect, useState } from 'react'
  * can't be reached, the buttons use the stable-name copies every release
  * gets (.github/workflows/noma-app-release-aliases.yml).
  */
-const LATEST = 'https://github.com/awnsh/Noma/releases/latest/download'
-const RELEASES_API = 'https://api.github.com/repos/awnsh/Noma/releases?per_page=10'
+const REPO = 'awnsh/Noma'
+const LATEST = `https://github.com/${REPO}/releases/latest/download`
+const RELEASES_API = `https://api.github.com/repos/${REPO}/releases?per_page=10`
 
 export interface Downloads {
   version: string | null

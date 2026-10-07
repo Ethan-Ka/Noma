@@ -1,5 +1,5 @@
 /**
- * Brief section 11 — kept concise and factual on purpose. "AI-powered" is
+ * Brief section 11. Kept concise and factual on purpose. "AI-powered" is
  * deliberately never said here; the intelligence is meant to be
  * demonstrated in the Workspace, not marketed on this page.
  */
@@ -10,7 +10,7 @@ export function WhyNomaContent() {
         Noma isn't a keyboard with a screen.
       </h2>
       <p className="mt-4 text-base text-base-300">
-        It's an adaptive interface. The physical keys stay exactly where they are — what changes
+        It's an adaptive interface. The physical keys stay exactly where they are. What changes
         is the small set of controls Noma surfaces around them, based on:
       </p>
       <ul className="mt-4 space-y-2.5 text-sm text-base-300">
@@ -33,7 +33,7 @@ export function WhyNomaContent() {
       </ul>
       <p className="mt-5 text-sm text-base-400">
         A macro pad has to be told what to do. Noma notices what you actually do, and asks before
-        it changes anything — see for yourself in the Workspace.
+        it changes anything. See for yourself in the Workspace.
       </p>
     </div>
   )

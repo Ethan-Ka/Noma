@@ -15,7 +15,7 @@ const sizes: Record<string, string> = {
   lg: 'px-5 py-4 text-sm',
 }
 
-/** A pill that reads as a physical keyboard control — reused across every section that shows controls. */
+/** A pill that reads as a physical keyboard control, reused across every section that shows controls. */
 export default function ControlChip({ children, size = 'md', active = false, muted = false, onClick }: ControlChipProps) {
   const Tag = onClick ? motion.button : motion.div
 

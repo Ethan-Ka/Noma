@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Noma software prototype — a pre-hardware validation build. Tests whether people want a physical interface that adapts to what they're doing, before investing in custom keyboard hardware.",
+  "description": "Noma software prototype: a pre-hardware validation build. Tests whether people want a physical interface that adapts to what they're doing, before investing in custom keyboard hardware.",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

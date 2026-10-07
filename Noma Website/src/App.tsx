@@ -17,14 +17,14 @@ import Feedback from './pages/Feedback'
  * across every route, `Routes` swaps only the page content between them.
  * The single-page marketing scroll (`Home`, formerly this file's own
  * inline JSX) got its own page component when routing was added for
- * `/contact`, `/privacy`, and `/terms` — see that file's own doc comment.
+ * `/contact`, `/privacy`, and `/terms` (see that file's own doc comment).
  * `ScrollToHash` (not React Router's default, which doesn't jump on route
  * change on its own) resets scroll position on every navigation, and
  * finishes the job for a `/#hash` link from `SiteLink.tsx`.
  */
 export default function App() {
   // Reduced-motion users get plain native scroll rather than Lenis's eased
-  // momentum — smooth scrolling is a nicety, not something to force on people
+  // momentum. Smooth scrolling is a nicety, not something to force on people
   // who've asked their system to minimize motion.
   const reduceMotion = useReducedMotion()
 

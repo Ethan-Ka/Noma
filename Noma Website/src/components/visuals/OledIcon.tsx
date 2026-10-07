@@ -113,7 +113,7 @@ const paths: Record<string, ReactElement> = {
     </>
   ),
   // Same glyph as `brush` under the label Photoshop's own workflow
-  // actually uses — see `KeyboardCloseup.tsx`.
+  // actually uses (see `KeyboardCloseup.tsx`).
   retouch: (
     <>
       <path d="M15.5 4.5l4 4-8.5 8.5-5 1 1-5z" />
@@ -199,7 +199,7 @@ const paths: Record<string, ReactElement> = {
   ),
   // Whole-workflow labels (`Coding`/`Design`/`Video`/`Research`), used
   // where a single OLED cell represents an entire recognized workflow
-  // rather than one manual action — see `KeyboardCloseup.tsx`.
+  // rather than one manual action (see `KeyboardCloseup.tsx`).
   coding: <path d="M9 6l-6 6 6 6M15 6l6 6-6 6" />,
   design: (
     <>
@@ -221,7 +221,7 @@ const paths: Record<string, ReactElement> = {
     </>
   ),
   // Sub-workflows within a single piece of software (see
-  // `KeyboardCloseup.tsx`) — VS Code doesn't have one "coding" workflow,
+  // `KeyboardCloseup.tsx`). VS Code doesn't have one "coding" workflow,
   // it has several distinct ones, and the same is true of Premiere.
   review: (
     <>

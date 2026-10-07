@@ -45,7 +45,7 @@ export default function DownloadButtons() {
       </div>
 
       <p className="mt-4 text-sm leading-relaxed text-base-400">
-        Mac download is for Apple silicon (M1 and later).{' '}
+        Mac: Apple silicon (M1 and later).{' '}
         <a href={downloads.macIntel} download className="text-base-300 underline underline-offset-4 hover:text-base-50">
           Intel Mac
         </a>
@@ -53,8 +53,8 @@ export default function DownloadButtons() {
       </p>
 
       <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-base-400">
-        The beta isn't signed yet, so your computer will ask once. Windows: More info, then Run anyway. Mac: System
-        Settings, Privacy &amp; Security, Open Anyway.
+        Unsigned beta, so your computer asks once. Windows: More info, Run anyway. Mac: Privacy &amp; Security, Open
+        Anyway.
       </p>
     </div>
   )

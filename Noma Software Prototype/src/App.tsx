@@ -13,7 +13,7 @@ import { useNomaStore } from './store/nomaStore'
  * No landing/marketing gate before the product (brief feedback: "show the
  * hero feature immediately... I don't want it to look like a website
  * showing it off"). The hardware simulation in Workspace *is* the first
- * thing rendered — everything else is one tab away.
+ * thing rendered. Everything else is one tab away.
  */
 export default function App() {
   const view = useNomaStore((s) => s.view)
@@ -23,8 +23,8 @@ export default function App() {
   const feedbackNudgeVisible = useNomaStore((s) => s.feedbackNudgeVisible)
   const dismissFeedbackNudge = useNomaStore((s) => s.dismissFeedbackNudge)
 
-  // Validation Mode (brief section 12) is deliberately not in the nav —
-  // reachable only by this shortcut, or the quiet dot in the footer below.
+  // Validation Mode (brief section 12) is deliberately not in the nav.
+  // Reachable only by this shortcut, or the quiet dot in the footer below.
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
       if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
@@ -61,7 +61,7 @@ export default function App() {
 }
 
 /** The "easily accessible" half of Validation Mode's hidden-ness (brief
- *  section 12) — findable if you know to look, invisible otherwise. */
+ *  section 12). Findable if you know to look, invisible otherwise. */
 function FooterDot({ onOpenAnalytics }: { onOpenAnalytics: () => void }) {
   return (
     <div className="flex justify-center py-8">

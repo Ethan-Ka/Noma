@@ -14,7 +14,7 @@ import { appProfiles } from '../../data/appProfiles'
  * think *I do that*.
  *
  * A step is either an application (real mark, its own colour) or an action
- * taken inside one (set in mono, no icon) — the same two-kind distinction the
+ * taken inside one (set in mono, no icon). The same two-kind distinction the
  * desktop app draws, so the site is describing the product rather than
  * inventing a nicer version of it.
  */
@@ -22,7 +22,7 @@ import { appProfiles } from '../../data/appProfiles'
 export interface WorkflowStep {
   kind: 'app' | 'action'
   label: string
-  /** For `app` steps — resolves the real brand mark and colour. */
+  /** For `app` steps: resolves the real brand mark and colour. */
   appId?: string
 }
 
@@ -62,7 +62,7 @@ export default function WorkflowSteps({ steps, animate = true, size = 'md', clas
             <motion.div {...node(index)} className="flex shrink-0 flex-col items-center">
               {/* An application is a place you went, so it gets a mark and its
                   name underneath. An action is a thing you did, so it is just
-                  the thing, set in mono — naming it twice (once in the box,
+                  the thing, set in mono. Naming it twice (once in the box,
                   once below) says nothing the first one didn't. The two kinds
                   are drawn the same way in the desktop app, for the same
                   reason. */}

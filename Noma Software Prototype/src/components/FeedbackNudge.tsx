@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { CloseIcon } from './Icon'
 
-/** A one-time, dismissible nudge toward Feedback — only after real
+/** A one-time, dismissible nudge toward Feedback. Only after real
  *  engagement (3+ apps explored), never on a blind timer. See
  *  store/nomaStore.ts's maybeShowFeedbackNudge. */
 export function FeedbackNudge({ visible, onOpen, onDismiss }: { visible: boolean; onOpen: () => void; onDismiss: () => void }) {

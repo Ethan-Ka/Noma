@@ -4,7 +4,7 @@ import { useNomaStore } from '../store/nomaStore'
 
 const replaceOptions = ['Absolutely', 'Maybe', 'Probably not', 'No']
 
-/** Brief section 13 — the actual point of this whole prototype. */
+/** Brief section 13: the actual point of this whole prototype. */
 export function Feedback() {
   const surveySubmitted = useNomaStore((s) => s.surveySubmitted)
   const submitSurveyResponse = useNomaStore((s) => s.submitSurveyResponse)
@@ -25,9 +25,8 @@ export function Feedback() {
     return (
       <div className="mx-auto max-w-xl px-6 py-20 text-center">
         <h1 className="font-display text-2xl font-semibold text-base-50 sm:text-3xl">
-          {justSubmitted ? 'Thank you — your answers are in.' : "You've already shared feedback."}
+          {justSubmitted ? 'Thank you. Your answers are in.' : "You've already shared feedback."}
         </h1>
-        <p className="mt-3 text-sm text-base-400">This is exactly the kind of signal this prototype exists to collect.</p>
         <button
           type="button"
           onClick={() => {
@@ -91,7 +90,7 @@ export function Feedback() {
           onChange={(e) => setAdaptTo(e.target.value)}
           rows={3}
           className="mt-3 w-full rounded-lg border border-white/10 bg-base-950 p-3 text-sm text-base-100 placeholder:text-base-600"
-          placeholder="An app, a workflow, a habit — anything."
+          placeholder="An app, a workflow, a habit, anything."
         />
       </div>
 
@@ -103,7 +102,7 @@ export function Feedback() {
           onChange={(e) => setMissing(e.target.value)}
           rows={3}
           className="mt-3 w-full rounded-lg border border-white/10 bg-base-950 p-3 text-sm text-base-100 placeholder:text-base-600"
-          placeholder="Be blunt — that's the point."
+          placeholder="Be blunt. That's the point."
         />
       </div>
 

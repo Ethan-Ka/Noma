@@ -2,7 +2,7 @@
 // the real app's shared MacroStep/Macro shapes (src/shared/types) closely
 // enough that swapping in the real engine later is a straight copy. Only
 // 'shortcut' | 'delay' | 'systemCommand' | 'flowAction' step types are
-// included — the real editor also has 'launchApplication' and 'macro'
+// included. The real editor also has 'launchApplication' and 'macro'
 // (reference another macro), left out here since both need a cross-app
 // picker list that has no equivalent in a standalone demo.
 
@@ -51,8 +51,8 @@ export function defaultStepForType(type: MacroStep['type']): MacroStep {
 }
 
 // Two seeded macros. "Quick Commit" deliberately mirrors the "Flow noticed
-// Command Palette -> Git Commit" moment from the Interactive Demo section —
-// this is the macro someone would actually build from that pattern.
+// Command Palette -> Git Commit" moment from the Interactive Demo section.
+// This is the macro someone would actually build from that pattern.
 export const initialMacros: DemoMacro[] = [
   {
     id: 'quick-commit',

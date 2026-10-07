@@ -1,8 +1,8 @@
 import { appOrder, appProfiles, type AppId } from '../data/appProfiles'
 
 /**
- * Styled like a row of open windows to jump between (brief section 3) —
- * not a settings-style profile list, and deliberately no card/border
+ * Styled like a row of open windows to jump between (brief section 3).
+ * Not a settings-style profile list, and deliberately no card/border
  * wrapper of its own: it should read as a small strip of context, not
  * another dashboard panel sitting next to the keyboard.
  */

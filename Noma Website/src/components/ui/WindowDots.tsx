@@ -1,6 +1,6 @@
 /** The three traffic-light dots every window-chrome mockup on this site
- *  uses (AppPreview, AdaptiveIntelligence, WorkflowDemo's feature preview)
- *  — real feedback was that plain gray dots didn't read as an actual
+ *  uses (AppPreview, AdaptiveIntelligence, WorkflowDemo's feature preview);
+ *  real feedback was that plain gray dots didn't read as an actual
  *  application window. Real (if slightly toned down for a dark UI) close /
  *  minimize / fullscreen colors, not a costume: these are the same three
  *  affordances every desktop OS window chrome has, just decorative here

@@ -9,7 +9,7 @@ import { appProfiles } from '../../data/appProfiles'
  * This is the site's whole argument in one component, so it is the one
  * component every section reuses rather than re-illustrating. The point it
  * has to land is not "here is a panel" but "these four things *changed
- * because the application changed*" — so the application's identity and its
+ * because the application changed*". So the application's identity and its
  * controls are deliberately bound together in one surface, and the change is
  * animated as a single physical event rather than as four independent fades.
  *
@@ -55,7 +55,7 @@ const SIZES = {
   },
 } as const
 
-/** What the person is doing there — the word that makes the icon mean
+/** What the person is doing there. The word that makes the icon mean
  *  something. Kept beside the profile data rather than inside it because it
  *  is a claim this page makes, not a fact the desktop app stores. */
 const DOING: Record<string, string> = {
@@ -98,7 +98,7 @@ export default function AdaptiveSurface({ appId, size = 'lg', className = '', co
     <div
       className={`relative overflow-hidden rounded-3xl border border-white/10 bg-base-900/70 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.08),0_32px_80px_-32px_rgba(0,0,0,0.9)] backdrop-blur-2xl backdrop-saturate-150 ${dim.pad} ${className}`}
     >
-      {/* The application's own colour, barely present — enough that switching
+      {/* The application's own colour, barely present. Enough that switching
           apps changes the temperature of the surface, not enough to read as
           a coloured card. */}
       <motion.div
