@@ -11,7 +11,7 @@
 Noma notices the shortcuts you keep repeating and puts them on your trackpad.
 
 [![Status: beta](https://img.shields.io/badge/status-beta-4c7eff?style=flat-square)](https://nomashift.com/#beta)
-[![Version 0.1.10](https://img.shields.io/badge/version-0.1.10-2a2d33?style=flat-square)](https://nomashift.com/#beta)
+[![Version 0.1.11](https://img.shields.io/badge/version-0.1.11-2a2d33?style=flat-square)](https://nomashift.com/#beta)
 [![Windows and macOS](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-2a2d33?style=flat-square)](https://nomashift.com/#beta)
 
 [**Download the beta**](https://nomashift.com/#beta) &nbsp;·&nbsp;
@@ -49,7 +49,7 @@ Installed copies check [downloads.nomashift.com](https://downloads.nomashift.com
 
 ## Privacy
 
-Flow records only which application was in front and which shortcuts you pressed that hold Control, Alt or the Windows or Command key, and in what order. It never records what you type, and never takes screenshots. Everything stays in a local database on your computer. The details, and the rule any future capture has to keep, are in [`privacy-and-legal.md`](./Noma%20App/docs/privacy-and-legal.md).
+Flow records only which application was in front and which shortcuts you pressed that hold Control, Alt or the Windows key (Control, Option or Command on a Mac), and in what order. It never records what you type, and never takes screenshots. Everything stays in a local database on your computer. The details, and the rule any future capture has to keep, are in [`privacy-and-legal.md`](./Noma%20App/docs/privacy-and-legal.md).
 
 ## What's in this repo
 
