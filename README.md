@@ -1,105 +1,121 @@
+<div align="center">
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./noma%20logo%20transparent.png">
+  <img src="./noma%20logo%20transparent%20black.png" alt="Noma" width="96">
+</picture>
+
 # Noma
 
-Noma learns how you use your computer and turns repetitive workflows into
-one-press actions. The desktop app watches for patterns you opt into
-sharing (which shortcuts you use, how often, in what sequence, never what
-you type), explains what it noticed in plain language, and asks before it
-automates anything. A physical device is being built to make that
-intelligence tangible, not as a customizable control-center product in its
-own right (that space now has direct competition: Logitech's MX Keypad;
-see "Current stage" below), but as a physical readout of what the software
-already understands.
+**Four actions per app, one swipe away.**<br>
+Noma notices the shortcuts you keep repeating and puts them on your trackpad.
 
-This repo holds every piece of that: the working desktop prototype, the
-public site, and the hardware track (software simulator, a real serial
-transport, and starter firmware for a physical device).
+[![Status: beta](https://img.shields.io/badge/status-beta-4c7eff?style=flat-square)](https://nomashift.com/#beta)
+[![Version 0.1.10](https://img.shields.io/badge/version-0.1.10-2a2d33?style=flat-square)](https://nomashift.com/#beta)
+[![Windows and macOS](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-2a2d33?style=flat-square)](https://nomashift.com/#beta)
 
-## Repo layout
+[**Download the beta**](https://nomashift.com/#beta) &nbsp;·&nbsp;
+[Website](https://nomashift.com) &nbsp;·&nbsp;
+[Report an issue](https://nomashift.com/feedback) &nbsp;·&nbsp;
+[Docs](./Noma%20App/docs)
 
-| Folder | What it is | Status |
-|---|---|---|
-| [`Noma App`](./Noma%20App) | The real product: Electron desktop app with application detection, workflow capture, pattern detection, the suggestion/learning loop, macros, profiles, a virtual hardware simulator, and the Dashboard/Virtual Keyboard/Macro Studio/Learning Center UI. | Working, tested (see below). Start here. |
-| [`Noma Website`](./Noma%20Website) | Public marketing site (React/Vite/Tailwind), independent codebase, no shared dependency on `Noma App`. | Live-buildable; copy still reflects the pre-competitive-pivot "adaptive keyboard" story; see its own README's "Before shipping" and the note under "Current stage" below. |
-| [`Noma Virtual Device`](./Noma%20Virtual%20Device) | A standalone always-on-top window that *is* the eventual physical module (OLED + 4 buttons): a real, dumb terminal client of `Noma App`'s hardware transport, for testing Flow's behavior before any physical hardware exists. | Working. |
-| [`Noma Device Firmware`](./Noma%20Device%20Firmware) | An ESP32 sketch implementing the real HOST↔DEVICE serial protocol, plus a parts list and wiring guide, for the first actual physical prototype. | Written against the documented protocol; not yet flashed or verified against real hardware; no board has existed in this repo's history. |
-| [`Noma Software Prototype`](./Noma%20Software%20Prototype) | A separate, deliberately-fake pre-hardware pitch/user-testing build (no real execution) used to validate the concept with 20-30 outside people before investing in hardware. | Standalone; not connected to `Noma App`. |
+</div>
 
-No package is shared between these projects; where something needs to
-match across two of them (a color token, a protocol constant, a port
-number, a logo asset), it's copied by hand and called out in a comment at
-the point of use. Grep for the specific constant if you're changing one of
-these and aren't sure what else depends on it.
+---
 
-## Current stage
+## What it is
 
-The software loop (application detection → workflow capture → pattern
-detection → suggestion → accept/reject → learning) is real and working end
-to end in `Noma App`, not mocked, not a placeholder. See its own
-`README.md` for a guided walkthrough and `docs/architecture.md` for how it
-fits together.
+Noma is a desktop app with two parts that work together:
 
-The project is now moving into a **physical prototype stage**, prompted by
-a competing product (Logitech's MX Keypad) that covers the same ground as
-Noma's original "keyboard with a screen" framing. The response isn't to
-compete feature-for-feature on physical controls; it's to prove the
-hardware is a readout of the software's own judgment (a display and
-buttons that change because Flow noticed something, not because a user
-configured a profile). See `Noma App/docs/product-audit.md`'s "Physical
-Prototype Stage" update and `Noma App/docs/hardware-protocol.md`'s status
-section for the technical detail behind where the hardware track stands
-today: a real serial transport (`SerialHardwareDevice`) and starter
-firmware exist and are written directly against the same protocol
-`VirtualHardwareDevice` already implements, but neither is flashed onto or
-wired up against real hardware yet; that's the next concrete step, not
-more code.
+- **Glide.** Slide a finger from the palm rest onto your laptop's trackpad and run an action in the app you are using. Every app gets its own four, one per zone (upper and lower half of each side), so a swipe in Chrome does something different from a swipe in Visual Studio Code. No extra hardware needed.
+- **Flow.** Noma watches for shortcut sequences you repeat. After about three repeats it suggests turning that sequence into a single action. You see the exact steps, choose which Glide zone should run it, and only then is anything saved. Nothing runs without you.
 
-`Noma Website`'s copy has not yet been updated for this; it still tells
-the original "adaptive keyboard" story. Sequencing that rewrite behind
-proving the physical prototype out is deliberate, not an oversight.
+The loop is simple: you are in an app, you swipe in from a side, and the action for that zone runs in that app. When Flow notices something you keep doing, you check its steps and put it on a zone.
 
-## Getting started
+## Download
 
-```powershell
-# The main app
+Get the installer from **[nomashift.com](https://nomashift.com/#beta)**.
+
+| | |
+|---|---|
+| **Windows** | `Noma-Setup.exe`, for computers with a precision touchpad |
+| **macOS** | `Noma-arm64.dmg` for Apple silicon, `Noma-x64.dmg` for Intel |
+
+The beta is not code-signed yet, so your computer asks once. On Windows choose **More info**, then **Run anyway**. On a Mac open **System Settings, Privacy & Security**, then **Open Anyway**.
+
+Installed copies check [downloads.nomashift.com](https://downloads.nomashift.com) for updates at launch and every few hours. Windows installs them when Noma quits. An unsigned Mac build shows a notification that opens the download page instead.
+
+> Glide on macOS is newer and has had less testing than on Windows. If a swipe from the right edge opens Notification Center, the Glide page offers to turn off that macOS gesture.
+
+## Privacy
+
+Flow records only which application was in front and which shortcuts you pressed that hold Control, Alt or the Windows or Command key, and in what order. It never records what you type, and never takes screenshots. Everything stays in a local database on your computer. The details, and the rule any future capture has to keep, are in [`privacy-and-legal.md`](./Noma%20App/docs/privacy-and-legal.md).
+
+## What's in this repo
+
+| Folder | What it is |
+|---|---|
+| [`Noma App`](./Noma%20App) | The product. An Electron desktop app: application detection, Glide, Flow's pattern detection and suggestions, saved workflows, Macro Studio, and the real action executor. **Start here.** |
+| [`Noma Website`](./Noma%20Website) | The public site at [nomashift.com](https://nomashift.com). React, Vite and Tailwind, pre-rendered. Its own codebase; nothing is shared with the app. |
+| [`Noma Design`](./Noma%20Design) | The design system. A page documenting the current one, the briefs used to replace it, and the v5 proposals (see below). |
+| [`Noma Virtual Device`](./Noma%20Virtual%20Device) | A small always-on-top window that acts as the eventual physical module (a screen and four buttons), for testing against the app before any hardware exists. |
+| [`Noma Device Firmware`](./Noma%20Device%20Firmware) | An ESP32 sketch for the same module, with a parts list and wiring guide. Written against the documented protocol; not yet flashed or checked on real hardware. |
+| [`Noma Software Prototype`](./Noma%20Software%20Prototype) | A separate, deliberately fake pre-hardware build used to test the idea with people. Standalone. |
+
+No package is shared between these projects. Where something has to match across two of them (a color token, a protocol constant), it is copied by hand and noted where it is used.
+
+### The physical device
+
+A dedicated device is the long-term plan: a small display and buttons that change because Flow noticed something, not because someone configured a profile. Version 0.1 does not depend on it, and its UI stays behind developer tools. The software side (a hardware protocol, a simulator and a real serial transport) exists; the firmware is the next step to verify. See [`hardware-protocol.md`](./Noma%20App/docs/hardware-protocol.md).
+
+## Development
+
+```bash
+# The app
 cd "Noma App"
 npm install
-npm run dev      # opens the Electron dashboard
-npm test         # 283 tests as of this writing
+npm run dev          # opens the Electron app
+npm test             # unit and component tests
 npm run typecheck
 
-# The marketing site
+# Package it
+npm run dist:mac     # or dist:win
+
+# The website
 cd "Noma Website"
 npm install
 npm run dev
+npm run build        # type-checks, builds, and pre-renders
 
-# The hardware test rig (run Noma App first; it has nothing to talk to otherwise)
+# The device simulator (run the app first)
 cd "Noma Virtual Device"
 npm install
 npm start
-
-# The pre-hardware validation build (standalone, no dependency on the above)
-cd "Noma Software Prototype"
-npm install
-npm run dev
 ```
 
-`Noma Device Firmware` isn't an npm project; it's an Arduino sketch. See
-its own `README.md` for the parts list, wiring, and bring-up order.
+`Noma Device Firmware` is an Arduino sketch, not an npm project; see its README for the wiring and bring-up order.
 
-## Where to read next
+Releases are cut by pushing a `vX.Y.Z` tag. GitHub Actions runs the tests on Windows and macOS, builds the installers, and uploads them to the download site. See [`RELEASING.md`](./Noma%20App/RELEASING.md).
 
-- `Noma App/brainstorm.md`: the original product vision and build order.
-- `Noma App/docs/architecture.md`: process layout, the learning loop, and
-  the "real execution" safety design (closed key vocabulary, refocus-then-
-  verify, the incident history behind it).
-- `Noma App/docs/privacy-and-legal.md`: exactly what Flow captures and why
-  it isn't a keylogger; the constraint any future capture broadening has to
-  keep satisfying.
-- `Noma App/docs/hardware-protocol.md`: the HOST↔DEVICE message protocol,
-  what's implemented today, and what's still just a design.
-- `Noma App/docs/product-audit.md`: the running ground-truth audit: what's
-  strong, what's missing, what's next, updated in place rather than
-  rewritten each pass.
+## Design system
 
-Assorted PNGs at the repo root are ad-hoc design-review screenshots from
-past sessions, not build artifacts; safe to ignore or clean up.
+[`Noma Design`](./Noma%20Design) holds the design system:
+
+- `noma-design-system-current.html`: the system as built, with measured contrast and its known problems. Open it in a browser.
+- `Noma Design System v5.dc.html`: a proposed replacement in two directions, **Machined** (cool graphite, one cobalt accent) and **Display** (true black, white as the only accent). Each also has its own page.
+- `claude-design-font-brief.md` and `claude-design-system-brief.md`: the briefs those proposals were made from.
+
+## Read next
+
+- [`Noma App/README.md`](./Noma%20App/README.md): a guided walkthrough of the app.
+- [`docs/architecture.md`](./Noma%20App/docs/architecture.md): process layout, the learning loop, and how real execution is kept safe.
+- [`docs/beta-testing-guide.md`](./Noma%20App/docs/beta-testing-guide.md): what to try and what to report.
+- [`PRODUCT.md`](./Noma%20App/PRODUCT.md) and [`DESIGN.md`](./Noma%20App/DESIGN.md): who it is for, and the design rules.
+- [`docs/product-audit.md`](./Noma%20App/docs/product-audit.md): the running audit of what is strong, missing and next.
+- [`brainstorm.md`](./Noma%20App/brainstorm.md): the original product vision.
+
+## Contact
+
+Questions or bugs: [nomashift.com/feedback](https://nomashift.com/feedback) or hello@nomashift.com.
+
+Copyright Noma. All rights reserved.
