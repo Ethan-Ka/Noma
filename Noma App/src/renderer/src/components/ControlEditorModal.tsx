@@ -16,7 +16,7 @@ import { defaultActionForType, type SelectableActionType } from '../lib/actions'
 import { defaultLabelForAction } from '../lib/actionLabel'
 import { knownShortcutsFor } from '@shared/shortcuts'
 import { isMacRenderer } from '../lib/platform'
-import { formatShortcutCaption } from '../lib/describeAction'
+import { formatShortcutCaption, systemCommandLabel } from '../lib/describeAction'
 
 interface ControlEditorModalProps {
   applicationId: string
@@ -244,7 +244,7 @@ export function ControlEditorModal({
           >
             {SYSTEM_COMMAND_CATALOG.map((command) => (
               <option key={command} value={command}>
-                {command}
+                {systemCommandLabel(command)}
               </option>
             ))}
           </select>

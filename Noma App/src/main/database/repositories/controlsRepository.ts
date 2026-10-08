@@ -53,7 +53,9 @@ interface ReferencingControlRow {
  *  `controlId` + `getControlUsageStats`) its real usage count. Deliberately
  *  a plain string search over action_type = 'macro' rows rather than a
  *  dedicated foreign-key column, since action_payload is already the single
- *  source of truth for a control's action. */
+ *  source of truth for a control's action. Only controls: macros calling
+ *  this one as a step are macrosRepository.getMacrosReferencingMacro, and
+ *  both together are getMacroReferences. */
 export function getControlsReferencingMacro(
   macroId: string
 ): Array<{ controlId: string; applicationId: string; applicationName: string; slot: number; label: string }> {
@@ -70,8 +72,16 @@ export function getControlsReferencingMacro(
 
   return rows
     .filter((row) => {
-      const action = JSON.parse(row.action_payload) as { type: string; macroId?: string }
-      return action.type === 'macro' && action.macroId === macroId
+      // One control with a corrupt payload must not break the lookup for
+      // every macro: it can't be shown to reference anything, so skip it.
+      let action: { type?: unknown; macroId?: unknown } | null
+      try {
+        action = JSON.parse(row.action_payload) as { type?: unknown; macroId?: unknown } | null
+      } catch {
+        console.warn(`[controls] Control ${row.control_id} has an unreadable action; skipping it.`)
+        return false
+      }
+      return action?.type === 'macro' && action.macroId === macroId
     })
     .map((row) => ({
       controlId: row.control_id,

@@ -91,3 +91,17 @@ describe('getControlsReferencingMacro', () => {
     expect(getControlsReferencingMacro('macro-1')).toEqual([])
   })
 })
+
+describe('getControlsReferencingMacro; corrupt payloads', () => {
+  it('skips a control whose action_payload is not valid JSON instead of throwing for every macro', () => {
+    getDatabase()
+      .prepare(
+        `INSERT INTO controls (id, profile_id, slot, label, action_type, action_payload)
+         VALUES ('ctrl-2', 'code-default', 2, 'BROKEN', 'macro', '{not json')`
+      )
+      .run()
+    assignControlAction('code-default', 1, 'My Macro', { type: 'macro', macroId: 'macro-1' })
+
+    expect(getControlsReferencingMacro('macro-1').map((ref) => ref.controlId)).toEqual(['ctrl-1'])
+  })
+})

@@ -54,6 +54,9 @@ export const IPC_CHANNELS = {
   GET_LEARNING_STATS: 'flow:get-learning-stats',
   GET_SHORTCUT_USAGE_STATS: 'flow:get-shortcut-usage-stats',
   GET_CONTROL_USAGE_STATS: 'flow:get-control-usage-stats',
+  /** Recent presses and per-control success/failure counts, read from
+   *  logs/actions.jsonl (main/history/actionHistory.ts). */
+  GET_ACTION_HISTORY: 'flow:get-action-history',
   GET_DAILY_ACTIVITY_COUNTS: 'flow:get-daily-activity-counts',
   LIST_APPLICATION_PROFILE_SUMMARIES: 'flow:list-application-profile-summaries',
   CREATE_PROFILE_FOR_APPLICATION: 'flow:create-profile-for-application',
@@ -66,6 +69,9 @@ export const IPC_CHANNELS = {
   DEMO_RESET: 'flow:demo-reset',
   CLEAR_LEARNING_DATA: 'flow:clear-learning-data',
   DELETE_ALL_DATA: 'flow:delete-all-data',
+  CONFIG_EXPORT: 'flow:config-export',
+  CONFIG_IMPORT_PICK: 'flow:config-import-pick',
+  CONFIG_IMPORT_APPLY: 'flow:config-import-apply',
   CONFIGURE_MODULE: 'flow:configure-module',
   PING_HARDWARE: 'flow:ping-hardware',
   RESET_HARDWARE: 'flow:reset-hardware',
@@ -164,7 +170,22 @@ export const MODULE_CATALOG: ModuleCatalogEntry[] = [
  *  and the saved labels all use it. */
 export const MAX_CONTROL_LABEL_LENGTH = 16
 
-export const SYSTEM_COMMAND_CATALOG: string[] = ['volumeMute', 'volumeUp', 'volumeDown']
+/** The most characters a profile's name can have (Profiles page, create/rename).
+ *  Main trims and caps to this; the renderer's inputs can use it as maxLength. */
+export const MAX_PROFILE_NAME_LENGTH = 64
+
+/** The most characters a workflow (macro) name can have. Longer than a profile
+ *  name because learned workflows are named for their steps ("A → B → C"). */
+export const MAX_MACRO_NAME_LENGTH = 120
+
+export const SYSTEM_COMMAND_CATALOG: string[] = [
+  'volumeMute',
+  'volumeUp',
+  'volumeDown',
+  'mediaPlayPause',
+  'mediaNextTrack',
+  'mediaPrevTrack'
+]
 
 /** The exact allowlist `actionExecutor.ts`'s `isKnownFlowAction` accepts. */
 export const FLOW_ACTION_CATALOG: string[] = ['closeWindow']

@@ -4,6 +4,7 @@ import { getDatabase } from '../database/db'
 import { getAllApplications, upsertApplication } from '../database/repositories/applicationsRepository'
 import { getProfileForApplicationId } from '../database/repositories/profileRepository'
 import { isSystemUtilityApp } from '../os/systemApps'
+import { normalizeProfileName } from '../ipc/validation'
 
 /** New profiles start with 4 unconfigured slots: the same display-label
  *  length limit (MAX_CONTROL_LABEL_LENGTH) as every other label in the app. The user
@@ -23,11 +24,17 @@ const DEFAULT_SLOT_LABELS = ['SLOT 1', 'SLOT 2', 'SLOT 3', 'SLOT 4']
  * Returns null if this application already has an active profile: this
  * never silently creates a second, competing one; use updateControl to
  * change an existing profile instead.
+ *
+ * The name is trimmed and capped at MAX_PROFILE_NAME_LENGTH (see
+ * normalizeProfileName); a name that's empty after trimming is refused with
+ * null, before anything is written, so no nameless profile ever exists.
  */
 export function createProfileForApplication(
   application: Application,
   profileName: string
 ): ApplicationProfile | null {
+  const name = normalizeProfileName(profileName)
+  if (name === null) return null
   if (getProfileForApplicationId(application.id)) return null
 
   upsertApplication(application)
@@ -43,7 +50,7 @@ export function createProfileForApplication(
   )
 
   const createAll = db.transaction(() => {
-    insertProfile.run({ id: profileId, applicationId: application.id, name: profileName })
+    insertProfile.run({ id: profileId, applicationId: application.id, name })
     DEFAULT_SLOT_LABELS.forEach((label, index) => {
       insertControl.run({
         id: randomUUID(),
@@ -60,14 +67,18 @@ export function createProfileForApplication(
   return getProfileForApplicationId(application.id)
 }
 
-/** Renames a profile in place. Returns null if this application has no profile. */
+/** Renames a profile in place, with the same trimming and length cap as
+ *  createProfileForApplication. Returns null, changing nothing, if this
+ *  application has no profile or the new name is empty after trimming. */
 export function renameApplicationProfile(
   applicationId: string,
   name: string
 ): ApplicationProfile | null {
+  const normalized = normalizeProfileName(name)
+  if (normalized === null) return null
   const profile = getProfileForApplicationId(applicationId)
   if (!profile) return null
-  getDatabase().prepare('UPDATE profiles SET name = ? WHERE id = ?').run(name, profile.id)
+  getDatabase().prepare('UPDATE profiles SET name = ? WHERE id = ?').run(normalized, profile.id)
   return getProfileForApplicationId(applicationId)
 }
 
